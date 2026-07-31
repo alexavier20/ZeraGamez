@@ -1,0 +1,42 @@
+name: Quality
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Lint, testes e build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v5
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Verificar lint
+        run: npm run lint
+
+      - name: Verificar formatação
+        run: npm run format:check
+
+      - name: Verificar tipos
+        run: npm run typecheck
+
+      - name: Executar testes
+        run: npm run test:run
+
+      - name: Gerar build de produção
+        run: npm run build
