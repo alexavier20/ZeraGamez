@@ -1,7 +1,8 @@
 import { ArrowLeft, Bell, Ellipsis, Share2, X } from 'lucide-react';
 
-import { HeaderBrand } from './HeaderBrand';
 import { headerCopy } from './header.config';
+import { HeaderBrand } from './HeaderBrand';
+
 import type { HeaderContextAction } from './header.types';
 
 type MobileContextHeaderProps =

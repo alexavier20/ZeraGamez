@@ -2,6 +2,7 @@ import { Compass, House, Library, User, type LucideIcon } from 'lucide-react';
 import { NavLink } from 'react-router';
 
 import { headerCopy, headerRoutes, mobileNavItems } from './header.config';
+
 import type { MobileNavigationItem } from './header.types';
 
 const mobileIcons: Readonly<Record<MobileNavigationItem['icon'], LucideIcon>> = {

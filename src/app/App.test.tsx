@@ -9,5 +9,10 @@ describe('Zera GameZ', () => {
 
     expect(screen.getByRole('heading', { level: 1, name: 'Zera GameZ' })).toBeInTheDocument();
     expect(screen.getByText('Em construção')).toBeInTheDocument();
+    expect(screen.getByRole('banner')).toBeInTheDocument();
+    expect(
+      screen.getByRole('navigation', { hidden: true, name: 'Navegação principal' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Navegação móvel' })).toBeInTheDocument();
   });
 });

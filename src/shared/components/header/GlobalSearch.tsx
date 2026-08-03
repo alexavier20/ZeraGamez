@@ -1,5 +1,5 @@
-import { useId, useState, type FormEvent } from 'react';
 import { Search } from 'lucide-react';
+import { useId, useState, type SubmitEventHandler } from 'react';
 
 import { headerCopy } from './header.config';
 
@@ -12,7 +12,7 @@ export function GlobalSearch({ className = '', onSearch }: Readonly<GlobalSearch
   const inputId = useId();
   const [query, setQuery] = useState('');
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const handleSubmit: SubmitEventHandler<HTMLFormElement> = (event) => {
     event.preventDefault();
     const normalizedQuery = query.trim();
 
@@ -21,7 +21,7 @@ export function GlobalSearch({ className = '', onSearch }: Readonly<GlobalSearch
     }
 
     onSearch?.(normalizedQuery);
-  }
+  };
 
   return (
     <form
@@ -42,7 +42,9 @@ export function GlobalSearch({ className = '', onSearch }: Readonly<GlobalSearch
       <input
         className="min-w-0 flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-header-text"
         id={inputId}
-        onChange={(event) => setQuery(event.target.value)}
+        onChange={(event) => {
+          setQuery(event.target.value);
+        }}
         placeholder={headerCopy.searchPlaceholder}
         type="search"
         value={query}

@@ -2,6 +2,7 @@ import { Bell, Plus } from 'lucide-react';
 import { Link } from 'react-router';
 
 import { headerCopy, headerRoutes } from './header.config';
+
 import type { HeaderUser } from './header.types';
 
 interface HeaderActionsProps {

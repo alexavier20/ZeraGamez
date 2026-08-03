@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
-import { HeaderActions } from '@/shared/components/header/HeaderActions';
 import { GlobalSearch } from '@/shared/components/header/GlobalSearch';
+import { HeaderActions } from '@/shared/components/header/HeaderActions';
 
 describe('Header controls', () => {
   it('mantém um indicador de foco visível para o campo de busca', () => {
