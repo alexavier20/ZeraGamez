@@ -11,16 +11,16 @@
   --color-bg-secondary: #12101a;
   --color-surface: #191624;
   --color-surface-hover: #2a171b;
-  --color-text-primary: #f5f3ff;
+  --color-text-primary: #ffffff;
   --color-text-muted: #a8a3b3;
-  --color-header-text: #ffe5e8;
+  --color-header-text: #ffffff;
   --color-border-brand: #e7001233;
   --color-header-border: #ffffff22;
   --color-header-field-border: #ffffff2e;
   --color-header-field: #09070fcc;
   --color-header-overlay: #09070f4d;
-  --color-avatar-start: #a855f7;
-  --color-avatar-end: #2563eb;
+  --color-avatar-start: #6d28d9;
+  --color-avatar-end: #1d4ed8;
   --font-heading: 'Oxanium', sans-serif;
   --font-body: 'Chakra Petch', sans-serif;
 }

@@ -29,7 +29,9 @@ export function MobileBottomNav({ onProfileClick }: Readonly<MobileBottomNavProp
           <NavLink
             className={({ isActive }) =>
               `flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl text-[11px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand ${
-                isActive ? 'text-brand-bright' : 'text-text-muted hover:text-text-primary'
+                isActive
+                  ? 'font-semibold text-brand-bright'
+                  : 'text-text-muted hover:text-text-primary'
               }`
             }
             end={item.to === headerRoutes.home}

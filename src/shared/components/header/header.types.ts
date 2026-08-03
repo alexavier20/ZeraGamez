@@ -24,7 +24,6 @@ interface HeaderBaseProps {
   readonly onNotificationsClick?: () => void;
   readonly onProfileClick?: () => void;
   readonly onTabletMenuClick?: () => void;
-  readonly showMobileBottomNav?: boolean;
 }
 
 interface DefaultHeaderProps extends HeaderBaseProps {

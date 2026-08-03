@@ -1,4 +1,5 @@
 import { Header } from '@/shared/components/header/Header';
+import { MobileBottomNav } from '@/shared/components/header/MobileBottomNav';
 
 import type { HeaderUser } from '@/shared/components/header/header.types';
 
@@ -18,6 +19,7 @@ export function App() {
           <p className="text-base text-text-muted sm:text-lg">Em construção</p>
         </div>
       </main>
+      <MobileBottomNav />
     </div>
   );
 }

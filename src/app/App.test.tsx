@@ -14,5 +14,16 @@ describe('Zera GameZ', () => {
       screen.getByRole('navigation', { hidden: true, name: 'Navegação principal' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Navegação móvel' })).toBeInTheDocument();
+
+    const header = screen.getByRole('banner');
+    const main = screen.getByRole('main');
+    const mobileNavigation = screen.getByRole('navigation', { name: 'Navegação móvel' });
+
+    expect(header.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(main.compareDocumentPosition(mobileNavigation) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
   });
 });

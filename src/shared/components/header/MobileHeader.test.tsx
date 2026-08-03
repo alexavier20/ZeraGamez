@@ -74,5 +74,7 @@ describe('Mobile Header', () => {
     expect(screen.getByRole('link', { name: 'Listas' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'Início' })).not.toHaveAttribute('aria-current');
     expect(screen.getByRole('link', { name: 'Explorar' })).toHaveAttribute('href', '/lancamentos');
+    expect(screen.getByRole('link', { name: 'Listas' })).toHaveClass('font-semibold');
+    expect(screen.getByRole('link', { name: 'Início' })).not.toHaveClass('font-semibold');
   });
 });
