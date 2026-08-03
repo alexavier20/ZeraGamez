@@ -143,9 +143,9 @@ Run:
 
 ```powershell
 npm.cmd install lucide-react @fontsource/oxanium @fontsource/chakra-petch
-New-Item -ItemType Directory -Force -Path 'C:\Projects\zera-gamez\public\assets\images'
-Copy-Item -LiteralPath 'C:\Users\alex.brq\Documents\ZeraGamez\assets\images\zera-gamez-z-icon-white-header.png' -Destination 'C:\Projects\zera-gamez\public\assets\images\zera-gamez-z-icon-white-header.png'
-Get-Item -LiteralPath 'C:\Projects\zera-gamez\public\assets\images\zera-gamez-z-icon-white-header.png'
+New-Item -ItemType Directory -Force -Path 'public\assets\images'
+Copy-Item -LiteralPath 'C:\Users\alex.brq\Documents\ZeraGamez\assets\images\zera-gamez-z-icon-white-header.png' -Destination 'public\assets\images\zera-gamez-z-icon-white-header.png'
+Get-Item -LiteralPath 'public\assets\images\zera-gamez-z-icon-white-header.png'
 ```
 
 Expected: `Get-Item` reports a non-zero `Length` for the copied PNG.
