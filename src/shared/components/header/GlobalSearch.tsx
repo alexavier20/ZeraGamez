@@ -25,7 +25,7 @@ export function GlobalSearch({ className = '', onSearch }: Readonly<GlobalSearch
 
   return (
     <form
-      className={`flex h-10 items-center gap-2 rounded-xl border border-header-field-border bg-header-field px-3.5 ${className}`}
+      className={`flex h-10 items-center gap-2 rounded-xl border border-header-field-border bg-header-field px-3.5 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-text-primary ${className}`}
       onSubmit={handleSubmit}
       role="search"
     >

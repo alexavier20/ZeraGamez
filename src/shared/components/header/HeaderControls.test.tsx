@@ -7,6 +7,16 @@ import { HeaderActions } from '@/shared/components/header/HeaderActions';
 import { GlobalSearch } from '@/shared/components/header/GlobalSearch';
 
 describe('Header controls', () => {
+  it('mantém um indicador de foco visível para o campo de busca', () => {
+    const { unmount } = render(<GlobalSearch />);
+
+    try {
+      expect(screen.getByRole('search')).toHaveClass('focus-within:outline-2');
+    } finally {
+      unmount();
+    }
+  });
+
   it('normaliza a busca e ignora consultas vazias', async () => {
     const user = userEvent.setup();
     const onSearch = vi.fn();
