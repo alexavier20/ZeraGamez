@@ -48,6 +48,7 @@ describe('Zera GameZ', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: 'Próximos lançamentos' }),
     ).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.getByText('Descubra os games que estão chegando')).toBeInTheDocument();
     expect(main).toHaveClass(
       'mx-auto',
