@@ -1,8 +1,29 @@
+@import '@fontsource/chakra-petch/400.css';
+@import '@fontsource/chakra-petch/600.css';
+@import '@fontsource/chakra-petch/700.css';
+@import '@fontsource/oxanium/700.css';
 @import 'tailwindcss';
 
 @theme {
   --color-brand: #e70012;
-  --color-surface: #0a0a0a;
+  --color-brand-bright: #f52b3a;
+  --color-app: #09070f;
+  --color-bg-secondary: #12101a;
+  --color-surface: #191624;
+  --color-surface-hover: #2a171b;
+  --color-text-primary: #ffffff;
+  --color-content-primary: #f5f3ff;
+  --color-text-muted: #a8a3b3;
+  --color-header-text: #ffffff;
+  --color-border-brand: #e7001233;
+  --color-header-border: #ffffff22;
+  --color-header-field-border: #ffffff2e;
+  --color-header-field: #09070fcc;
+  --color-header-overlay: #09070f4d;
+  --color-avatar-start: #6d28d9;
+  --color-avatar-end: #1d4ed8;
+  --font-heading: 'Oxanium', sans-serif;
+  --font-body: 'Chakra Petch', sans-serif;
 }
 
 @layer base {
@@ -14,6 +35,13 @@
     min-width: 20rem;
     min-height: 100vh;
     margin: 0;
+    background: var(--color-app);
+    font-family: var(--font-body);
+  }
+
+  button,
+  input {
+    font: inherit;
   }
 
   #root {

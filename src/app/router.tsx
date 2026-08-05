@@ -1,12 +1,18 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 
-import { App } from '@/app/App';
+import { AppLayout } from '@/app/AppLayout';
+import { HomePage } from '@/pages/HomePage';
+import { ReleasesPage } from '@/pages/ReleasesPage';
+import { headerRoutes } from '@/shared/components/header/header.config';
 
 export function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<App />} />
+        <Route element={<AppLayout />}>
+          <Route index element={<HomePage />} />
+          <Route path={headerRoutes.releases} element={<ReleasesPage />} />
+        </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
