@@ -35,15 +35,30 @@ describe('Zera GameZ', () => {
     expectShellOrder();
   });
 
-  it('abre a página vazia de Lançamentos pelo Header', async () => {
+  it('abre Lançamentos com o título responsivo selecionado no Pencil', async () => {
     const user = userEvent.setup();
     render(<AppRouter />);
 
     const releasesLink = screen.getByRole('link', { name: 'Lançamentos' });
     await user.click(releasesLink);
 
+    const main = screen.getByRole('main', { name: 'Lançamentos' });
+
     expect(window.location.pathname).toBe('/lancamentos');
-    expect(screen.getByRole('main', { name: 'Lançamentos' })).toBeEmptyDOMElement();
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Próximos lançamentos' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Descubra os games que estão chegando')).toBeInTheDocument();
+    expect(main).toHaveClass(
+      'mx-auto',
+      'max-w-[1440px]',
+      'px-4',
+      'pt-[22px]',
+      'sm:px-5',
+      'sm:pt-7',
+      'lg:px-8',
+      'lg:pt-9',
+    );
     expect(releasesLink).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'Explorar' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('banner')).toBeInTheDocument();

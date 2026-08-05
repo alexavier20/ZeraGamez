@@ -9,9 +9,11 @@ describe('PageHeading', () => {
 
     const title = screen.getByRole('heading', { level: 1, name: 'Título reutilizável' });
     const subtitle = screen.getByText('Texto de apoio');
-    const container = title.closest('header');
+    const container = title.parentElement;
 
+    expect(container?.tagName).toBe('DIV');
     expect(container).toHaveClass('flex', 'flex-col', 'gap-[18px]', 'sm:gap-[22px]', 'lg:gap-2');
+    expect(screen.queryByRole('banner')).not.toBeInTheDocument();
     expect(title).toHaveClass(
       'font-heading',
       'text-[27px]',
