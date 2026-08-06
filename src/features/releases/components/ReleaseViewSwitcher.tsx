@@ -1,0 +1,52 @@
+import { CalendarDays, List } from 'lucide-react';
+
+export type ReleaseView = 'list' | 'calendar';
+
+type ReleaseViewSwitcherProps = Readonly<{
+  onChange: (value: ReleaseView) => void;
+  value: ReleaseView;
+}>;
+
+const optionClassName =
+  'flex h-8 items-center gap-[7px] rounded-[9px] px-[11px] text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand';
+
+export function ReleaseViewSwitcher({ onChange, value }: ReleaseViewSwitcherProps) {
+  return (
+    <div
+      aria-label="Alternar visualização"
+      className="hidden h-10 w-[189px] items-center gap-1 rounded-xl bg-bg-secondary p-1 lg:flex"
+      role="group"
+    >
+      <button
+        aria-pressed={value === 'list'}
+        className={`${optionClassName} ${
+          value === 'list'
+            ? 'bg-surface-hover text-content-primary ring-1 ring-inset ring-brand'
+            : 'bg-transparent text-text-muted ring-1 ring-inset ring-transparent hover:text-content-primary'
+        }`}
+        onClick={() => {
+          onChange('list');
+        }}
+        type="button"
+      >
+        <List aria-hidden="true" size={15} />
+        Lista
+      </button>
+      <button
+        aria-pressed={value === 'calendar'}
+        className={`${optionClassName} ${
+          value === 'calendar'
+            ? 'bg-surface-hover text-content-primary ring-1 ring-inset ring-brand'
+            : 'bg-transparent text-text-muted ring-1 ring-inset ring-transparent hover:text-content-primary'
+        }`}
+        onClick={() => {
+          onChange('calendar');
+        }}
+        type="button"
+      >
+        <CalendarDays aria-hidden="true" size={15} />
+        Calendário
+      </button>
+    </div>
+  );
+}

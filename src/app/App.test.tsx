@@ -45,11 +45,28 @@ describe('Zera GameZ', () => {
     const main = screen.getByRole('main', { name: 'Lançamentos' });
 
     expect(window.location.pathname).toBe('/lancamentos');
-    expect(
-      screen.getByRole('heading', { level: 1, name: 'Próximos lançamentos' }),
-    ).toBeInTheDocument();
+    const pageHeading = screen.getByRole('heading', { level: 1, name: 'Próximos lançamentos' });
+    expect(pageHeading).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.getByText('Descubra os games que estão chegando')).toBeInTheDocument();
+    expect(pageHeading.parentElement?.parentElement).toHaveClass(
+      'lg:flex',
+      'lg:items-end',
+      'lg:justify-between',
+    );
+    const viewSwitcher = screen.getByRole('group', { name: 'Alternar visualização' });
+    const listButton = screen.getByRole('button', { name: 'Lista' });
+    const calendarButton = screen.getByRole('button', { name: 'Calendário' });
+
+    expect(viewSwitcher).toHaveClass('hidden', 'lg:flex');
+    expect(listButton).toHaveAttribute('aria-pressed', 'true');
+    expect(calendarButton).toHaveAttribute('aria-pressed', 'false');
+
+    await user.click(calendarButton);
+
+    expect(listButton).toHaveAttribute('aria-pressed', 'false');
+    expect(calendarButton).toHaveAttribute('aria-pressed', 'true');
+
     expect(main).toHaveClass(
       'mx-auto',
       'max-w-[1440px]',
