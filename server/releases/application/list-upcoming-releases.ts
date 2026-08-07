@@ -1,7 +1,7 @@
 import { consolidateReleases, type CandidateRelease } from '../domain/release';
 
-import type { ReleasesResponse } from '../../../shared/contracts/releases';
 import type { ReleaseQuery } from './releases-query';
+import type { ReleasesResponse } from '../../../shared/contracts/releases';
 
 export interface Clock {
   now(): Date;

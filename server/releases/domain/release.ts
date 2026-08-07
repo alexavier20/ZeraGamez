@@ -36,12 +36,16 @@ export function consolidateReleases(candidates: readonly CandidateRelease[], lim
 
   const releases: ReleaseItem[] = [];
   for (const entries of byGame.values()) {
+    const firstEntry = entries.at(0);
+    if (!firstEntry) continue;
     const releaseDate = entries.reduce(
       (earliest, entry) => (entry.releaseDate < earliest ? entry.releaseDate : earliest),
-      entries[0]!.releaseDate,
+      firstEntry.releaseDate,
     );
     const selected = entries.filter((entry) => entry.releaseDate === releaseDate);
-    const game = selected[0]!.game;
+    const selectedEntry = selected.at(0);
+    if (!selectedEntry) continue;
+    const game = selectedEntry.game;
     const platforms = [
       ...new Map(selected.map(({ platform }) => [platform.id, platform])).values(),
     ];

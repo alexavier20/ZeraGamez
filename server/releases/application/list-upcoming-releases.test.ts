@@ -4,8 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { listUpcomingReleases, type Clock, type ReleaseRepository } from './list-upcoming-releases';
 
-import type { CandidateRelease } from '../domain/release';
 import type { ReleaseQuery } from './releases-query';
+import type { CandidateRelease } from '../domain/release';
 
 const query: ReleaseQuery = {
   from: '2026-08-07',
