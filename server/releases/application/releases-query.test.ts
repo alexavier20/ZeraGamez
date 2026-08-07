@@ -33,15 +33,15 @@ describe('parseReleasesQuery', () => {
   });
 
   it('aceita datas civis de quatro dígitos antes de 0100', () => {
-    expect(
-      parseReleasesQuery(new URLSearchParams('from=0001-01-01&to=0001-01-01'), clock),
-    ).toEqual({
-      from: '0001-01-01',
-      to: '0001-01-01',
-      limit: 50,
-      platformIds: [],
-      genreIds: [],
-    });
+    expect(parseReleasesQuery(new URLSearchParams('from=0001-01-01&to=0001-01-01'), clock)).toEqual(
+      {
+        from: '0001-01-01',
+        to: '0001-01-01',
+        limit: 50,
+        platformIds: [],
+        genreIds: [],
+      },
+    );
   });
 
   it.each([

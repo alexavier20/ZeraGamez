@@ -20,11 +20,7 @@ function deferredResponse() {
   return { promise, resolve };
 }
 
-function setup(
-  fetcher: typeof fetch,
-  initial = '2026-08-07T12:00:00.000Z',
-  timeoutMs?: number,
-) {
+function setup(fetcher: typeof fetch, initial = '2026-08-07T12:00:00.000Z', timeoutMs?: number) {
   let now = new Date(initial);
   const provider = new TwitchTokenProvider({
     clientId: 'client-id',
@@ -181,7 +177,9 @@ describe('TwitchTokenProvider', () => {
     vi.spyOn(response, 'json').mockRejectedValue(new TypeError('stream failed'));
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(response);
 
-    await expect(setup(fetcher).provider.getToken()).rejects.toBeInstanceOf(ServiceUnavailableError);
+    await expect(setup(fetcher).provider.getToken()).rejects.toBeInstanceOf(
+      ServiceUnavailableError,
+    );
   });
 
   it('compartilha falha simultânea e permite nova tentativa', async () => {
