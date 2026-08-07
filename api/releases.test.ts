@@ -9,10 +9,7 @@ import {
 } from '../server/releases/infrastructure/upstream-errors';
 import { apiErrorResponseSchema, type ReleasesResponse } from '../shared/contracts/releases';
 
-import releasesFunction, {
-  handleReleasesRequest,
-  type ReleaseHandlerDependencies,
-} from './releases';
+import type { ReleaseHandlerDependencies } from './releases';
 
 const response: ReleasesResponse = {
   data: [],
@@ -33,6 +30,11 @@ function setup(load = vi.fn().mockResolvedValue(response)): ReleaseHandlerDepend
   };
 }
 
+async function handleReleasesRequest(request: Request, dependencies: ReleaseHandlerDependencies) {
+  const releasesModule = await import('./releases');
+  return releasesModule.handleReleasesRequest(request, dependencies);
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
@@ -49,6 +51,7 @@ describe('handleReleasesRequest', () => {
     expect(result.status).toBe(405);
     expect(result.headers.get('allow')).toBe('GET');
     expect(result.headers.get('cache-control')).toBe('no-store');
+    expect(result.headers.get('content-type')).toBe('application/json; charset=utf-8');
     expect(load).not.toHaveBeenCalled();
   });
 
@@ -78,6 +81,7 @@ describe('handleReleasesRequest', () => {
     expect(result.headers.get('vercel-cdn-cache-control')).toBe(
       'public, max-age=900, stale-while-revalidate=3600',
     );
+    expect(result.headers.get('content-type')).toBe('application/json; charset=utf-8');
   });
 
   it('normaliza DTO de sucesso inválido como erro interno', async () => {
@@ -119,10 +123,12 @@ describe('handleReleasesRequest', () => {
 
 describe('default Vercel function', () => {
   it('rejeita método antes de ler ambiente ou acessar a rede', async () => {
+    vi.resetModules();
     vi.stubEnv('IGDB_CLIENT_ID', '');
     vi.stubEnv('IGDB_CLIENT_SECRET', '');
     const fetcher = vi.fn();
     vi.stubGlobal('fetch', fetcher);
+    const { default: releasesFunction } = await import('./releases');
 
     const result = await releasesFunction.fetch(
       new Request('https://zera.test/api/releases', { method: 'POST' }),
