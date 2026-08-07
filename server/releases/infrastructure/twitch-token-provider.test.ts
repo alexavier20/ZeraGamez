@@ -14,13 +14,24 @@ function tokenResponse(token = 'token', expiresIn = 3_600) {
   return Response.json({ access_token: token, expires_in: expiresIn, token_type: 'bearer' });
 }
 
-function setup(fetcher: typeof fetch, initial = '2026-08-07T12:00:00.000Z') {
+function deferredResponse() {
+  let resolve!: (response: Response) => void;
+  const promise = new Promise<Response>((resolvePromise) => (resolve = resolvePromise));
+  return { promise, resolve };
+}
+
+function setup(
+  fetcher: typeof fetch,
+  initial = '2026-08-07T12:00:00.000Z',
+  timeoutMs?: number,
+) {
   let now = new Date(initial);
   const provider = new TwitchTokenProvider({
     clientId: 'client-id',
     clientSecret: 'client-secret',
     clock: { now: () => now },
     fetcher,
+    ...(timeoutMs === undefined ? {} : { timeoutMs }),
   });
   return {
     provider,
@@ -88,6 +99,31 @@ describe('TwitchTokenProvider', () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
+  it('isola a renovação invalidada da geração atual', async () => {
+    const requestA = deferredResponse();
+    const requestB = deferredResponse();
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockReturnValueOnce(requestA.promise)
+      .mockReturnValueOnce(requestB.promise);
+    const { provider } = setup(fetcher);
+
+    const stale = provider.getToken();
+    provider.invalidate();
+    const current = provider.getToken();
+    expect(fetcher).toHaveBeenCalledTimes(2);
+
+    requestA.resolve(tokenResponse('stale'));
+    await expect(stale).resolves.toBe('stale');
+    const sharedCurrent = provider.getToken();
+    expect(fetcher).toHaveBeenCalledTimes(2);
+
+    requestB.resolve(tokenResponse('current'));
+    await expect(Promise.all([current, sharedCurrent])).resolves.toEqual(['current', 'current']);
+    await expect(provider.getToken()).resolves.toBe('current');
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
   it('renova na margem de segurança e após invalidação', async () => {
     const fetcher = vi
       .fn<typeof fetch>()
@@ -117,9 +153,68 @@ describe('TwitchTokenProvider', () => {
     await expect(setup(fetcher).provider.getToken()).rejects.toBeInstanceOf(error);
   });
 
-  it('normaliza timeout', async () => {
-    const fetcher = vi.fn<typeof fetch>().mockRejectedValue(new DOMException('timeout', 'TimeoutError'));
+  it('normaliza timeout durante a leitura do corpo', async () => {
+    const response = tokenResponse();
+    vi.spyOn(response, 'json').mockRejectedValue(new DOMException('timeout', 'TimeoutError'));
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(response);
 
     await expect(setup(fetcher).provider.getToken()).rejects.toBeInstanceOf(UpstreamTimeoutError);
+  });
+
+  it('normaliza leitura abortada pelo sinal de timeout', async () => {
+    const controller = new AbortController();
+    controller.abort(new DOMException('timeout', 'TimeoutError'));
+    const timeoutSpy = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(controller.signal);
+    const response = tokenResponse();
+    vi.spyOn(response, 'json').mockRejectedValue(new DOMException('aborted', 'AbortError'));
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(response);
+
+    try {
+      await expect(setup(fetcher).provider.getToken()).rejects.toBeInstanceOf(UpstreamTimeoutError);
+    } finally {
+      timeoutSpy.mockRestore();
+    }
+  });
+
+  it('normaliza falha de transporte durante a leitura do corpo', async () => {
+    const response = tokenResponse();
+    vi.spyOn(response, 'json').mockRejectedValue(new TypeError('stream failed'));
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(response);
+
+    await expect(setup(fetcher).provider.getToken()).rejects.toBeInstanceOf(ServiceUnavailableError);
+  });
+
+  it('compartilha falha simultânea e permite nova tentativa', async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockRejectedValueOnce(new TypeError('network failed'))
+      .mockResolvedValueOnce(tokenResponse('retry'));
+    const { provider } = setup(fetcher);
+
+    const first = provider.getToken();
+    const second = provider.getToken();
+
+    await expect(Promise.all([first, second])).rejects.toBeInstanceOf(ServiceUnavailableError);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    await expect(provider.getToken()).resolves.toBe('retry');
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    { name: 'padrão', timeoutMs: undefined, expectedTimeout: 5_000 },
+    { name: 'configurado', timeoutMs: 1_234, expectedTimeout: 1_234 },
+  ])('encaminha o sinal de timeout $name ao fetch', async ({ timeoutMs, expectedTimeout }) => {
+    const signal = new AbortController().signal;
+    const timeoutSpy = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(signal);
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(tokenResponse());
+
+    try {
+      await expect(setup(fetcher, undefined, timeoutMs).provider.getToken()).resolves.toBe('token');
+      expect(timeoutSpy).toHaveBeenCalledWith(expectedTimeout);
+      const [, init] = fetcher.mock.calls[0];
+      expect(init?.signal).toBe(signal);
+    } finally {
+      timeoutSpy.mockRestore();
+    }
   });
 });

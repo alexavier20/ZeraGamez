@@ -29,34 +29,45 @@ interface TwitchTokenProviderOptions {
 }
 
 export class TwitchTokenProvider implements AccessTokenProvider {
-  private cachedToken?: { token: string; expiresAt: number };
+  private cachedToken?: { token: string; expiresAt: number; generation: number };
+  private generation = 0;
   private readonly options: TwitchTokenProviderOptions;
-  private pendingToken?: Promise<string>;
+  private pendingToken?: { generation: number; promise: Promise<string> };
 
   constructor(options: TwitchTokenProviderOptions) {
     this.options = options;
   }
 
   getToken() {
-    if (this.cachedToken && this.options.clock.now().getTime() < this.cachedToken.expiresAt) {
+    const generation = this.generation;
+    if (
+      this.cachedToken?.generation === generation &&
+      this.options.clock.now().getTime() < this.cachedToken.expiresAt
+    ) {
       return Promise.resolve(this.cachedToken.token);
     }
-    this.pendingToken ??= this.requestToken().finally(() => {
-      this.pendingToken = undefined;
-    });
-    return this.pendingToken;
+    if (this.pendingToken?.generation !== generation) {
+      const promise = this.requestToken(generation).finally(() => {
+        if (this.pendingToken?.promise === promise) this.pendingToken = undefined;
+      });
+      this.pendingToken = { generation, promise };
+    }
+    return this.pendingToken.promise;
   }
 
   invalidate() {
+    this.generation += 1;
     this.cachedToken = undefined;
+    this.pendingToken = undefined;
   }
 
-  private async requestToken() {
+  private async requestToken(generation: number) {
     const body = new URLSearchParams({
       client_id: this.options.clientId,
       client_secret: this.options.clientSecret,
       grant_type: 'client_credentials',
     });
+    const timeoutSignal = AbortSignal.timeout(this.options.timeoutMs ?? 5_000);
 
     let response: Response;
     try {
@@ -64,10 +75,12 @@ export class TwitchTokenProvider implements AccessTokenProvider {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body,
-        signal: AbortSignal.timeout(this.options.timeoutMs ?? 5_000),
+        signal: timeoutSignal,
       });
     } catch (error) {
-      if (isTimeoutError(error)) throw new UpstreamTimeoutError('OAuth excedeu o timeout.');
+      if (isTimeoutError(error) || isTimeoutError(timeoutSignal.reason)) {
+        throw new UpstreamTimeoutError('OAuth excedeu o timeout.');
+      }
       throw new ServiceUnavailableError('OAuth indisponível.');
     }
 
@@ -76,17 +89,27 @@ export class TwitchTokenProvider implements AccessTokenProvider {
     let payload: unknown;
     try {
       payload = await response.json();
-    } catch {
-      throw new InvalidUpstreamResponseError('Resposta OAuth inválida.');
+    } catch (error) {
+      if (isTimeoutError(error) || isTimeoutError(timeoutSignal.reason)) {
+        throw new UpstreamTimeoutError('OAuth excedeu o timeout.');
+      }
+      if (error instanceof SyntaxError) {
+        throw new InvalidUpstreamResponseError('Resposta OAuth inválida.');
+      }
+      throw new ServiceUnavailableError('OAuth indisponível.');
     }
 
     const result = tokenResponseSchema.safeParse(payload);
     if (!result.success) throw new InvalidUpstreamResponseError('Resposta OAuth inválida.');
 
-    this.cachedToken = {
-      token: result.data.access_token,
-      expiresAt: this.options.clock.now().getTime() + result.data.expires_in * 1_000 - 60_000,
-    };
-    return this.cachedToken.token;
+    const token = result.data.access_token;
+    if (generation === this.generation) {
+      this.cachedToken = {
+        token,
+        expiresAt: this.options.clock.now().getTime() + result.data.expires_in * 1_000 - 60_000,
+        generation,
+      };
+    }
+    return token;
   }
 }
