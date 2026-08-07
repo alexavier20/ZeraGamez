@@ -31,6 +31,16 @@ describe('releasesResponseSchema', () => {
     expect(releasesResponseSchema.parse(validResponse)).toEqual(validResponse);
   });
 
+  it('aceita datas civis de quatro dígitos antes de 0100', () => {
+    const response = {
+      ...validResponse,
+      data: [{ ...validResponse.data[0], releaseDate: '0001-01-01' }],
+      meta: { ...validResponse.meta, from: '0001-01-01', to: '0001-01-01' },
+    };
+
+    expect(releasesResponseSchema.parse(response)).toEqual(response);
+  });
+
   it('rejeita data civil inválida e URL não HTTPS', () => {
     const invalid = {
       ...validResponse,

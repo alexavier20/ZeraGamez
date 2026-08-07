@@ -32,6 +32,18 @@ describe('parseReleasesQuery', () => {
     });
   });
 
+  it('aceita datas civis de quatro dígitos antes de 0100', () => {
+    expect(
+      parseReleasesQuery(new URLSearchParams('from=0001-01-01&to=0001-01-01'), clock),
+    ).toEqual({
+      from: '0001-01-01',
+      to: '0001-01-01',
+      limit: 50,
+      platformIds: [],
+      genreIds: [],
+    });
+  });
+
   it.each([
     'from=2026-02-30',
     'from=2026-08-10&to=2026-08-09',
