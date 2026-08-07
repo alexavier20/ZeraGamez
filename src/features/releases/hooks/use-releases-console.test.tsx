@@ -147,4 +147,22 @@ describe('useReleasesConsole', () => {
     expect(log.info).not.toHaveBeenCalled();
     expect(log.error).not.toHaveBeenCalled();
   });
+
+  it('ignores a non-DOMException AbortError-shaped rejection', async () => {
+    const log = logger();
+    const abortError = Object.assign(new Error('raw abort detail'), { name: 'AbortError' });
+
+    renderHook(() => {
+      useReleasesConsole({
+        load: vi.fn().mockRejectedValue(abortError),
+        logger: log,
+      });
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(log.info).not.toHaveBeenCalled();
+    expect(log.error).not.toHaveBeenCalled();
+  });
 });

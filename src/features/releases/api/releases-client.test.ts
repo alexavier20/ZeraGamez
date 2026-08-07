@@ -56,6 +56,17 @@ describe('fetchReleases', () => {
     expect(fetcher.mock.calls[0]?.[1]?.signal).toBe(controller.signal);
   });
 
+  it('omits empty platform and genre filters from the query', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(payload));
+
+    await fetchReleases({ platformIds: [], genreIds: [] }, { fetcher });
+
+    expect(fetcher).toHaveBeenCalledWith('/api/releases', {
+      headers: { Accept: 'application/json' },
+      signal: undefined,
+    });
+  });
+
   it('rejects an invalid successful DTO without exposing it', async () => {
     const fetcher = vi
       .fn<typeof fetch>()
@@ -85,6 +96,21 @@ describe('fetchReleases', () => {
     });
   });
 
+  it('maps a non-JSON successful body to an invalid upstream response', async () => {
+    const response = {
+      ok: true,
+      status: 200,
+      json: vi.fn().mockRejectedValue(new Error('raw parser detail')),
+    } as unknown as Response;
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(response);
+
+    await expect(fetchReleases({}, { fetcher })).rejects.toMatchObject({
+      status: 502,
+      code: 'INVALID_UPSTREAM_RESPONSE',
+      message: 'Resposta inválida.',
+    });
+  });
+
   it('normalizes a non-JSON error body without exposing parser details', async () => {
     const response = {
       ok: false,
@@ -98,6 +124,18 @@ describe('fetchReleases', () => {
       code: 'INTERNAL_ERROR',
       message: 'Resposta inválida.',
     });
+  });
+
+  it('preserves an AbortError-shaped rejection while reading the response body', async () => {
+    const abortError = Object.assign(new Error('raw abort detail'), { name: 'AbortError' });
+    const response = {
+      ok: true,
+      status: 200,
+      json: vi.fn().mockRejectedValue(abortError),
+    } as unknown as Response;
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(response);
+
+    await expect(fetchReleases({}, { fetcher })).rejects.toBe(abortError);
   });
 
   it('normalizes fetch rejections without exposing the upstream message', async () => {

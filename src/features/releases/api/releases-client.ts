@@ -29,8 +29,10 @@ export class ReleasesClientError extends Error {
   }
 }
 
-function isAbortError(error: unknown): error is DOMException {
-  return error instanceof DOMException && error.name === 'AbortError';
+function isAbortError(error: unknown): error is { name: 'AbortError' } {
+  return (
+    typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError'
+  );
 }
 
 export async function fetchReleases(
@@ -41,8 +43,12 @@ export async function fetchReleases(
   if (query.from) params.set('from', query.from);
   if (query.to) params.set('to', query.to);
   if (query.limit !== undefined) params.set('limit', String(query.limit));
-  if (query.platformIds) params.set('platforms', query.platformIds.join(','));
-  if (query.genreIds) params.set('genres', query.genreIds.join(','));
+  if (query.platformIds && query.platformIds.length > 0) {
+    params.set('platforms', query.platformIds.join(','));
+  }
+  if (query.genreIds && query.genreIds.length > 0) {
+    params.set('genres', query.genreIds.join(','));
+  }
 
   const suffix = params.size > 0 ? `?${params.toString()}` : '';
 
@@ -60,7 +66,11 @@ export async function fetchReleases(
   let payload: unknown;
   try {
     payload = await response.json();
-  } catch {
+  } catch (error: unknown) {
+    if (isAbortError(error)) throw error;
+    if (response.ok) {
+      throw new ReleasesClientError(502, 'INVALID_UPSTREAM_RESPONSE', 'Resposta inválida.');
+    }
     throw new ReleasesClientError(response.status, 'INTERNAL_ERROR', 'Resposta inválida.');
   }
 
