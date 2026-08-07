@@ -3,6 +3,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { IgdbReleaseRepository } from './igdb-release-repository';
+import { TwitchTokenProvider } from './twitch-token-provider';
 import {
   InvalidUpstreamResponseError,
   ServiceUnavailableError,
@@ -33,9 +34,13 @@ const fixture = {
   platform: { id: 167, name: 'PlayStation 5', abbreviation: 'PS5' },
 };
 
+function tokenResponse(token: string) {
+  return Response.json({ access_token: token, expires_in: 3_600, token_type: 'bearer' });
+}
+
 function setup(fetcher: typeof fetch, timeoutMs?: number) {
   const tokenProvider = {
-    getToken: vi.fn().mockResolvedValue('token'),
+    getToken: vi.fn().mockResolvedValue({ token: 'token', generation: 0 }),
     invalidate: vi.fn(),
   };
   return {
@@ -120,13 +125,25 @@ describe('IgdbReleaseRepository', () => {
     });
   });
 
+  it('converte timestamp Unix negativo seguro em data civil anterior a 1970', async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(Response.json([{ ...fixture, date: -86_400 }]));
+
+    const result = await setup(fetcher).repository.findUpcoming(query);
+
+    expect(result.candidates[0]?.releaseDate).toBe('1969-12-31');
+  });
+
   it('invalida o token e repete uma vez com um token novo apos 401', async () => {
     const fetcher = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(new Response(null, { status: 401 }))
       .mockResolvedValueOnce(Response.json([fixture]));
     const { repository, tokenProvider } = setup(fetcher);
-    tokenProvider.getToken.mockResolvedValueOnce('old').mockResolvedValueOnce('new');
+    tokenProvider.getToken
+      .mockResolvedValueOnce({ token: 'old', generation: 0 })
+      .mockResolvedValueOnce({ token: 'new', generation: 1 });
 
     await repository.findUpcoming(query);
 
@@ -135,6 +152,43 @@ describe('IgdbReleaseRepository', () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
     expect(fetcher.mock.calls[0]?.[1]?.headers).toMatchObject({ Authorization: 'Bearer old' });
     expect(fetcher.mock.calls[1]?.[1]?.headers).toMatchObject({ Authorization: 'Bearer new' });
+  });
+
+  it('compartilha uma unica renovacao OAuth quando chamadas concorrentes recebem 401', async () => {
+    let oauthRequests = 0;
+    const fetcher = vi.fn<typeof fetch>((input, init) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      if (url === 'https://id.twitch.tv/oauth2/token') {
+        oauthRequests += 1;
+        return Promise.resolve(tokenResponse(oauthRequests === 1 ? 'initial' : 'renewed'));
+      }
+
+      const authorization = (init?.headers as Record<string, string> | undefined)?.Authorization;
+      if (authorization === 'Bearer initial') {
+        return Promise.resolve(new Response(null, { status: 401 }));
+      }
+      return Promise.resolve(Response.json([fixture]));
+    });
+    const tokenProvider = new TwitchTokenProvider({
+      clientId: 'client-id',
+      clientSecret: 'client-secret',
+      clock: { now: () => new Date('2026-08-07T12:00:00.000Z') },
+      fetcher,
+    });
+    const repository = new IgdbReleaseRepository({
+      clientId: 'client-id',
+      fetcher,
+      tokenProvider,
+    });
+
+    const results = await Promise.all([
+      repository.findUpcoming(query),
+      repository.findUpcoming(query),
+    ]);
+
+    expect(results).toHaveLength(2);
+    expect(results.every((result) => result.candidates.length === 1)).toBe(true);
+    expect(oauthRequests).toBe(2);
   });
 
   it.each([

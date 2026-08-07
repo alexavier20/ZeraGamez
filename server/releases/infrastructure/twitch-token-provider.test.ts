@@ -65,8 +65,8 @@ describe('TwitchTokenProvider', () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(tokenResponse());
     const { provider } = setup(fetcher);
 
-    await expect(provider.getToken()).resolves.toBe('token');
-    await expect(provider.getToken()).resolves.toBe('token');
+    await expect(provider.getToken()).resolves.toEqual({ token: 'token', generation: 0 });
+    await expect(provider.getToken()).resolves.toEqual({ token: 'token', generation: 0 });
 
     expect(fetcher).toHaveBeenCalledTimes(1);
     const [url, init] = fetcher.mock.calls[0];
@@ -91,7 +91,10 @@ describe('TwitchTokenProvider', () => {
     const second = provider.getToken();
     resolveResponse(tokenResponse());
 
-    await expect(Promise.all([first, second])).resolves.toEqual(['token', 'token']);
+    await expect(Promise.all([first, second])).resolves.toEqual([
+      { token: 'token', generation: 0 },
+      { token: 'token', generation: 0 },
+    ]);
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
@@ -105,18 +108,21 @@ describe('TwitchTokenProvider', () => {
     const { provider } = setup(fetcher);
 
     const stale = provider.getToken();
-    provider.invalidate();
+    provider.invalidate({ token: 'stale', generation: 0 });
     const current = provider.getToken();
     expect(fetcher).toHaveBeenCalledTimes(2);
 
     requestA.resolve(tokenResponse('stale'));
-    await expect(stale).resolves.toBe('stale');
+    await expect(stale).resolves.toEqual({ token: 'stale', generation: 0 });
     const sharedCurrent = provider.getToken();
     expect(fetcher).toHaveBeenCalledTimes(2);
 
     requestB.resolve(tokenResponse('current'));
-    await expect(Promise.all([current, sharedCurrent])).resolves.toEqual(['current', 'current']);
-    await expect(provider.getToken()).resolves.toBe('current');
+    await expect(Promise.all([current, sharedCurrent])).resolves.toEqual([
+      { token: 'current', generation: 1 },
+      { token: 'current', generation: 1 },
+    ]);
+    await expect(provider.getToken()).resolves.toEqual({ token: 'current', generation: 1 });
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
@@ -128,11 +134,13 @@ describe('TwitchTokenProvider', () => {
       .mockResolvedValueOnce(tokenResponse('third', 120));
     const { provider, advance } = setup(fetcher);
 
-    await expect(provider.getToken()).resolves.toBe('first');
+    const first = await provider.getToken();
+    expect(first).toEqual({ token: 'first', generation: 0 });
     advance(60_000);
-    await expect(provider.getToken()).resolves.toBe('second');
-    provider.invalidate();
-    await expect(provider.getToken()).resolves.toBe('third');
+    const second = await provider.getToken();
+    expect(second).toEqual({ token: 'second', generation: 1 });
+    provider.invalidate(second);
+    await expect(provider.getToken()).resolves.toEqual({ token: 'third', generation: 2 });
   });
 
   it.each([
@@ -194,7 +202,7 @@ describe('TwitchTokenProvider', () => {
 
     await expect(Promise.all([first, second])).rejects.toBeInstanceOf(ServiceUnavailableError);
     expect(fetcher).toHaveBeenCalledTimes(1);
-    await expect(provider.getToken()).resolves.toBe('retry');
+    await expect(provider.getToken()).resolves.toEqual({ token: 'retry', generation: 0 });
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
@@ -207,7 +215,10 @@ describe('TwitchTokenProvider', () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(tokenResponse());
 
     try {
-      await expect(setup(fetcher, undefined, timeoutMs).provider.getToken()).resolves.toBe('token');
+      await expect(setup(fetcher, undefined, timeoutMs).provider.getToken()).resolves.toEqual({
+        token: 'token',
+        generation: 0,
+      });
       expect(timeoutSpy).toHaveBeenCalledWith(expectedTimeout);
       const [, init] = fetcher.mock.calls[0];
       expect(init?.signal).toBe(signal);

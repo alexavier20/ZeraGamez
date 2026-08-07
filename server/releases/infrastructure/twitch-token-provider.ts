@@ -16,8 +16,13 @@ const tokenResponseSchema = z.object({
 });
 
 export interface AccessTokenProvider {
-  getToken(): Promise<string>;
-  invalidate(): void;
+  getToken(): Promise<AccessTokenLease>;
+  invalidate(lease: AccessTokenLease): void;
+}
+
+export interface AccessTokenLease {
+  readonly token: string;
+  readonly generation: number;
 }
 
 interface TwitchTokenProviderOptions {
@@ -29,10 +34,10 @@ interface TwitchTokenProviderOptions {
 }
 
 export class TwitchTokenProvider implements AccessTokenProvider {
-  private cachedToken?: { token: string; expiresAt: number; generation: number };
+  private cachedToken?: AccessTokenLease & { expiresAt: number };
   private generation = 0;
   private readonly options: TwitchTokenProviderOptions;
-  private pendingToken?: { generation: number; promise: Promise<string> };
+  private pendingToken?: { generation: number; promise: Promise<AccessTokenLease> };
 
   constructor(options: TwitchTokenProviderOptions) {
     this.options = options;
@@ -44,18 +49,24 @@ export class TwitchTokenProvider implements AccessTokenProvider {
       this.cachedToken?.generation === generation &&
       this.options.clock.now().getTime() < this.cachedToken.expiresAt
     ) {
-      return Promise.resolve(this.cachedToken.token);
+      return Promise.resolve({ token: this.cachedToken.token, generation });
     }
-    if (this.pendingToken?.generation !== generation) {
-      const promise = this.requestToken(generation).finally(() => {
+    if (this.cachedToken?.generation === generation) {
+      this.generation += 1;
+      this.cachedToken = undefined;
+    }
+    const currentGeneration = this.generation;
+    if (this.pendingToken?.generation !== currentGeneration) {
+      const promise = this.requestToken(currentGeneration).finally(() => {
         if (this.pendingToken?.promise === promise) this.pendingToken = undefined;
       });
-      this.pendingToken = { generation, promise };
+      this.pendingToken = { generation: currentGeneration, promise };
     }
     return this.pendingToken.promise;
   }
 
-  invalidate() {
+  invalidate(lease: AccessTokenLease) {
+    if (lease.generation !== this.generation) return;
     this.generation += 1;
     this.cachedToken = undefined;
     this.pendingToken = undefined;
@@ -110,6 +121,6 @@ export class TwitchTokenProvider implements AccessTokenProvider {
         generation,
       };
     }
-    return token;
+    return { token, generation };
   }
 }

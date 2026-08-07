@@ -9,7 +9,7 @@ import {
   UpstreamTimeoutError,
 } from './upstream-errors';
 
-import type { AccessTokenProvider } from './twitch-token-provider';
+import type { AccessTokenLease, AccessTokenProvider } from './twitch-token-provider';
 import type {
   ReleaseRepository,
   ReleaseRepositoryResult,
@@ -19,7 +19,6 @@ import type { CandidateRelease } from '../domain/release';
 const igdbDateSchema = z
   .number()
   .int()
-  .nonnegative()
   .transform((seconds, context) => {
     const milliseconds = seconds * 1_000;
     if (!Number.isSafeInteger(milliseconds)) {
@@ -122,6 +121,7 @@ interface IgdbReleaseRepositoryOptions {
 interface IgdbRequestResult {
   response: Response;
   timeoutSignal: AbortSignal;
+  tokenLease: AccessTokenLease;
 }
 
 export class IgdbReleaseRepository implements ReleaseRepository {
@@ -134,7 +134,7 @@ export class IgdbReleaseRepository implements ReleaseRepository {
   async findUpcoming(query: ReleaseQuery): Promise<ReleaseRepositoryResult> {
     let requestResult = await this.request(query);
     if (requestResult.response.status === 401) {
-      this.options.tokenProvider.invalidate();
+      this.options.tokenProvider.invalidate(requestResult.tokenLease);
       requestResult = await this.request(query);
     }
 
@@ -183,20 +183,20 @@ export class IgdbReleaseRepository implements ReleaseRepository {
   }
 
   private async request(query: ReleaseQuery): Promise<IgdbRequestResult> {
-    const token = await this.options.tokenProvider.getToken();
+    const tokenLease = await this.options.tokenProvider.getToken();
     const timeoutSignal = AbortSignal.timeout(this.options.timeoutMs ?? 10_000);
     try {
       const response = await this.options.fetcher('https://api.igdb.com/v4/release_dates', {
         method: 'POST',
         headers: {
           Accept: 'application/json',
-          Authorization: 'Bearer ' + token,
+          Authorization: 'Bearer ' + tokenLease.token,
           'Client-ID': this.options.clientId,
         },
         body: buildQuery(query),
         signal: timeoutSignal,
       });
-      return { response, timeoutSignal };
+      return { response, timeoutSignal, tokenLease };
     } catch (error) {
       if (isTimeoutError(error) || isTimeoutError(timeoutSignal.reason)) {
         throw new UpstreamTimeoutError('IGDB excedeu o timeout.');
