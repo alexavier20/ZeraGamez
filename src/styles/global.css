@@ -1,4 +1,5 @@
 @import '@fontsource/chakra-petch/400.css';
+@import '@fontsource/chakra-petch/500.css';
 @import '@fontsource/chakra-petch/600.css';
 @import '@fontsource/chakra-petch/700.css';
 @import '@fontsource/oxanium/700.css';
@@ -11,6 +12,8 @@
   --color-bg-secondary: #12101a;
   --color-surface: #191624;
   --color-surface-hover: #2a171b;
+  --color-filter-active: #ff304029;
+  --color-filter-active-text: #ffd6da;
   --color-text-primary: #ffffff;
   --color-content-primary: #f5f3ff;
   --color-text-muted: #a8a3b3;
