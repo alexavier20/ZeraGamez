@@ -54,6 +54,14 @@ describe('consolidateReleases', () => {
     expect(result[0]?.platforms.map(({ id }) => id)).toEqual([6, 167]);
   });
 
+  it('deduplica plataformas repetidas do mesmo jogo', () => {
+    const result = consolidateReleases([candidate(), candidate()], 50);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.name).toBe('Game');
+    expect(result[0]?.platforms.map(({ id }) => id)).toEqual([6]);
+  });
+
   it('deduplica, ordena deterministicamente e aplica limite depois de consolidar', () => {
     const secondGame = candidate({
       game: { id: 2, slug: 'alpha', name: 'Alpha', coverUrl: null, genres: [] },
