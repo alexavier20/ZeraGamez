@@ -1,8 +1,27 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppRouter } from '@/app/router';
+
+const payload = {
+  data: [],
+  meta: {
+    from: '2026-08-07',
+    to: '2026-11-05',
+    count: 0,
+    limit: 50,
+    generatedAt: '2026-08-07T12:00:00.000Z',
+    sourceTruncated: false,
+  },
+};
+
+const fetchReleasesMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@/features/releases/api/releases-client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/features/releases/api/releases-client')>();
+  return { ...actual, fetchReleases: fetchReleasesMock };
+});
 
 function expectShellOrder() {
   const header = screen.getByRole('banner');
@@ -19,8 +38,12 @@ function expectShellOrder() {
 
 describe('Zera GameZ', () => {
   beforeEach(() => {
+    fetchReleasesMock.mockReset();
+    fetchReleasesMock.mockResolvedValue(payload);
     window.history.replaceState({}, '', '/');
   });
+
+  afterEach(() => vi.restoreAllMocks());
 
   it('renderiza a página inicial', () => {
     render(<AppRouter />);
@@ -37,6 +60,7 @@ describe('Zera GameZ', () => {
 
   it('abre Lançamentos com o título responsivo selecionado no Pencil', async () => {
     const user = userEvent.setup();
+    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
     render(<AppRouter />);
 
     const releasesLink = screen.getByRole('link', { name: 'Lançamentos' });
@@ -92,6 +116,10 @@ describe('Zera GameZ', () => {
     expect(screen.getByRole('navigation', { name: 'Navegação móvel' })).toBeInTheDocument();
     expect(screen.queryByText('Em construção')).not.toBeInTheDocument();
     expectShellOrder();
+    await waitFor(() => {
+      expect(info).toHaveBeenCalledWith('[releases] Próximos lançamentos', payload);
+    });
+    expect(info).toHaveBeenCalledTimes(1);
   });
 
   it('redireciona rotas desconhecidas para o início', async () => {
