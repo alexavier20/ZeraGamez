@@ -1,10 +1,30 @@
-import type { ReleasesResponse } from '../../../shared/contracts/releases';
+export interface ReleaseGenre {
+  id: number;
+  name: string;
+}
 
-export type ReleaseItem = ReleasesResponse['data'][number];
+export interface ReleasePlatform {
+  id: number;
+  name: string;
+  abbreviation: string | null;
+}
+
+export interface ReleaseGame {
+  id: number;
+  slug: string;
+  name: string;
+  coverUrl: string | null;
+  genres: ReleaseGenre[];
+}
+
+export interface ConsolidatedRelease extends ReleaseGame {
+  releaseDate: string;
+  platforms: ReleasePlatform[];
+}
 
 export interface CandidateRelease {
-  game: Omit<ReleaseItem, 'releaseDate' | 'platforms'>;
-  platform: ReleaseItem['platforms'][number];
+  game: ReleaseGame;
+  platform: ReleasePlatform;
   releaseDate: string;
   region: 'brazil' | 'worldwide';
 }
@@ -34,7 +54,7 @@ export function consolidateReleases(candidates: readonly CandidateRelease[], lim
     byGame.set(candidate.game.id, entries);
   }
 
-  const releases: ReleaseItem[] = [];
+  const releases: ConsolidatedRelease[] = [];
   for (const entries of byGame.values()) {
     const firstEntry = entries.at(0);
     if (!firstEntry) continue;

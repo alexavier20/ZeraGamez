@@ -2,6 +2,7 @@ import {
   listUpcomingReleases,
   type Clock,
   type ListUpcomingReleasesDependencies,
+  type ListUpcomingReleasesResult,
 } from '../server/releases/application/list-upcoming-releases';
 import {
   InvalidQueryError,
@@ -20,7 +21,6 @@ import {
   apiErrorResponseSchema,
   releasesResponseSchema,
   type ApiErrorCode,
-  type ReleasesResponse,
 } from '../shared/contracts/releases';
 
 const successHeaders = {
@@ -36,7 +36,7 @@ const errorHeaders = {
 
 export interface ReleaseHandlerDependencies {
   clock: Clock;
-  load(query: ReleaseQuery): Promise<ReleasesResponse>;
+  load(query: ReleaseQuery): Promise<ListUpcomingReleasesResult>;
 }
 
 function json(payload: unknown, status: number, headers: Record<string, string>) {

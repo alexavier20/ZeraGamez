@@ -1,7 +1,10 @@
-import { consolidateReleases, type CandidateRelease } from '../domain/release';
+import {
+  consolidateReleases,
+  type CandidateRelease,
+  type ConsolidatedRelease,
+} from '../domain/release';
 
 import type { ReleaseQuery } from './releases-query';
-import type { ReleasesResponse } from '../../../shared/contracts/releases';
 
 export interface Clock {
   now(): Date;
@@ -21,10 +24,22 @@ export interface ListUpcomingReleasesDependencies {
   repository: ReleaseRepository;
 }
 
+export interface ListUpcomingReleasesResult {
+  data: ConsolidatedRelease[];
+  meta: {
+    from: string;
+    to: string;
+    count: number;
+    limit: number;
+    generatedAt: string;
+    sourceTruncated: boolean;
+  };
+}
+
 export async function listUpcomingReleases(
   query: ReleaseQuery,
   dependencies: ListUpcomingReleasesDependencies,
-): Promise<ReleasesResponse> {
+): Promise<ListUpcomingReleasesResult> {
   const result = await dependencies.repository.findUpcoming(query);
   const data = consolidateReleases(result.candidates, query.limit);
 
