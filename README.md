@@ -39,6 +39,28 @@ npm run dev
 
 Abra o endereço informado pelo Vite no terminal.
 
+## Integração de lançamentos da IGDB
+
+O navegador consome GET /api/releases na mesma origem. A Vercel Function mantém
+as credenciais e o token OAuth no servidor, porque a IGDB não aceita chamadas
+diretas do navegador e o client secret nunca pode entrar no bundle Vite.
+
+Crie uma aplicação Confidential no Twitch Developer Portal e configure
+IGDB_CLIENT_ID e IGDB_CLIENT_SECRET nos ambientes Development, Preview e
+Production do projeto na Vercel. Nunca use o prefixo VITE_ e nunca registre os
+valores ou o token no console.
+
+Para desenvolvimento local, coloque os valores em .env.local, que é ignorado
+pelo Git, ou baixe as variáveis Development com a CLI da Vercel.
+
+- npm run dev inicia somente o Vite para trabalho visual.
+- npm run dev:vercel inicia o frontend e as Vercel Functions.
+
+GET /api/releases aceita from e to no formato YYYY-MM-DD, limit entre 1 e 100,
+platforms e genres como listas de IDs separadas por vírgulas. Sem parâmetros, a
+consulta cobre hoje em America/Sao_Paulo até 90 dias depois e retorna até 50
+jogos consolidados.
+
 ## Comandos disponíveis
 
 | Comando                | Finalidade                                          |
