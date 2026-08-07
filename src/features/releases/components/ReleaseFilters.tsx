@@ -30,7 +30,7 @@ export function ReleaseFilters() {
         data-testid="release-filters-tablet"
       >
         <span
-          className={`${compactChipClassName} h-9 border-brand bg-filter-active text-filter-active-text`}
+          className={`${compactChipClassName} h-9 border-brand bg-[#ff30402a] text-filter-active-text`}
         >
           <span>Todas</span>
         </span>

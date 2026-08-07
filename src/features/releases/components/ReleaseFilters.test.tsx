@@ -21,6 +21,7 @@ describe('ReleaseFilters', () => {
     expect(tablet).toHaveClass('hidden', 'sm:flex', 'lg:hidden');
     expect(tablet).toHaveTextContent(/^TodasPS5PCGêneroPeríodo$/);
     expect(tablet.querySelector('svg')).not.toBeInTheDocument();
+    expect(within(tablet).getByText('Todas').parentElement).toHaveClass('bg-[#ff30402a]');
 
     expect(desktop).toHaveClass('hidden', 'lg:flex');
     expect(desktop).toHaveTextContent(
