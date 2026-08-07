@@ -1,6 +1,6 @@
 # Zera GameZ
 
-O **Zera GameZ** será uma plataforma sobre jogos e lançamentos de games. O projeto ainda está em sua etapa inicial: esta versão contém apenas a fundação técnica e uma página acessível de “Em construção”, sem funcionalidades de negócio ou dados fictícios.
+O **Zera GameZ** será uma plataforma sobre jogos e lançamentos de games. O projeto ainda está em sua etapa inicial: esta versão contém a fundação técnica, uma página acessível de “Em construção” e a infraestrutura server-side para consultar lançamentos da IGDB. A resposta ainda é exibida somente no console do navegador; não há cards, listas ou dados fictícios na interface.
 
 ## Tecnologias
 
@@ -12,6 +12,8 @@ O **Zera GameZ** será uma plataforma sobre jogos e lançamentos de games. O pro
 - ESLint em flat config, com regras para TypeScript, Hooks, Fast Refresh, acessibilidade e imports
 - Prettier
 - Vitest, React Testing Library, `user-event`, `jest-dom` e jsdom
+- Zod para validação de contratos públicos e dados externos
+- Vercel Functions e CLI da Vercel para a API server-side e o desenvolvimento local integrado
 - GitHub Actions para integração contínua
 
 As versões exatas instaladas estão registradas no `package-lock.json`.
@@ -46,9 +48,9 @@ as credenciais e o token OAuth no servidor, porque a IGDB não aceita chamadas
 diretas do navegador e o client secret nunca pode entrar no bundle Vite.
 
 Crie uma aplicação Confidential no Twitch Developer Portal e configure
-IGDB_CLIENT_ID e IGDB_CLIENT_SECRET nos ambientes Development, Preview e
-Production do projeto na Vercel. Nunca use o prefixo VITE_ e nunca registre os
-valores ou o token no console.
+IGDB_CLIENT_ID e IGDB_CLIENT_SECRET como **Sensitive Environment Variables**
+nos ambientes Development, Preview e Production do projeto na Vercel. Nunca
+use o prefixo VITE_ e nunca registre os valores ou o token no console.
 
 Para desenvolvimento local, coloque os valores em .env.local, que é ignorado
 pelo Git, ou baixe as variáveis Development com a CLI da Vercel.
@@ -83,12 +85,25 @@ zera-gamez/
 ├── .github/
 │   └── workflows/
 │       └── quality.yml
+├── api/
+│   └── releases.ts
 ├── public/
+├── server/
+│   └── releases/
+│       ├── application/
+│       ├── domain/
+│       └── infrastructure/
+├── shared/
+│   └── contracts/
 ├── src/
 │   ├── app/
 │   │   ├── App.test.tsx
 │   │   ├── App.tsx
 │   │   └── router.tsx
+│   ├── features/
+│   │   └── releases/
+│   │       ├── api/
+│   │       └── hooks/
 │   ├── styles/
 │   │   └── global.css
 │   ├── test/
@@ -119,9 +134,9 @@ zera-gamez/
 - O token `brand` centraliza a cor principal `#e70012`; `surface` registra o fundo escuro inicial. Ambos ficam no tema do Tailwind.
 - O CSS global contém apenas o carregamento do Tailwind, tokens e bases do documento. O layout continua mobile-first.
 - O lint com informação de tipos detecta, entre outros problemas, promises ignoradas e imports inválidos.
-- A configuração atual é deliberadamente simples. Não há estado global, serviços, contextos ou abstrações sem uso.
+- A configuração atual permanece deliberadamente simples: não há estado global ou contextos sem uso. A integração de lançamentos usa portas pequenas, caso de uso, domínio e adaptadores server-side para manter credenciais e regras de consolidação desacopladas do React e da Vercel.
 
-Quando funcionalidades reais surgirem, a organização deve evoluir gradualmente para uma estrutura orientada a funcionalidades, sem criar diretórios vazios antes da necessidade:
+Quando novas funcionalidades surgirem, a organização deve evoluir gradualmente a partir da estrutura orientada a funcionalidades já usada pelos lançamentos, sem criar diretórios vazios antes da necessidade:
 
 ```text
 src/
@@ -145,10 +160,10 @@ Integrações externas futuras devem ficar atrás de serviços ou adaptadores. D
 - Nunca envie arquivos `.env` reais ao Git.
 - Variáveis prefixadas com `VITE_` são incorporadas ao bundle e ficam visíveis no navegador. Elas **não podem conter segredos**, tokens, senhas ou credenciais.
 - Não registre informações sensíveis no console.
-- Valide dados externos quando APIs forem introduzidas.
+- Dados externos da IGDB são validados antes de alcançar o domínio ou os componentes.
 - Use `unknown`, e não `any`, antes da validação de dados de origem externa.
 
-## Publicação futura na Vercel
+## Publicação na Vercel
 
 O projeto está preparado, mas não foi publicado. Ao importar o repositório na Vercel, use:
 
@@ -159,9 +174,9 @@ Output Directory: dist
 Install Command: npm install
 ```
 
-O `vercel.json` reescreve rotas da SPA para `index.html`, permitindo atualizar e acessar URLs internas diretamente. A Vercel continua servindo arquivos estáticos existentes antes de aplicar o fallback da aplicação.
+O `vercel.json` reescreve rotas da SPA para `index.html`, permitindo atualizar e acessar URLs internas diretamente. A Vercel continua servindo arquivos estáticos existentes antes de aplicar o fallback da aplicação, enquanto `api/releases.ts` é publicada como Vercel Function.
 
-Não há funções serverless, banco de dados, domínio ou SDK da Vercel nesta etapa.
+Não há banco de dados ou domínio configurados nesta etapa. A CLI da Vercel é usada apenas para executar localmente o frontend e a Function com `npm run dev:vercel`.
 
 ## Integração contínua
 
@@ -179,11 +194,10 @@ O deploy não faz parte do workflow. A publicação futura deverá usar a integr
 ## Tecnologias planejadas, mas ainda não instaladas
 
 - TanStack Query para estado do servidor e cache
-- Zod para validação de dados externos
 - React Hook Form para formulários
 - Playwright para testes ponta a ponta quando existirem fluxos críticos, como busca, login, favoritos e navegação por jogos
 - MSW para simulação de APIs em testes
 - Zustand somente se surgir uma necessidade real de estado global no cliente
 - shadcn/ui ou Radix UI somente após a definição do design system
 
-Também não foram instalados Axios, Redux, bibliotecas de gráficos, animação, datas ou ícones, nem SDKs de autenticação, banco de dados ou Vercel. Essas dependências só devem ser avaliadas diante de uma necessidade concreta.
+Também não foram instalados Axios, Redux, bibliotecas de gráficos, animação, datas ou ícones, nem SDKs de autenticação ou banco de dados. Essas dependências só devem ser avaliadas diante de uma necessidade concreta.
