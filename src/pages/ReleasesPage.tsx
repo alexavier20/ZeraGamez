@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { ReleaseFilters } from '@/features/releases/components/ReleaseFilters';
 import {
   ReleaseViewSwitcher,
   type ReleaseView,
@@ -18,6 +19,7 @@ export function ReleasesPage() {
         <PageHeading title="Próximos lançamentos" subtitle="Descubra os games que estão chegando" />
         <ReleaseViewSwitcher onChange={setView} value={view} />
       </div>
+      <ReleaseFilters />
     </main>
   );
 }

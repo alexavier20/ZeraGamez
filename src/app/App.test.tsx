@@ -67,6 +67,15 @@ describe('Zera GameZ', () => {
     expect(listButton).toHaveAttribute('aria-pressed', 'false');
     expect(calendarButton).toHaveAttribute('aria-pressed', 'true');
 
+    const headingAndSwitcher = pageHeading.parentElement?.parentElement;
+    const filters = screen.getByRole('region', { name: 'Filtros de lançamentos' });
+
+    expect(
+      (headingAndSwitcher?.compareDocumentPosition(filters) ?? 0) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(filters).toHaveClass('mt-[18px]', 'sm:mt-[22px]', 'lg:mt-7');
+
     expect(main).toHaveClass(
       'mx-auto',
       'max-w-[1440px]',
