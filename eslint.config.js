@@ -58,4 +58,10 @@ export default defineConfig([
       ],
     },
   },
+  {
+    files: ['api/**/*.ts', 'server/**/*.ts', 'shared/**/*.ts'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ]);

@@ -1,0 +1,229 @@
+// @vitest-environment node
+
+import { describe, expect, it, vi } from 'vitest';
+
+import { readIgdbEnvironment } from './env';
+import { TwitchTokenProvider } from './twitch-token-provider';
+import {
+  InvalidUpstreamResponseError,
+  ServiceUnavailableError,
+  UpstreamTimeoutError,
+} from './upstream-errors';
+
+function tokenResponse(token = 'token', expiresIn = 3_600) {
+  return Response.json({ access_token: token, expires_in: expiresIn, token_type: 'bearer' });
+}
+
+function deferredResponse() {
+  let resolve!: (response: Response) => void;
+  const promise = new Promise<Response>((resolvePromise) => (resolve = resolvePromise));
+  return { promise, resolve };
+}
+
+function setup(fetcher: typeof fetch, initial = '2026-08-07T12:00:00.000Z', timeoutMs?: number) {
+  let now = new Date(initial);
+  const provider = new TwitchTokenProvider({
+    clientId: 'client-id',
+    clientSecret: 'client-secret',
+    clock: { now: () => now },
+    fetcher,
+    ...(timeoutMs === undefined ? {} : { timeoutMs }),
+  });
+  return {
+    provider,
+    advance: (milliseconds: number) => (now = new Date(now.getTime() + milliseconds)),
+  };
+}
+
+describe('readIgdbEnvironment', () => {
+  it('retorna somente as credenciais validadas', () => {
+    expect(
+      readIgdbEnvironment({
+        IGDB_CLIENT_ID: 'client-id',
+        IGDB_CLIENT_SECRET: 'client-secret',
+      }),
+    ).toEqual({ clientId: 'client-id', clientSecret: 'client-secret' });
+  });
+
+  it('rejeita configuração incompleta sem expor valores', () => {
+    expect(() =>
+      readIgdbEnvironment({
+        IGDB_CLIENT_ID: '',
+        IGDB_CLIENT_SECRET: 'raw-secret',
+      }),
+    ).toThrow(ServiceUnavailableError);
+    try {
+      readIgdbEnvironment({ IGDB_CLIENT_ID: '', IGDB_CLIENT_SECRET: 'raw-secret' });
+    } catch (error) {
+      expect(String(error)).not.toContain('raw-secret');
+    }
+  });
+});
+
+describe('TwitchTokenProvider', () => {
+  it('envia credenciais no formulário e reutiliza o token válido', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(tokenResponse());
+    const { provider } = setup(fetcher);
+
+    await expect(provider.getToken()).resolves.toEqual({ token: 'token', generation: 0 });
+    await expect(provider.getToken()).resolves.toEqual({ token: 'token', generation: 0 });
+
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    const [url, init] = fetcher.mock.calls[0];
+    expect(url).toBe('https://id.twitch.tv/oauth2/token');
+    expect(url).not.toContain('client-secret');
+    expect(init?.method).toBe('POST');
+    expect(init?.headers).toEqual({ 'Content-Type': 'application/x-www-form-urlencoded' });
+    expect(init?.body).toBeInstanceOf(URLSearchParams);
+    if (!(init?.body instanceof URLSearchParams)) throw new Error('OAuth body is not form data.');
+    expect(init.body.toString()).toBe(
+      'client_id=client-id&client_secret=client-secret&grant_type=client_credentials',
+    );
+  });
+
+  it('compartilha a renovação simultânea', async () => {
+    let resolveResponse!: (response: Response) => void;
+    const pending = new Promise<Response>((resolve) => (resolveResponse = resolve));
+    const fetcher = vi.fn<typeof fetch>().mockReturnValue(pending);
+    const { provider } = setup(fetcher);
+
+    const first = provider.getToken();
+    const second = provider.getToken();
+    resolveResponse(tokenResponse());
+
+    await expect(Promise.all([first, second])).resolves.toEqual([
+      { token: 'token', generation: 0 },
+      { token: 'token', generation: 0 },
+    ]);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('isola a renovação invalidada da geração atual', async () => {
+    const requestA = deferredResponse();
+    const requestB = deferredResponse();
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockReturnValueOnce(requestA.promise)
+      .mockReturnValueOnce(requestB.promise);
+    const { provider } = setup(fetcher);
+
+    const stale = provider.getToken();
+    provider.invalidate({ token: 'stale', generation: 0 });
+    const current = provider.getToken();
+    expect(fetcher).toHaveBeenCalledTimes(2);
+
+    requestA.resolve(tokenResponse('stale'));
+    await expect(stale).resolves.toEqual({ token: 'stale', generation: 0 });
+    const sharedCurrent = provider.getToken();
+    expect(fetcher).toHaveBeenCalledTimes(2);
+
+    requestB.resolve(tokenResponse('current'));
+    await expect(Promise.all([current, sharedCurrent])).resolves.toEqual([
+      { token: 'current', generation: 1 },
+      { token: 'current', generation: 1 },
+    ]);
+    await expect(provider.getToken()).resolves.toEqual({ token: 'current', generation: 1 });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it('renova na margem de segurança e após invalidação', async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(tokenResponse('first', 120))
+      .mockResolvedValueOnce(tokenResponse('second', 120))
+      .mockResolvedValueOnce(tokenResponse('third', 120));
+    const { provider, advance } = setup(fetcher);
+
+    const first = await provider.getToken();
+    expect(first).toEqual({ token: 'first', generation: 0 });
+    advance(60_000);
+    const second = await provider.getToken();
+    expect(second).toEqual({ token: 'second', generation: 1 });
+    provider.invalidate(second);
+    await expect(provider.getToken()).resolves.toEqual({ token: 'third', generation: 2 });
+  });
+
+  it.each([
+    {
+      response: new Response('{', { status: 200 }),
+      error: InvalidUpstreamResponseError,
+    },
+    {
+      response: new Response(null, { status: 503 }),
+      error: ServiceUnavailableError,
+    },
+  ])('normaliza resposta OAuth inválida', async ({ response, error }) => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(response);
+    await expect(setup(fetcher).provider.getToken()).rejects.toBeInstanceOf(error);
+  });
+
+  it('normaliza timeout durante a leitura do corpo', async () => {
+    const response = tokenResponse();
+    vi.spyOn(response, 'json').mockRejectedValue(new DOMException('timeout', 'TimeoutError'));
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(response);
+
+    await expect(setup(fetcher).provider.getToken()).rejects.toBeInstanceOf(UpstreamTimeoutError);
+  });
+
+  it('normaliza leitura abortada pelo sinal de timeout', async () => {
+    const controller = new AbortController();
+    controller.abort(new DOMException('timeout', 'TimeoutError'));
+    const timeoutSpy = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(controller.signal);
+    const response = tokenResponse();
+    vi.spyOn(response, 'json').mockRejectedValue(new DOMException('aborted', 'AbortError'));
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(response);
+
+    try {
+      await expect(setup(fetcher).provider.getToken()).rejects.toBeInstanceOf(UpstreamTimeoutError);
+    } finally {
+      timeoutSpy.mockRestore();
+    }
+  });
+
+  it('normaliza falha de transporte durante a leitura do corpo', async () => {
+    const response = tokenResponse();
+    vi.spyOn(response, 'json').mockRejectedValue(new TypeError('stream failed'));
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(response);
+
+    await expect(setup(fetcher).provider.getToken()).rejects.toBeInstanceOf(
+      ServiceUnavailableError,
+    );
+  });
+
+  it('compartilha falha simultânea e permite nova tentativa', async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockRejectedValueOnce(new TypeError('network failed'))
+      .mockResolvedValueOnce(tokenResponse('retry'));
+    const { provider } = setup(fetcher);
+
+    const first = provider.getToken();
+    const second = provider.getToken();
+
+    await expect(Promise.all([first, second])).rejects.toBeInstanceOf(ServiceUnavailableError);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    await expect(provider.getToken()).resolves.toEqual({ token: 'retry', generation: 0 });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    { name: 'padrão', timeoutMs: undefined, expectedTimeout: 5_000 },
+    { name: 'configurado', timeoutMs: 1_234, expectedTimeout: 1_234 },
+  ])('encaminha o sinal de timeout $name ao fetch', async ({ timeoutMs, expectedTimeout }) => {
+    const signal = new AbortController().signal;
+    const timeoutSpy = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(signal);
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(tokenResponse());
+
+    try {
+      await expect(setup(fetcher, undefined, timeoutMs).provider.getToken()).resolves.toEqual({
+        token: 'token',
+        generation: 0,
+      });
+      expect(timeoutSpy).toHaveBeenCalledWith(expectedTimeout);
+      const [, init] = fetcher.mock.calls[0];
+      expect(init?.signal).toBe(signal);
+    } finally {
+      timeoutSpy.mockRestore();
+    }
+  });
+});

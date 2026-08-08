@@ -5,9 +5,11 @@ import {
   ReleaseViewSwitcher,
   type ReleaseView,
 } from '@/features/releases/components/ReleaseViewSwitcher';
+import { useReleasesConsole } from '@/features/releases/hooks/use-releases-console';
 import { PageHeading } from '@/shared/components/page-heading/PageHeading';
 
 export function ReleasesPage() {
+  useReleasesConsole();
   const [view, setView] = useState<ReleaseView>('list');
 
   return (
