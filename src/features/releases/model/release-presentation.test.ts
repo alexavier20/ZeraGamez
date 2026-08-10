@@ -7,6 +7,7 @@ import {
   formatReleaseStatus,
   getReleaseDayKind,
   groupReleasesByDate,
+  platformLabel,
 } from './release-presentation';
 
 import type { ReleasesResponse } from '../../../../shared/contracts/releases';
@@ -67,5 +68,11 @@ describe('release presentation', () => {
 
     expect(desktopPlatformLabels(platforms)).toEqual(['PC', 'PS5', '+1']);
     expect(compactPlatformLabel(platforms)).toBe('PC • PS5 • +1');
+  });
+
+  it('falls back to the platform name when abbreviation is absent (catches fallback removal)', () => {
+    expect(platformLabel({ id: 3, name: 'Xbox Series X|S', abbreviation: null })).toBe(
+      'Xbox Series X|S',
+    );
   });
 });
