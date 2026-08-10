@@ -39,7 +39,10 @@ Inicie o servidor local:
 npm run dev
 ```
 
-Abra o endereço informado pelo Vite no terminal.
+Esse comando inicia o frontend e as Vercel Functions em modo local, carrega o
+`.env.local` quando ele existe e não cria nem vincula um projeto remoto. Abra o
+endereço informado pela CLI no terminal. Para trabalhar somente na interface,
+sem `/api`, use `npm run dev:vite`.
 
 ## Integração de lançamentos da IGDB
 
@@ -55,8 +58,8 @@ use o prefixo VITE_ e nunca registre os valores ou o token no console.
 Para desenvolvimento local, coloque os valores em .env.local, que é ignorado
 pelo Git, ou baixe as variáveis Development com a CLI da Vercel.
 
-- npm run dev inicia somente o Vite para trabalho visual.
-- npm run dev:vercel inicia o frontend e as Vercel Functions.
+- npm run dev (ou npm run dev:vercel) inicia o frontend e as Vercel Functions.
+- npm run dev:vite inicia somente o Vite para trabalho visual, sem `/api`.
 
 GET /api/releases aceita from e to no formato YYYY-MM-DD, limit entre 1 e 100,
 platforms e genres como listas de IDs separadas por vírgulas. Sem parâmetros, a
@@ -65,18 +68,20 @@ jogos consolidados.
 
 ## Comandos disponíveis
 
-| Comando                | Finalidade                                          |
-| ---------------------- | --------------------------------------------------- |
-| `npm run dev`          | Inicia o servidor de desenvolvimento                |
-| `npm run build`        | Verifica o TypeScript e gera a aplicação em `dist/` |
-| `npm run preview`      | Serve localmente o build de produção                |
-| `npm run lint`         | Verifica o código com ESLint                        |
-| `npm run lint:fix`     | Corrige automaticamente problemas seguros de lint   |
-| `npm run format`       | Formata os arquivos com Prettier                    |
-| `npm run format:check` | Confere a formatação sem alterar arquivos           |
-| `npm run typecheck`    | Verifica os tipos sem emitir JavaScript             |
-| `npm run test`         | Executa o Vitest em modo de observação              |
-| `npm run test:run`     | Executa os testes uma vez, adequado para CI         |
+| Comando                | Finalidade                                           |
+| ---------------------- | ---------------------------------------------------- |
+| `npm run dev`          | Inicia frontend e Functions no ambiente Vercel local |
+| `npm run dev:vite`     | Inicia somente o frontend, sem `/api`                |
+| `npm run dev:vercel`   | Alias para o ambiente Vercel local                   |
+| `npm run build`        | Verifica o TypeScript e gera a aplicação em `dist/`  |
+| `npm run preview`      | Serve localmente o build de produção                 |
+| `npm run lint`         | Verifica o código com ESLint                         |
+| `npm run lint:fix`     | Corrige automaticamente problemas seguros de lint    |
+| `npm run format`       | Formata os arquivos com Prettier                     |
+| `npm run format:check` | Confere a formatação sem alterar arquivos            |
+| `npm run typecheck`    | Verifica os tipos sem emitir JavaScript              |
+| `npm run test`         | Executa o Vitest em modo de observação               |
+| `npm run test:run`     | Executa os testes uma vez, adequado para CI          |
 
 ## Estrutura atual
 
@@ -176,7 +181,7 @@ Install Command: npm install
 
 O `vercel.json` reescreve rotas da SPA para `index.html`, permitindo atualizar e acessar URLs internas diretamente. A Vercel continua servindo arquivos estáticos existentes antes de aplicar o fallback da aplicação, enquanto `api/releases.ts` é publicada como Vercel Function.
 
-Não há banco de dados ou domínio configurados nesta etapa. A CLI da Vercel é usada apenas para executar localmente o frontend e a Function com `npm run dev:vercel`.
+Não há banco de dados ou domínio configurados nesta etapa. A CLI da Vercel é usada apenas para executar localmente o frontend e a Function com `npm run dev` (ou `npm run dev:vercel`).
 
 ## Integração contínua
 
