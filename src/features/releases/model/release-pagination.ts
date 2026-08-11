@@ -28,10 +28,11 @@ export function createReleaseHorizon(initialFrom: string): string {
 }
 
 export function nextReleaseWindow(after: string, horizon: string): ReleaseWindow | null {
+  const validatedHorizon = releasesResponseSchema.shape.meta.shape.to.parse(horizon);
   const from = addCivilDays(after, 1);
-  if (from > horizon) return null;
+  if (from > validatedHorizon) return null;
   const candidateTo = addCivilDays(from, WINDOW_SPAN_DAYS);
-  return { from, to: candidateTo < horizon ? candidateTo : horizon };
+  return { from, to: candidateTo < validatedHorizon ? candidateTo : validatedHorizon };
 }
 
 export function splitReleaseWindow(

@@ -68,6 +68,7 @@ describe('release pagination windows', () => {
       from: '2028-08-10',
       to: '2028-08-10',
     });
+    expect(() => nextReleaseWindow('2026-11-09', '2027-02-29')).toThrow();
   });
 
   it('splits odd and even spans without a gap or overlap', () => {
@@ -99,6 +100,7 @@ describe('release pagination windows', () => {
       },
     );
     const firstSnapshot = structuredClone(first);
+    const secondSnapshot = structuredClone(second);
 
     const merged = mergeReleaseResponses(first, second);
 
@@ -112,5 +114,6 @@ describe('release pagination windows', () => {
       sourceTruncated: false,
     });
     expect(first).toEqual(firstSnapshot);
+    expect(second).toEqual(secondSnapshot);
   });
 });
