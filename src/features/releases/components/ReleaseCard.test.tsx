@@ -33,7 +33,8 @@ describe('ReleaseCard', () => {
     const mobileCover = within(mobile).getByRole('img', { name: 'Capa de Eclipse Protocol' });
 
     expect(desktopCover).toHaveAttribute('loading', 'lazy');
-    expect(desktopCover).toHaveClass('aspect-square', 'w-full', 'object-cover');
+    expect(desktopCover).toHaveClass('h-[244px]', 'w-full', 'object-cover');
+    expect(desktopCover).not.toHaveClass('aspect-square');
     expect(mobileCover).toHaveAttribute('loading', 'lazy');
     expect(mobileCover).toHaveClass('h-full', 'w-[82px]', 'object-cover');
   });
@@ -114,7 +115,8 @@ describe('ReleaseCard', () => {
       name: 'Capa indisponível de Eclipse Protocol',
     });
 
-    expect(desktopPlaceholder).toHaveClass('aspect-square', 'w-full');
+    expect(desktopPlaceholder).toHaveClass('h-[244px]', 'w-full');
+    expect(desktopPlaceholder).not.toHaveClass('aspect-square');
     expect(mobilePlaceholder).toHaveClass('h-full', 'w-[82px]');
     expect(desktopPlaceholder.querySelector('svg.lucide-gamepad-2')).toHaveAttribute(
       'aria-hidden',

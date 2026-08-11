@@ -516,7 +516,7 @@ export function ReleaseCard({ item, generatedAt }: ReleaseCardProps) {
 
 Implementation details:
 
-- Desktop cover: `aspect-square w-full rounded-xl object-cover`, with `loading="lazy"` and `alt={\`Capa de ${item.name}\`}`.
+- Desktop cover: `h-[244px] w-full rounded-xl object-cover`, with `loading="lazy"` and `alt={\`Capa de ${item.name}\`}`. This follows the approved Pencil geometry (220 × 244 cover and approximately 407px total card height) instead of the superseded square-cover constraint.
 - Mobile cover: `h-full w-[82px] rounded-[10px] object-cover`.
 - Placeholder: a `div role="img"` with the exact accessible label, a surface gradient, and decorative `Gamepad2` icon.
 - Status badge: dark overlay on desktop; success-tinted chip on mobile.

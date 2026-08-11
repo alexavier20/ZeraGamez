@@ -38,14 +38,14 @@ function ReleaseCardDesktop({ item, presentation }: ReleaseCardLayoutProps) {
         {item.coverUrl ? (
           <img
             alt={`Capa de ${item.name}`}
-            className="aspect-square w-full rounded-xl object-cover"
+            className="h-[244px] w-full rounded-xl object-cover"
             loading="lazy"
             src={item.coverUrl}
           />
         ) : (
           <div
             aria-label={`Capa indisponível de ${item.name}`}
-            className="flex aspect-square w-full items-center justify-center rounded-xl bg-gradient-to-br from-bg-secondary to-surface-hover text-text-muted"
+            className="flex h-[244px] w-full items-center justify-center rounded-xl bg-gradient-to-br from-bg-secondary to-surface-hover text-text-muted"
             role="img"
           >
             <Gamepad2 aria-hidden="true" size={32} />
