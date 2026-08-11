@@ -61,11 +61,13 @@ describe('useReleases', () => {
     const { result } = renderHook(() => useReleases({ load, logger: log }), {
       wrapper: StrictWrapper,
     });
+    const initialRetry = result.current.retry;
 
     expect(result.current.state.status).toBe('loading');
     await waitFor(() => {
       expect(result.current.state.status).toBe('success');
     });
+    expect(result.current.retry).toBe(initialRetry);
     expect(load).toHaveBeenCalledTimes(1);
     expect(log.info).toHaveBeenCalledWith(
       '[releases] Pr\u00f3ximos lan\u00e7amentos',
@@ -82,6 +84,7 @@ describe('useReleases', () => {
     await waitFor(() => {
       expect(result.current.state.status).toBe('empty');
     });
+    expect(result.current.state).toEqual({ status: 'empty', response: emptyResponse });
   });
 
   it('normalizes an error and retries with a new request', async () => {
@@ -91,6 +94,7 @@ describe('useReleases', () => {
       .mockResolvedValueOnce(responseWithOneRelease);
     const log = logger();
     const { result } = renderHook(() => useReleases({ load, logger: log }));
+    const initialRetry = result.current.retry;
 
     await waitFor(() => {
       expect(result.current.state.status).toBe('error');
@@ -99,15 +103,19 @@ describe('useReleases', () => {
       status: 'error',
       error: { status: 503, code: 'SERVICE_UNAVAILABLE' },
     });
+    expect(result.current.retry).toBe(initialRetry);
     expect(JSON.stringify(log.error.mock.calls)).not.toContain('secret');
+    expect(log.error).toHaveBeenCalledTimes(1);
 
     act(() => {
       result.current.retry();
     });
     expect(result.current.state.status).toBe('loading');
+    expect(result.current.retry).toBe(initialRetry);
     await waitFor(() => {
       expect(result.current.state.status).toBe('success');
     });
+    expect(result.current.retry).toBe(initialRetry);
     expect(load).toHaveBeenCalledTimes(2);
   });
 
@@ -127,6 +135,7 @@ describe('useReleases', () => {
       status: 0,
       code: 'INTERNAL_ERROR',
     });
+    expect(log.error).toHaveBeenCalledTimes(1);
     expect(JSON.stringify(log.error.mock.calls)).not.toContain('secret');
   });
 
