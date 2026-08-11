@@ -180,6 +180,7 @@ export function useReleases(
   }, []);
 
   const loadMore = useCallback(() => {
+    if (failedWindowRef.current) return;
     void consumePendingWindow(sessionRef.current);
   }, [consumePendingWindow]);
 

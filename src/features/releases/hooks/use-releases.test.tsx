@@ -296,6 +296,47 @@ describe('useReleases', () => {
     expect(successData(result.current.state)).toEqual(laterPage.data);
   });
 
+  it('stays loading while a later empty window is pending before final empty', async () => {
+    const initialEmpty = page([], {
+      from: '2024-08-11',
+      to: '2026-05-12',
+    });
+    const finalEmpty = deferred<ReleasesResponse>();
+    const load = vi
+      .fn<ReleasesDependencies['load']>()
+      .mockResolvedValueOnce(initialEmpty)
+      .mockReturnValueOnce(finalEmpty.promise);
+    const { result } = renderHook(() => useReleases({ load, logger: logger() }));
+
+    await waitFor(() => {
+      expect(load).toHaveBeenCalledTimes(2);
+    });
+    expect(load.mock.calls[1]?.[0]).toEqual({
+      from: '2026-05-13',
+      to: '2026-08-11',
+      limit: 100,
+    });
+    expect(result.current.state).toEqual({ status: 'loading' });
+    expect(result.current.pagination).toEqual({ status: 'loading' });
+
+    await act(async () => {
+      finalEmpty.resolve(
+        page([], {
+          from: '2026-05-13',
+          to: '2026-08-11',
+        }),
+      );
+      await finalEmpty.promise;
+    });
+
+    await waitFor(() => {
+      expect(result.current.state.status).toBe('empty');
+    });
+    expect(result.current.state).toEqual({ status: 'empty', response: initialEmpty });
+    expect(result.current.pagination).toEqual({ status: 'complete' });
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
   it('keeps the accumulated response when a later window fails', async () => {
     const load = vi
       .fn<ReleasesDependencies['load']>()
@@ -352,6 +393,15 @@ describe('useReleases', () => {
       expect(result.current.pagination.status).toBe('error');
     });
     expect(successResponse(result.current.state)).toBe(beforeError);
+    const failedPagination = result.current.pagination;
+
+    act(() => {
+      result.current.loadMore();
+    });
+
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(load.mock.calls.at(-1)?.[0]).toEqual(failedQuery);
+    expect(result.current.pagination).toBe(failedPagination);
 
     act(() => {
       result.current.retryMore();
@@ -412,6 +462,62 @@ describe('useReleases', () => {
 
     expect(load).toHaveBeenCalledTimes(1);
     expect(result.current.state).toEqual({ status: 'loading' });
+    expect(result.current.pagination).toEqual({
+      status: 'error',
+      error: { status: 0, code: 'INTERNAL_ERROR' },
+    });
+  });
+
+  it('keeps accumulated data and retries the same incremental one-day saturation', async () => {
+    const initial = page([release(1, '2026-08-10')], {
+      from: '2024-08-11',
+      to: '2026-08-10',
+    });
+    const saturatedDay = page([release(99, '2026-08-11')], {
+      from: '2026-08-11',
+      to: '2026-08-11',
+      count: 100,
+    });
+    const failedQuery = {
+      from: '2026-08-11',
+      to: '2026-08-11',
+      limit: 100,
+    };
+    const load = vi
+      .fn<ReleasesDependencies['load']>()
+      .mockResolvedValueOnce(initial)
+      .mockResolvedValue(saturatedDay);
+    const { result } = renderHook(() => useReleases({ load, logger: logger() }));
+
+    await waitFor(() => {
+      expect(result.current.state.status).toBe('success');
+    });
+    const accumulated = successResponse(result.current.state);
+
+    act(() => {
+      result.current.loadMore();
+    });
+    await waitFor(() => {
+      expect(result.current.pagination.status).toBe('error');
+    });
+
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(load.mock.calls[1]?.[0]).toEqual(failedQuery);
+    expect(successResponse(result.current.state)).toBe(accumulated);
+    expect(successData(result.current.state).map(({ id }) => id)).toEqual([1]);
+
+    act(() => {
+      result.current.retryMore();
+    });
+    await waitFor(() => {
+      expect(load).toHaveBeenCalledTimes(3);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(load.mock.calls.at(-1)?.[0]).toEqual(failedQuery);
+    expect(successResponse(result.current.state)).toBe(accumulated);
     expect(result.current.pagination).toEqual({
       status: 'error',
       error: { status: 0, code: 'INTERNAL_ERROR' },
