@@ -83,7 +83,7 @@ Recebe uma data civil, o dia de referência e os jogos daquele dia. Produz o cab
 
 Funciona como fachada sobre duas apresentações puras do mesmo DTO:
 
-- `ReleaseCardDesktop`: capa com altura fixa de 244px e largura fluida (a referência Pencil parte de 220 × 244 e produz cards de aproximadamente 407px), status sobre a imagem, favorito visual, título, data, chips de plataforma, primeiro gênero, botão de lista e menu visual;
+- `ReleaseCardDesktop`: card com altura total fixa de 407px, capa com altura fixa de 244px e largura fluida, metadata compacta com chips de plataforma e primeiro gênero na mesma faixa, status sobre a imagem, favorito visual, título, data, botão de lista e menu visual;
 - `ReleaseCardMobile`: capa estreita à esquerda, informações à direita, status e plataformas na mesma linha e botão compacto.
 
 A duplicação limitada de marcação é intencional porque os dois layouts têm hierarquias visuais diferentes no Pen. Formatação e dados permanecem compartilhados.

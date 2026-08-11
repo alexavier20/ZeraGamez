@@ -26,7 +26,8 @@ describe('ReleaseCard', () => {
     const desktop = screen.getByTestId('release-card-desktop-42');
     const mobile = screen.getByTestId('release-card-mobile-42');
 
-    expect(desktop).toHaveClass('hidden', 'sm:flex', 'sm:flex-col');
+    expect(desktop).toHaveClass('hidden', 'h-[407px]', 'sm:flex', 'sm:flex-col', 'sm:gap-2');
+    expect(desktop).not.toHaveClass('overflow-hidden');
     expect(mobile).toHaveClass('grid', 'grid-cols-[82px_minmax(0,1fr)]', 'sm:hidden');
 
     const desktopCover = within(desktop).getByRole('img', { name: 'Capa de Eclipse Protocol' });
@@ -54,6 +55,16 @@ describe('ReleaseCard', () => {
     expect(within(desktop).getByText('PS5')).toBeInTheDocument();
     expect(within(desktop).getByText('+1')).toBeInTheDocument();
     expect(within(mobile).getByText('PC • PS5 • +1')).toBeInTheDocument();
+
+    const desktopPlatformRow = within(desktop).getByText('PC').parentElement;
+    const desktopGenre = within(desktop).getByText('Ação RPG');
+    expect(desktopGenre.parentElement).toBe(desktopPlatformRow);
+    expect(desktopPlatformRow).toHaveClass('flex', 'min-w-0', 'items-center', 'gap-1.5');
+
+    const desktopActions = within(desktop).getByRole('button', {
+      name: 'Adicionar Eclipse Protocol à lista',
+    }).parentElement;
+    expect(desktopActions).toHaveClass('pt-2');
 
     const headings = screen.getAllByRole('heading', { name: 'Eclipse Protocol' });
     expect(headings).toHaveLength(2);

@@ -64,7 +64,7 @@ function ReleaseCardDesktop({ item, presentation }: ReleaseCardLayoutProps) {
         </button>
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="min-w-0">
           <h3
             className="truncate font-heading text-base font-semibold text-text-primary"
@@ -75,25 +75,27 @@ function ReleaseCardDesktop({ item, presentation }: ReleaseCardLayoutProps) {
           <p className="mt-1 text-xs text-text-muted">{presentation.date}</p>
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex min-w-0 items-center gap-1.5">
           {presentation.desktopPlatforms.map((platform) => (
             <span
-              className="rounded-md border border-border-brand bg-bg-secondary px-2 py-1 text-[11px] font-semibold text-text-muted"
+              className="shrink-0 rounded-md border border-border-brand bg-bg-secondary px-2 py-1 text-[11px] font-semibold text-text-muted"
               key={platform}
             >
               {platform}
             </span>
           ))}
+          {presentation.genre ? (
+            <p
+              className="ml-auto min-w-0 truncate text-xs text-text-muted"
+              title={presentation.genre}
+            >
+              {presentation.genre}
+            </p>
+          ) : null}
         </div>
-
-        {presentation.genre ? (
-          <p className="truncate text-xs text-text-muted" title={presentation.genre}>
-            {presentation.genre}
-          </p>
-        ) : null}
       </div>
 
-      <div className="flex items-center gap-2 border-t border-border-brand pt-3">
+      <div className="flex items-center gap-2 border-t border-border-brand pt-2">
         <button
           aria-label={`Adicionar ${item.name} à lista`}
           className={`${disabledActionClassName} h-9 flex-1 gap-2 border border-border-brand bg-bg-secondary px-3 text-xs font-semibold text-content-primary`}
@@ -210,7 +212,7 @@ export function ReleaseCard({ item, generatedAt }: ReleaseCardProps): React.Reac
   return (
     <>
       <article
-        className="hidden overflow-hidden rounded-2xl border border-border-brand bg-surface p-3 shadow-[0_8px_24px_#00000040] sm:flex sm:flex-col sm:gap-3"
+        className="hidden h-[407px] rounded-2xl border border-border-brand bg-surface p-3 shadow-[0_8px_24px_#00000040] sm:flex sm:flex-col sm:gap-2"
         data-testid={`release-card-desktop-${String(item.id)}`}
       >
         <ReleaseCardDesktop item={item} presentation={presentation} />

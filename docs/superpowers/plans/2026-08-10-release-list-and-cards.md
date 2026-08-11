@@ -498,7 +498,7 @@ export function ReleaseCard({ item, generatedAt }: ReleaseCardProps) {
   return (
     <>
       <article
-        className="hidden overflow-hidden rounded-2xl border border-border-brand bg-surface p-3 shadow-[0_8px_24px_#00000040] sm:flex sm:flex-col sm:gap-3"
+        className="hidden h-[407px] rounded-2xl border border-border-brand bg-surface p-3 shadow-[0_8px_24px_#00000040] sm:flex sm:flex-col sm:gap-2"
         data-testid={`release-card-desktop-${item.id}`}
       >
         <ReleaseCardDesktop generatedAt={generatedAt} item={item} presentation={presentation} />
@@ -516,7 +516,9 @@ export function ReleaseCard({ item, generatedAt }: ReleaseCardProps) {
 
 Implementation details:
 
-- Desktop cover: `h-[244px] w-full rounded-xl object-cover`, with `loading="lazy"` and `alt={\`Capa de ${item.name}\`}`. This follows the approved Pencil geometry (220 × 244 cover and approximately 407px total card height) instead of the superseded square-cover constraint.
+- Desktop card: `h-[407px]` with `sm:gap-2`, no container clipping, and `pt-2` above the actions. This fixes the Pencil total height instead of allowing metadata to grow the card.
+- Desktop cover: `h-[244px] w-full rounded-xl object-cover`, with `loading="lazy"` and `alt={\`Capa de ${item.name}\`}`.
+- Desktop metadata: keep title and date intact, then place platform chips and the first genre in one compact `flex min-w-0 items-center gap-1.5` row; the genre remains available through its `title` when truncated.
 - Mobile cover: `h-full w-[82px] rounded-[10px] object-cover`.
 - Placeholder: a `div role="img"` with the exact accessible label, a surface gradient, and decorative `Gamepad2` icon.
 - Status badge: dark overlay on desktop; success-tinted chip on mobile.
