@@ -56,7 +56,7 @@ describe('ReleaseLoadMore', () => {
     vi.unstubAllGlobals();
   });
 
-  it('loads once when the idle sentinel intersects and disconnects on cleanup', () => {
+  it('loads at most once for repeated intersections and disconnects immediately', () => {
     const onLoadMore = vi.fn();
     const { unmount } = render(
       <ReleaseLoadMore
@@ -70,12 +70,68 @@ describe('ReleaseLoadMore', () => {
     expect(observe).toHaveBeenCalledTimes(1);
     expect(observerOptions).toMatchObject({ rootMargin: '600px 0px' });
     act(() => {
+      observerCallback(
+        [
+          { isIntersecting: true } as IntersectionObserverEntry,
+          { isIntersecting: true } as IntersectionObserverEntry,
+        ],
+        observerInstance,
+      );
       observerCallback([{ isIntersecting: true } as IntersectionObserverEntry], observerInstance);
     });
     expect(onLoadMore).toHaveBeenCalledTimes(1);
+    expect(disconnect).toHaveBeenCalledTimes(1);
 
     unmount();
-    expect(disconnect).toHaveBeenCalledTimes(1);
+    expect(disconnect).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores an observer callback queued before unmount', () => {
+    const onLoadMore = vi.fn();
+    const { unmount } = render(
+      <ReleaseLoadMore
+        enabled
+        onLoadMore={onLoadMore}
+        onRetry={vi.fn()}
+        pagination={{ status: 'idle' }}
+      />,
+    );
+    const queuedCallback = observerCallback;
+
+    unmount();
+    act(() => {
+      queuedCallback([{ isIntersecting: true } as IntersectionObserverEntry], observerInstance);
+    });
+
+    expect(onLoadMore).not.toHaveBeenCalled();
+  });
+
+  it('ignores an observer callback queued before leaving idle', () => {
+    const onLoadMore = vi.fn();
+    const onRetry = vi.fn();
+    const { rerender } = render(
+      <ReleaseLoadMore
+        enabled
+        onLoadMore={onLoadMore}
+        onRetry={onRetry}
+        pagination={{ status: 'idle' }}
+      />,
+    );
+    const queuedCallback = observerCallback;
+
+    rerender(
+      <ReleaseLoadMore
+        enabled
+        onLoadMore={onLoadMore}
+        onRetry={onRetry}
+        pagination={{ status: 'loading' }}
+      />,
+    );
+    act(() => {
+      queuedCallback([{ isIntersecting: true } as IntersectionObserverEntry], observerInstance);
+    });
+
+    expect(onLoadMore).not.toHaveBeenCalled();
   });
 
   it('does not observe while disabled or while pagination is not idle', () => {

@@ -23,16 +23,21 @@ export function ReleaseLoadMore({
     if (!enabled || pagination.status !== 'idle' || !sentinelRef.current) return;
     if (typeof IntersectionObserver === 'undefined') return;
 
+    let active = true;
+    let triggered = false;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          onLoadMore();
-        }
+        if (!active || triggered || !entries.some((entry) => entry.isIntersecting)) return;
+
+        triggered = true;
+        observer.disconnect();
+        onLoadMore();
       },
       { rootMargin: '600px 0px' },
     );
     observer.observe(sentinelRef.current);
     return () => {
+      active = false;
       observer.disconnect();
     };
   }, [enabled, onLoadMore, pagination.status]);
