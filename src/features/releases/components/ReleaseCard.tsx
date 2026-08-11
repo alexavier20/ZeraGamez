@@ -2,9 +2,9 @@ import { BookmarkPlus, Ellipsis, Gamepad2, Heart, Plus } from 'lucide-react';
 
 import {
   compactPlatformLabel,
-  desktopPlatformLabels,
   formatReleaseDate,
   formatReleaseStatus,
+  platformLabel,
   type ReleaseItem,
 } from '@/features/releases/model/release-presentation';
 
@@ -18,9 +18,15 @@ export interface ReleaseCardProps {
 interface ReleasePresentation {
   readonly date: string;
   readonly status: string;
-  readonly desktopPlatforms: readonly string[];
+  readonly desktopPlatforms: readonly ReleasePlatformChip[];
   readonly compactPlatforms: string;
   readonly genre: string | undefined;
+}
+
+interface ReleasePlatformChip {
+  readonly key: string;
+  readonly label: string;
+  readonly summary: boolean;
 }
 
 interface ReleaseCardLayoutProps {
@@ -30,6 +36,26 @@ interface ReleaseCardLayoutProps {
 
 const disabledActionClassName =
   'inline-flex items-center justify-center rounded-lg text-text-muted transition-colors disabled:cursor-not-allowed disabled:opacity-100';
+
+function desktopPlatformChips(platforms: ReleaseItem['platforms']): ReleasePlatformChip[] {
+  const chips = platforms.slice(0, 2).map((platform, index) => ({
+    key: `platform-${String(platform.id)}-${String(index)}`,
+    label: platformLabel(platform),
+    summary: false,
+  }));
+  const remaining = platforms.length - chips.length;
+
+  return remaining > 0
+    ? [
+        ...chips,
+        {
+          key: `platform-summary-${String(platforms.length)}`,
+          label: `+${String(remaining)}`,
+          summary: true,
+        },
+      ]
+    : chips;
+}
 
 function ReleaseCardDesktop({ item, presentation }: ReleaseCardLayoutProps) {
   return (
@@ -78,15 +104,18 @@ function ReleaseCardDesktop({ item, presentation }: ReleaseCardLayoutProps) {
         <div className="flex min-w-0 items-center gap-1.5">
           {presentation.desktopPlatforms.map((platform) => (
             <span
-              className="shrink-0 rounded-md border border-border-brand bg-bg-secondary px-2 py-1 text-[11px] font-semibold text-text-muted"
-              key={platform}
+              className={`${
+                platform.summary ? 'shrink-0' : 'min-w-0 shrink truncate'
+              } rounded-md border border-border-brand bg-bg-secondary px-2 py-1 text-[11px] font-semibold text-text-muted`}
+              key={platform.key}
+              title={platform.summary ? undefined : platform.label}
             >
-              {platform}
+              {platform.label}
             </span>
           ))}
           {presentation.genre ? (
             <p
-              className="ml-auto min-w-0 truncate text-xs text-text-muted"
+              className="ml-auto min-w-[4rem] max-w-[40%] shrink truncate text-xs text-text-muted"
               title={presentation.genre}
             >
               {presentation.genre}
@@ -204,7 +233,7 @@ export function ReleaseCard({ item, generatedAt }: ReleaseCardProps): React.Reac
   const presentation: ReleasePresentation = {
     date: formatReleaseDate(item.releaseDate),
     status: formatReleaseStatus(item.releaseDate, generatedAt),
-    desktopPlatforms: desktopPlatformLabels(item.platforms),
+    desktopPlatforms: desktopPlatformChips(item.platforms),
     compactPlatforms: compactPlatformLabel(item.platforms),
     genre: item.genres.at(0)?.name,
   };

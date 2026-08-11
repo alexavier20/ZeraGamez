@@ -1,5 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ReleaseCard } from '@/features/releases/components/ReleaseCard';
 
@@ -85,6 +85,64 @@ describe('ReleaseCard', () => {
     );
 
     expect(screen.queryByText('Ação RPG')).not.toBeInTheDocument();
+  });
+
+  it('uses stable platform identity when fallback labels are duplicated', () => {
+    const duplicateLabel = 'Plataforma doméstica com um nome excepcionalmente comprido';
+    const duplicatedPlatforms: ReleaseItem = {
+      ...release,
+      platforms: [
+        { id: 200, name: duplicateLabel, abbreviation: null },
+        { id: 201, name: duplicateLabel, abbreviation: null },
+      ],
+    };
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    try {
+      render(<ReleaseCard generatedAt="2026-08-10T12:00:00.000Z" item={duplicatedPlatforms} />);
+
+      expect(consoleError).not.toHaveBeenCalled();
+      expect(
+        within(screen.getByTestId('release-card-desktop-42')).getAllByText(duplicateLabel),
+      ).toHaveLength(2);
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it('shrinks long textual chips while preserving titles, the summary, and the genre', () => {
+    const firstPlatform = 'Plataforma doméstica com um nome excepcionalmente comprido';
+    const secondPlatform = 'Outro dispositivo de entretenimento com nome ainda mais extenso';
+    const longGenre = 'Aventura narrativa cinematográfica de mundo aberto';
+    render(
+      <ReleaseCard
+        generatedAt="2026-08-10T12:00:00.000Z"
+        item={{
+          ...release,
+          platforms: [
+            { id: 200, name: firstPlatform, abbreviation: null },
+            { id: 201, name: secondPlatform, abbreviation: null },
+            { id: 202, name: 'Console portátil', abbreviation: null },
+          ],
+          genres: [{ id: 301, name: longGenre }],
+        }}
+      />,
+    );
+
+    const desktop = screen.getByTestId('release-card-desktop-42');
+    for (const label of [firstPlatform, secondPlatform]) {
+      expect(within(desktop).getByText(label)).toHaveAttribute('title', label);
+      expect(within(desktop).getByText(label)).toHaveClass('min-w-0', 'shrink', 'truncate');
+      expect(within(desktop).getByText(label)).not.toHaveClass('shrink-0');
+    }
+    expect(within(desktop).getByText('+1')).toHaveClass('shrink-0');
+    expect(within(desktop).getByText(longGenre)).toHaveAttribute('title', longGenre);
+    expect(within(desktop).getByText(longGenre)).toHaveClass(
+      'min-w-[4rem]',
+      'max-w-[40%]',
+      'shrink',
+      'truncate',
+    );
   });
 
   it('keeps named visual actions disabled and decorative icons out of the accessibility tree', () => {

@@ -115,6 +115,9 @@ O rótulo desktop separa o destaque relativo da data. No mobile, o texto é comp
 - `coverUrl: null` usa um placeholder visual com ícone, sem imagem fictícia.
 - Chips usam `abbreviation` quando presente e `name` como fallback.
 - Desktop mostra no máximo duas plataformas e resume o excedente como `+N`.
+- Chips textuais de desktop usam identidade por plataforma/posição, podem encolher e truncar,
+  e preservam o rótulo completo em `title`; `+N` não encolhe e o primeiro gênero mantém
+  espaço visível para truncamento.
 - Mobile resume as plataformas em uma linha textual curta.
 - O primeiro gênero é exibido; ausência de gênero não cria rótulo vazio.
 - Títulos e metadados longos usam truncamento sem alterar o valor acessível.
@@ -134,8 +137,9 @@ Filtros permanecem visuais e não alteram a consulta nesta etapa.
 
 ## Acessibilidade
 
-- Cada grupo é uma `section` nomeada por seu cabeçalho.
-- A coleção usa semântica de lista e cada card usa semântica de artigo/list item.
+- A coleção externa é neutra; cada grupo é uma `section` nomeada por seu único `h2`.
+- Cada `section` contém uma única lista nativa rotulada pelo `h2`, com um `listitem` direto
+  por DTO; o card preserva sua semântica de artigo dentro desse item.
 - Imagens possuem `alt` descritivo; ícones decorativos ficam ocultos da árvore acessível.
 - Estados de carregamento e erro usam região com `aria-live="polite"` sem anunciar skeletons individualmente.
 - Controles visuais indisponíveis usam `disabled` e rótulo acessível.

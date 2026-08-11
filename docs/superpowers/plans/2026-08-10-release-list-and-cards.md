@@ -523,6 +523,9 @@ Implementation details:
 - Placeholder: a `div role="img"` with the exact accessible label, a surface gradient, and decorative `Gamepad2` icon.
 - Status badge: dark overlay on desktop; success-tinted chip on mobile.
 - Desktop platforms: at most two chips plus `+N`; mobile uses the compact text.
+- Desktop textual chips use platform ID plus position for React identity, may shrink/truncate,
+  and expose the complete label through `title`; the `+N` summary never shrinks and the first
+  genre keeps a visible truncation budget.
 - The first genre is omitted when absent.
 - Add button, favorite, and more buttons use `disabled` plus explicit accessible names; preserve opacity with `disabled:opacity-100` and use `disabled:cursor-not-allowed`.
 - Use `title={item.name}` on truncated headings so the full value remains available.
@@ -578,7 +581,7 @@ export function ReleaseList(props: ReleaseListProps): React.ReactElement;
 it('renders every release once in chronological date groups', () => {
   render(<ReleaseList response={responseWithThreeReleasesAcrossTwoDates} />);
 
-  const groups = screen.getAllByRole('group', { name: /10 de agosto|11 de agosto/i });
+  const groups = screen.getAllByRole('region', { name: /10 de agosto|11 de agosto/i });
   expect(groups).toHaveLength(2);
   expect(screen.getAllByRole('listitem')).toHaveLength(3);
   expect(screen.getAllByText('Primeiro jogo')).toHaveLength(2);
@@ -606,7 +609,7 @@ export function ReleaseList({ response }: ReleaseListProps) {
   const groups = groupReleasesByDate(response.data);
 
   return (
-    <div aria-label="Lista de lançamentos" className="mt-7 space-y-7" role="list">
+    <div className="mt-7 space-y-7">
       {groups.map((group) => (
         <ReleaseDateGroup
           generatedAt={response.meta.generatedAt}
@@ -622,11 +625,11 @@ export function ReleaseList({ response }: ReleaseListProps) {
 `ReleaseDateGroup` must:
 
 - create a stable heading ID from `releaseDate`;
-- use `<section aria-labelledby={headingId} role="group">`, making each date group an allowed grouped child of the outer ARIA list;
+- use `<section aria-labelledby={headingId}>`, making each date group a named region inside the neutral outer collection;
 - render the desktop/tablet heading with a red `Hoje` badge only for today, `Amanhã — {date}` for tomorrow, and the date for later groups;
 - render a mobile uppercase caption matching the same semantic heading;
-- map each item into one `<div role="listitem">` containing `ReleaseCard`;
-- use `grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4`;
+- render one `<ul aria-labelledby={headingId}>` per section and map each item into a direct `<li>` containing `ReleaseCard`;
+- use `grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4` on that list;
 - add `sm:[content-visibility:auto] sm:[contain-intrinsic-size:407px]` to list items.
 
 - [ ] **Step 4: Run focused tests and mutation check**
@@ -755,17 +758,17 @@ Change the App fixture to contain two releases on one date. Extend the releases 
 ```tsx
 await user.click(screen.getByRole('link', { name: 'Lançamentos' }));
 
-expect(await screen.findByRole('list', { name: 'Lista de lançamentos' })).toBeInTheDocument();
+expect(await screen.findByRole('list', { name: 'Hoje 10 de agosto' })).toBeInTheDocument();
 expect(screen.getAllByRole('listitem')).toHaveLength(2);
 expect(screen.getAllByText('Eclipse Protocol')).toHaveLength(2);
 expect(fetchReleasesMock).toHaveBeenCalledTimes(1);
 
 await user.click(screen.getByRole('button', { name: 'Calendário' }));
 expect(screen.getByRole('status')).toHaveTextContent('Visualização em breve');
-expect(screen.queryByRole('list', { name: 'Lista de lançamentos' })).not.toBeInTheDocument();
+expect(screen.queryByRole('list', { name: 'Hoje 10 de agosto' })).not.toBeInTheDocument();
 
 await user.click(screen.getByRole('button', { name: 'Lista' }));
-expect(screen.getByRole('list', { name: 'Lista de lançamentos' })).toBeInTheDocument();
+expect(screen.getByRole('list', { name: 'Hoje 10 de agosto' })).toBeInTheDocument();
 expect(fetchReleasesMock).toHaveBeenCalledTimes(1);
 ```
 

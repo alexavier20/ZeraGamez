@@ -49,11 +49,10 @@ describe('ReleaseList', () => {
   it('renders every release once in chronological date groups', () => {
     render(<ReleaseList response={responseWithThreeReleasesAcrossTwoDates} />);
 
-    const list = screen.getByRole('list', { name: 'Lista de lançamentos' });
-    const groups = within(list).getAllByRole('group', { name: /10 de agosto|11 de agosto/i });
+    const groups = screen.getAllByRole('region', { name: /10 de agosto|11 de agosto/i });
 
     expect(groups).toHaveLength(2);
-    expect(within(list).getAllByRole('listitem')).toHaveLength(3);
+    expect(screen.getAllByRole('listitem')).toHaveLength(3);
     expect(screen.getAllByText('Primeiro jogo')).toHaveLength(2);
     expect(screen.getAllByText('Segundo jogo')).toHaveLength(2);
     expect(screen.getAllByText('Terceiro jogo')).toHaveLength(2);
@@ -82,18 +81,16 @@ describe('ReleaseList', () => {
 
     render(<ReleaseList response={response} />);
 
-    const list = screen.getByRole('list', { name: 'Lista de lançamentos' });
-    expect(within(list).getByRole('group', { name: 'Hoje 10 de agosto' })).toBeInTheDocument();
-    expect(within(list).getByRole('group', { name: 'Amanhã — 11 de agosto' })).toBeInTheDocument();
-    expect(within(list).getByRole('group', { name: '13 de agosto' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Hoje 10 de agosto' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Amanhã — 11 de agosto' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: '13 de agosto' })).toBeInTheDocument();
     expect(response).toEqual(snapshot);
   });
 
   it('keeps one exposed semantic heading per date group across responsive presentations', () => {
     render(<ReleaseList response={responseWithThreeReleasesAcrossTwoDates} />);
 
-    const list = screen.getByRole('list', { name: 'Lista de lançamentos' });
-    const todayGroup = within(list).getByRole('group', { name: 'Hoje 10 de agosto' });
+    const todayGroup = screen.getByRole('region', { name: 'Hoje 10 de agosto' });
     const dateHeadings = screen.getAllByRole('heading', { level: 2 });
     const todayHeading = within(todayGroup).getByRole('heading', {
       level: 2,
@@ -108,17 +105,26 @@ describe('ReleaseList', () => {
     expect(mobileCaption).toHaveClass('uppercase', 'sm:hidden');
   });
 
-  it('uses the responsive grid and item containment while preserving list semantics', () => {
+  it('owns direct list items from one heading-labelled list in each neutral date collection', () => {
     render(<ReleaseList response={responseWithThreeReleasesAcrossTwoDates} />);
 
-    const list = screen.getByRole('list', { name: 'Lista de lançamentos' });
-    const todayGroup = within(list).getByRole('group', { name: 'Hoje 10 de agosto' });
-    const grid = todayGroup.querySelector(':scope > div');
-    const items = within(todayGroup).getAllByRole('listitem');
+    const todayGroup = screen.getByRole('region', { name: 'Hoje 10 de agosto' });
+    const heading = within(todayGroup).getByRole('heading', {
+      level: 2,
+      name: 'Hoje 10 de agosto',
+    });
+    const lists = within(todayGroup).getAllByRole('list', { name: 'Hoje 10 de agosto' });
+    const list = lists[0];
+    const items = within(list).getAllByRole('listitem');
+    const outerCollection = todayGroup.parentElement;
 
-    expect(grid).toHaveClass('grid', 'grid-cols-1', 'sm:grid-cols-2', 'lg:grid-cols-4');
+    expect(outerCollection).not.toHaveAttribute('role');
+    expect(lists).toHaveLength(1);
+    expect(list).toHaveAttribute('aria-labelledby', heading.id);
+    expect(list).toHaveClass('grid', 'grid-cols-1', 'sm:grid-cols-2', 'lg:grid-cols-4');
     expect(items).toHaveLength(2);
     for (const item of items) {
+      expect(item.parentElement).toBe(list);
       expect(item).toHaveClass('sm:[content-visibility:auto]', 'sm:[contain-intrinsic-size:407px]');
     }
   });

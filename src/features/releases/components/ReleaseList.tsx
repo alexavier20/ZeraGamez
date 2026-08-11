@@ -12,7 +12,7 @@ export function ReleaseList({ response }: ReleaseListProps): React.ReactElement 
   const groups = groupReleasesByDate(response.data);
 
   return (
-    <div aria-label="Lista de lançamentos" className="mt-7 space-y-7" role="list">
+    <div className="mt-7 space-y-7">
       {groups.map((group) => (
         <ReleaseDateGroup
           generatedAt={response.meta.generatedAt}

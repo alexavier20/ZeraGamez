@@ -118,9 +118,7 @@ describe('Zera GameZ', () => {
       'id',
       'release-results',
     );
-    expect(
-      await screen.findByRole('list', { name: 'Lista de lan\u00e7amentos' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('list', { name: 'Hoje 10 de agosto' })).toBeInTheDocument();
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
     expect(screen.getAllByText('Eclipse Protocol')).toHaveLength(2);
     expect(fetchReleasesMock).toHaveBeenCalledTimes(1);
@@ -130,13 +128,11 @@ describe('Zera GameZ', () => {
     expect(listButton).toHaveAttribute('aria-pressed', 'false');
     expect(calendarButton).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('status')).toHaveTextContent('Visualiza\u00e7\u00e3o em breve');
-    expect(
-      screen.queryByRole('list', { name: 'Lista de lan\u00e7amentos' }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Hoje 10 de agosto' })).not.toBeInTheDocument();
 
     await user.click(listButton);
 
-    expect(screen.getByRole('list', { name: 'Lista de lan\u00e7amentos' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Hoje 10 de agosto' })).toBeInTheDocument();
     expect(screen.getAllByText('Eclipse Protocol')).toHaveLength(2);
     expect(fetchReleasesMock).toHaveBeenCalledTimes(1);
 
@@ -215,9 +211,7 @@ describe('Zera GameZ', () => {
 
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
 
-    expect(
-      await screen.findByRole('list', { name: 'Lista de lan\u00e7amentos' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('list', { name: 'Hoje 10 de agosto' })).toBeInTheDocument();
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
     expect(fetchReleasesMock).toHaveBeenCalledTimes(2);
     expect(info).toHaveBeenCalledWith('[releases] Pr\u00f3ximos lan\u00e7amentos', payload);

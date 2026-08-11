@@ -24,7 +24,7 @@ export function ReleaseDateGroup({
   const mobileHeading = dayKind === 'today' ? `Hoje — ${date}` : heading;
 
   return (
-    <section aria-labelledby={headingId} role="group">
+    <section aria-labelledby={headingId}>
       <h2 aria-label={heading} className="font-heading" id={headingId}>
         <span className="hidden items-center gap-2 text-xl font-semibold text-text-primary sm:flex">
           {dayKind === 'today' ? (
@@ -40,17 +40,19 @@ export function ReleaseDateGroup({
         </span>
       </h2>
 
-      <div className="mt-3 grid grid-cols-1 gap-3 sm:mt-4 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+      <ul
+        aria-labelledby={headingId}
+        className="mt-3 grid list-none grid-cols-1 gap-3 p-0 sm:mt-4 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4"
+      >
         {group.items.map((item) => (
-          <div
+          <li
             className="sm:[content-visibility:auto] sm:[contain-intrinsic-size:407px]"
             key={item.id}
-            role="listitem"
           >
             <ReleaseCard generatedAt={generatedAt} item={item} />
-          </div>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }
