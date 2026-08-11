@@ -1,7 +1,7 @@
 # Paginação incremental de lançamentos
 
 - **Data:** 2026-08-11
-- **Status:** aprovado em conversa; aguardando revisão do documento
+- **Status:** revisado e aprovado
 - **Escopo:** carregamento incremental da lista existente em `/lancamentos`
 
 ## Objetivo
