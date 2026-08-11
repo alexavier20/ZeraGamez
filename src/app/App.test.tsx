@@ -1,8 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppRouter } from '@/app/router';
+
+import type { ReleasesClientQuery } from '@/features/releases/api/releases-client';
 
 const emptyPayload = {
   data: [],
@@ -10,7 +12,7 @@ const emptyPayload = {
     from: '2026-08-07',
     to: '2026-11-05',
     count: 0,
-    limit: 50,
+    limit: 100,
     generatedAt: '2026-08-07T12:00:00.000Z',
     sourceTruncated: false,
   },
@@ -45,7 +47,60 @@ const payload = {
   },
 };
 
+const nextPayload = {
+  data: [
+    {
+      id: 3,
+      slug: 'future-game',
+      name: 'Future Game',
+      coverUrl: null,
+      releaseDate: '2026-12-15',
+      platforms: [{ id: 6, name: 'PC (Microsoft Windows)', abbreviation: 'PC' }],
+      genres: [],
+    },
+  ],
+  meta: {
+    ...emptyPayload.meta,
+    from: '2026-11-06',
+    to: '2027-02-04',
+    count: 1,
+    generatedAt: '2026-11-06T12:00:00.000Z',
+  },
+};
+
 const fetchReleasesMock = vi.hoisted(() => vi.fn());
+
+let releaseObserverCallback: IntersectionObserverCallback | undefined;
+let releaseObserverInstance: IntersectionObserver | undefined;
+let releaseObservedTarget: Element | undefined;
+
+class ReleaseIntersectionObserverDouble {
+  constructor(callback: IntersectionObserverCallback) {
+    releaseObserverCallback = callback;
+    releaseObserverInstance = this as unknown as IntersectionObserver;
+  }
+
+  observe = vi.fn((target: Element) => {
+    releaseObservedTarget = target;
+  });
+  disconnect = vi.fn();
+  unobserve = vi.fn();
+  takeRecords = vi.fn(() => []);
+  readonly root = null;
+  readonly rootMargin = '600px 0px';
+  readonly thresholds = [0];
+}
+
+function intersectReleaseSentinel() {
+  if (!releaseObserverCallback || !releaseObserverInstance) {
+    throw new Error('Release sentinel is not being observed');
+  }
+
+  releaseObserverCallback(
+    [{ isIntersecting: true } as IntersectionObserverEntry],
+    releaseObserverInstance,
+  );
+}
 
 vi.mock('@/features/releases/api/releases-client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/features/releases/api/releases-client')>();
@@ -69,10 +124,17 @@ describe('Zera GameZ', () => {
   beforeEach(() => {
     fetchReleasesMock.mockReset();
     fetchReleasesMock.mockResolvedValue(payload);
+    releaseObserverCallback = undefined;
+    releaseObserverInstance = undefined;
+    releaseObservedTarget = undefined;
+    vi.stubGlobal('IntersectionObserver', ReleaseIntersectionObserverDouble);
     window.history.replaceState({}, '', '/');
   });
 
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
 
   it('renderiza a página inicial', () => {
     render(<AppRouter />);
@@ -122,6 +184,11 @@ describe('Zera GameZ', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
     expect(screen.getAllByText('Eclipse Protocol')).toHaveLength(2);
     expect(fetchReleasesMock).toHaveBeenCalledTimes(1);
+    const expectedSignal: unknown = expect.any(AbortSignal);
+    expect(fetchReleasesMock).toHaveBeenCalledWith(
+      { limit: 100 },
+      { signal: expectedSignal },
+    );
 
     await user.click(calendarButton);
 
@@ -167,6 +234,112 @@ describe('Zera GameZ', () => {
     expect(info).toHaveBeenCalledTimes(1);
   });
 
+  it('loads and appends the next release window when the sentinel intersects', async () => {
+    fetchReleasesMock.mockResolvedValueOnce(payload).mockResolvedValueOnce(nextPayload);
+    window.history.replaceState({}, '', '/lancamentos');
+    render(<AppRouter />);
+
+    expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
+    await waitFor(() => {
+      expect(releaseObservedTarget).toBeDefined();
+    });
+    const results = screen.getByRole('region', { name: 'Resultados de lan\u00e7amentos' });
+    expect(releaseObservedTarget).toBeDefined();
+    for (const list of within(results).getAllByRole('list')) {
+      expect(list).not.toContainElement(releaseObservedTarget as HTMLElement);
+    }
+
+    act(() => {
+      intersectReleaseSentinel();
+    });
+
+    expect(await screen.findAllByText('Future Game')).toHaveLength(2);
+    expect(fetchReleasesMock.mock.calls[1]?.[0]).toEqual({
+      from: '2026-11-06',
+      to: '2027-02-04',
+      limit: 100,
+    });
+    expect(screen.getAllByRole('listitem')).toHaveLength(3);
+  });
+
+  it('pauses automatic loading in Calendar and resumes the same list session', async () => {
+    const user = userEvent.setup();
+    fetchReleasesMock.mockResolvedValueOnce(payload).mockResolvedValueOnce(nextPayload);
+    window.history.replaceState({}, '', '/lancamentos');
+    render(<AppRouter />);
+
+    expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
+    await waitFor(() => {
+      expect(releaseObservedTarget).toBeDefined();
+    });
+    const results = screen.getByRole('region', { name: 'Resultados de lan\u00e7amentos' });
+    const pausedObserverCallback = releaseObserverCallback;
+    const pausedObserverInstance = releaseObserverInstance;
+    const listSentinel = releaseObservedTarget;
+    if (!pausedObserverCallback || !pausedObserverInstance || !listSentinel) {
+      throw new Error('Release sentinel is not being observed');
+    }
+
+    await user.click(screen.getByRole('button', { name: 'Calend\u00e1rio' }));
+    expect(results).not.toContainElement(listSentinel as HTMLElement);
+    expect(results).not.toContainElement(releaseObservedTarget as HTMLElement);
+    act(() => {
+      pausedObserverCallback(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        pausedObserverInstance,
+      );
+    });
+    expect(fetchReleasesMock).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('button', { name: 'Lista' }));
+    expect(screen.getAllByText('Eclipse Protocol')).toHaveLength(2);
+    expect(fetchReleasesMock).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(releaseObserverCallback).not.toBe(pausedObserverCallback);
+    });
+
+    act(() => {
+      intersectReleaseSentinel();
+    });
+
+    expect(await screen.findAllByText('Future Game')).toHaveLength(2);
+    expect(fetchReleasesMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries an incremental failure without discarding loaded releases', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    fetchReleasesMock
+      .mockResolvedValueOnce(payload)
+      .mockRejectedValueOnce(new Error('secret'))
+      .mockResolvedValueOnce(nextPayload);
+    window.history.replaceState({}, '', '/lancamentos');
+    render(<AppRouter />);
+
+    expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
+    act(() => {
+      intersectReleaseSentinel();
+    });
+
+    const failedNextQuery = {
+      from: '2026-11-06',
+      to: '2027-02-04',
+      limit: 100,
+    };
+    expect(screen.getAllByText('Eclipse Protocol')).toHaveLength(2);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'N\u00e3o foi poss\u00edvel carregar mais jogos',
+    );
+    expect(fetchReleasesMock.mock.calls[1]?.[0]).toEqual(failedNextQuery);
+
+    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+
+    expect(await screen.findAllByText('Future Game')).toHaveLength(2);
+    expect(screen.getAllByText('Eclipse Protocol')).toHaveLength(2);
+    expect(screen.getAllByRole('listitem')).toHaveLength(3);
+    expect(fetchReleasesMock.mock.calls.at(-1)?.[0]).toEqual(failedNextQuery);
+  });
+
   it('shows loading while the release request is pending', async () => {
     const user = userEvent.setup();
     fetchReleasesMock.mockImplementation(() => new Promise<never>(() => undefined));
@@ -181,13 +354,31 @@ describe('Zera GameZ', () => {
   it('shows the empty state when the request has no releases', async () => {
     const user = userEvent.setup();
     vi.spyOn(console, 'info').mockImplementation(() => undefined);
-    fetchReleasesMock.mockResolvedValue(emptyPayload);
+    fetchReleasesMock.mockImplementation((query: ReleasesClientQuery = {}) => {
+      const from = query.from ?? '2026-08-07';
+      const to = query.to ?? '2026-11-05';
+      return {
+        data: [],
+        meta: {
+          ...emptyPayload.meta,
+          from,
+          to,
+          count: 0,
+          limit: 100,
+        },
+      };
+    });
     render(<AppRouter />);
 
     await user.click(screen.getByRole('link', { name: 'Lan\u00e7amentos' }));
 
     expect(await screen.findByRole('status')).toHaveTextContent('Nenhum jogo encontrado');
-    expect(fetchReleasesMock).toHaveBeenCalledTimes(1);
+    expect(fetchReleasesMock.mock.calls.length).toBeGreaterThan(1);
+    const lastQuery = fetchReleasesMock.mock.calls.at(-1)?.[0] as
+      | ReleasesClientQuery
+      | undefined;
+    expect(lastQuery?.to).toBeDefined();
+    expect((lastQuery?.to ?? '') <= '2028-08-06').toBe(true);
   });
 
   it('retries a failed request and displays the recovered list', async () => {

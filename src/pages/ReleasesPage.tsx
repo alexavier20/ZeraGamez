@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { ReleaseFilters } from '@/features/releases/components/ReleaseFilters';
 import { ReleaseList } from '@/features/releases/components/ReleaseList';
+import { ReleaseLoadMore } from '@/features/releases/components/ReleaseLoadMore';
 import {
   ReleaseCalendarPlaceholder,
   ReleasesEmpty,
@@ -18,7 +19,7 @@ import { PageHeading } from '@/shared/components/page-heading/PageHeading';
 const resultsId = 'release-results';
 
 export function ReleasesPage() {
-  const { retry, state } = useReleases();
+  const { loadMore, pagination, retry, retryMore, state } = useReleases();
   const [view, setView] = useState<ReleaseView>('list');
 
   return (
@@ -41,7 +42,15 @@ export function ReleasesPage() {
         ) : state.status === 'empty' ? (
           <ReleasesEmpty />
         ) : (
-          <ReleaseList response={state.response} />
+          <>
+            <ReleaseList response={state.response} />
+            <ReleaseLoadMore
+              enabled
+              onLoadMore={loadMore}
+              onRetry={retryMore}
+              pagination={pagination}
+            />
+          </>
         )}
       </section>
     </main>
