@@ -89,19 +89,33 @@ describe('ReleaseList', () => {
     expect(response).toEqual(snapshot);
   });
 
-  it('uses responsive headings, grid, and item containment while preserving list semantics', () => {
+  it('keeps one exposed semantic heading per date group across responsive presentations', () => {
     render(<ReleaseList response={responseWithThreeReleasesAcrossTwoDates} />);
 
     const list = screen.getByRole('list', { name: 'Lista de lançamentos' });
     const todayGroup = within(list).getByRole('group', { name: 'Hoje 10 de agosto' });
-    const todayHeading = within(todayGroup).getByRole('heading', { name: 'Hoje 10 de agosto' });
+    const dateHeadings = screen.getAllByRole('heading', { level: 2 });
+    const todayHeading = within(todayGroup).getByRole('heading', {
+      level: 2,
+      name: 'Hoje 10 de agosto',
+    });
     const mobileCaption = within(todayGroup).getByText('Hoje — 10 de agosto');
+
+    expect(dateHeadings).toHaveLength(2);
+    expect(todayHeading).not.toHaveClass('hidden');
+    expect(todayHeading).not.toHaveClass('sm:block');
+    expect(mobileCaption).not.toHaveAttribute('aria-hidden', 'true');
+    expect(mobileCaption).toHaveClass('uppercase', 'sm:hidden');
+  });
+
+  it('uses the responsive grid and item containment while preserving list semantics', () => {
+    render(<ReleaseList response={responseWithThreeReleasesAcrossTwoDates} />);
+
+    const list = screen.getByRole('list', { name: 'Lista de lançamentos' });
+    const todayGroup = within(list).getByRole('group', { name: 'Hoje 10 de agosto' });
     const grid = todayGroup.querySelector(':scope > div');
     const items = within(todayGroup).getAllByRole('listitem');
 
-    expect(todayHeading).toHaveClass('hidden', 'sm:flex');
-    expect(mobileCaption).toHaveAttribute('aria-hidden', 'true');
-    expect(mobileCaption).toHaveClass('uppercase', 'sm:hidden');
     expect(grid).toHaveClass('grid', 'grid-cols-1', 'sm:grid-cols-2', 'lg:grid-cols-4');
     expect(items).toHaveLength(2);
     for (const item of items) {
