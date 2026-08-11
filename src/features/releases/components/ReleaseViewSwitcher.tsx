@@ -3,6 +3,7 @@ import { CalendarDays, List } from 'lucide-react';
 export type ReleaseView = 'list' | 'calendar';
 
 type ReleaseViewSwitcherProps = Readonly<{
+  controlsId: string;
   onChange: (value: ReleaseView) => void;
   value: ReleaseView;
 }>;
@@ -10,7 +11,7 @@ type ReleaseViewSwitcherProps = Readonly<{
 const optionClassName =
   'flex h-8 items-center gap-[7px] rounded-[9px] px-[11px] text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand';
 
-export function ReleaseViewSwitcher({ onChange, value }: ReleaseViewSwitcherProps) {
+export function ReleaseViewSwitcher({ controlsId, onChange, value }: ReleaseViewSwitcherProps) {
   return (
     <div
       aria-label="Alternar visualização"
@@ -18,6 +19,7 @@ export function ReleaseViewSwitcher({ onChange, value }: ReleaseViewSwitcherProp
       role="group"
     >
       <button
+        aria-controls={controlsId}
         aria-pressed={value === 'list'}
         className={`${optionClassName} ${
           value === 'list'
@@ -33,6 +35,7 @@ export function ReleaseViewSwitcher({ onChange, value }: ReleaseViewSwitcherProp
         Lista
       </button>
       <button
+        aria-controls={controlsId}
         aria-pressed={value === 'calendar'}
         className={`${optionClassName} ${
           value === 'calendar'

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppRouter } from '@/app/router';
 
-const payload = {
+const emptyPayload = {
   data: [],
   meta: {
     from: '2026-08-07',
@@ -13,6 +13,35 @@ const payload = {
     limit: 50,
     generatedAt: '2026-08-07T12:00:00.000Z',
     sourceTruncated: false,
+  },
+};
+
+const payload = {
+  ...emptyPayload,
+  data: [
+    {
+      id: 1,
+      slug: 'eclipse-protocol',
+      name: 'Eclipse Protocol',
+      coverUrl: null,
+      releaseDate: '2026-08-10',
+      platforms: [{ id: 6, name: 'PC (Microsoft Windows)', abbreviation: 'PC' }],
+      genres: [{ id: 12, name: 'Role-playing (RPG)' }],
+    },
+    {
+      id: 2,
+      slug: 'second-game',
+      name: 'Second Game',
+      coverUrl: null,
+      releaseDate: '2026-08-10',
+      platforms: [{ id: 48, name: 'PlayStation 4', abbreviation: 'PS4' }],
+      genres: [],
+    },
+  ],
+  meta: {
+    ...emptyPayload.meta,
+    count: 2,
+    generatedAt: '2026-08-10T12:00:00.000Z',
   },
 };
 
@@ -85,11 +114,31 @@ describe('Zera GameZ', () => {
     expect(viewSwitcher).toHaveClass('hidden', 'lg:flex');
     expect(listButton).toHaveAttribute('aria-pressed', 'true');
     expect(calendarButton).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('region', { name: 'Resultados de lan\u00e7amentos' })).toHaveAttribute(
+      'id',
+      'release-results',
+    );
+    expect(
+      await screen.findByRole('list', { name: 'Lista de lan\u00e7amentos' }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
+    expect(screen.getAllByText('Eclipse Protocol')).toHaveLength(2);
+    expect(fetchReleasesMock).toHaveBeenCalledTimes(1);
 
     await user.click(calendarButton);
 
     expect(listButton).toHaveAttribute('aria-pressed', 'false');
     expect(calendarButton).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('status')).toHaveTextContent('Visualiza\u00e7\u00e3o em breve');
+    expect(
+      screen.queryByRole('list', { name: 'Lista de lan\u00e7amentos' }),
+    ).not.toBeInTheDocument();
+
+    await user.click(listButton);
+
+    expect(screen.getByRole('list', { name: 'Lista de lan\u00e7amentos' })).toBeInTheDocument();
+    expect(screen.getAllByText('Eclipse Protocol')).toHaveLength(2);
+    expect(fetchReleasesMock).toHaveBeenCalledTimes(1);
 
     const headingAndSwitcher = pageHeading.parentElement?.parentElement;
     const filters = screen.getByRole('region', { name: 'Filtros de lançamentos' });
@@ -119,6 +168,59 @@ describe('Zera GameZ', () => {
     await waitFor(() => {
       expect(info).toHaveBeenCalledWith('[releases] Próximos lançamentos', payload);
     });
+    expect(info).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows loading while the release request is pending', async () => {
+    const user = userEvent.setup();
+    fetchReleasesMock.mockImplementation(() => new Promise<never>(() => undefined));
+    render(<AppRouter />);
+
+    await user.click(screen.getByRole('link', { name: 'Lan\u00e7amentos' }));
+
+    expect(screen.getByRole('status')).toHaveTextContent('Carregando jogos');
+    expect(fetchReleasesMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the empty state when the request has no releases', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    fetchReleasesMock.mockResolvedValue(emptyPayload);
+    render(<AppRouter />);
+
+    await user.click(screen.getByRole('link', { name: 'Lan\u00e7amentos' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Nenhum jogo encontrado');
+    expect(fetchReleasesMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries a failed request and displays the recovered list', async () => {
+    const user = userEvent.setup();
+    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    fetchReleasesMock.mockRejectedValueOnce(new Error('secret')).mockResolvedValueOnce(payload);
+    render(<AppRouter />);
+
+    await user.click(screen.getByRole('link', { name: 'Lan\u00e7amentos' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'N\u00e3o foi poss\u00edvel carregar os jogos',
+    );
+    expect(fetchReleasesMock).toHaveBeenCalledTimes(1);
+    expect(error).toHaveBeenCalledWith('[releases] Falha ao carregar lan\u00e7amentos', {
+      status: 0,
+      code: 'INTERNAL_ERROR',
+    });
+    expect(error).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+
+    expect(
+      await screen.findByRole('list', { name: 'Lista de lan\u00e7amentos' }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
+    expect(fetchReleasesMock).toHaveBeenCalledTimes(2);
+    expect(info).toHaveBeenCalledWith('[releases] Pr\u00f3ximos lan\u00e7amentos', payload);
     expect(info).toHaveBeenCalledTimes(1);
   });
 

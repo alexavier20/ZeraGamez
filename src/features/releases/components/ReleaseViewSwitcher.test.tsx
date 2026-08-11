@@ -11,7 +11,7 @@ import {
 function ControlledSwitcher() {
   const [value, setValue] = useState<ReleaseView>('list');
 
-  return <ReleaseViewSwitcher onChange={setValue} value={value} />;
+  return <ReleaseViewSwitcher controlsId="release-results" onChange={setValue} value={value} />;
 }
 
 describe('ReleaseViewSwitcher', () => {
@@ -24,9 +24,11 @@ describe('ReleaseViewSwitcher', () => {
     const calendarButton = screen.getByRole('button', { name: 'Calendário' });
 
     expect(group).toBeInTheDocument();
+    expect(listButton).toHaveAttribute('aria-controls', 'release-results');
     expect(listButton).toHaveAttribute('aria-pressed', 'true');
     expect(listButton).toHaveClass('ring-1', 'ring-inset', 'ring-brand');
     expect(calendarButton).toHaveAttribute('aria-pressed', 'false');
+    expect(calendarButton).toHaveAttribute('aria-controls', 'release-results');
     expect(calendarButton).toHaveClass('ring-1', 'ring-inset', 'ring-transparent');
 
     await user.click(calendarButton);
