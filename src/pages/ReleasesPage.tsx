@@ -16,6 +16,7 @@ import {
 import { useReleases } from '@/features/releases/hooks/use-releases';
 import {
   defaultReleaseFilterSelection,
+  toReleaseFilterIds,
   type ReleaseFilterSelection,
   type ReleaseGenreFilterKey,
   type ReleasePlatformFilterKey,
@@ -25,9 +26,11 @@ import { PageHeading } from '@/shared/components/page-heading/PageHeading';
 const resultsId = 'release-results';
 
 export function ReleasesPage() {
-  const { loadMore, pagination, retry, retryMore, state } = useReleases();
-  const [view, setView] = useState<ReleaseView>('list');
   const [filters, setFilters] = useState<ReleaseFilterSelection>(defaultReleaseFilterSelection);
+  const { loadMore, pagination, retry, retryMore, state } = useReleases(
+    toReleaseFilterIds(filters),
+  );
+  const [view, setView] = useState<ReleaseView>('list');
 
   const handlePlatformChange = (platform: ReleasePlatformFilterKey) => {
     setFilters((current) => ({ ...current, platform }));
