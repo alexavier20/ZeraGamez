@@ -266,17 +266,22 @@ describe('useReleases', () => {
   });
 
   it('skips empty windows until data is found', async () => {
+    const initialEmptyPage = page([], {
+      generatedAt: '2026-08-11T10:00:00.000Z',
+    });
     const nextEmptyPage = page([], {
       from: '2026-11-10',
       to: '2027-02-08',
+      generatedAt: '2026-11-10T10:00:00.000Z',
     });
     const laterPage = page([release(3, '2027-02-10')], {
       from: '2027-02-09',
       to: '2027-05-10',
+      generatedAt: '2027-02-09T10:00:00.000Z',
     });
     const load = vi
       .fn<ReleasesDependencies['load']>()
-      .mockResolvedValueOnce(emptyResponse)
+      .mockResolvedValueOnce(initialEmptyPage)
       .mockResolvedValueOnce(nextEmptyPage)
       .mockResolvedValueOnce(laterPage);
 
@@ -286,7 +291,17 @@ describe('useReleases', () => {
       expect(result.current.state.status).toBe('success');
     });
     expect(load).toHaveBeenCalledTimes(3);
-    expect(successData(result.current.state)).toEqual(laterPage.data);
+    expect(successResponse(result.current.state)).toEqual({
+      data: laterPage.data,
+      meta: {
+        from: '2026-08-11',
+        to: '2027-05-10',
+        count: 1,
+        limit: 100,
+        generatedAt: '2026-08-11T10:00:00.000Z',
+        sourceTruncated: false,
+      },
+    });
   });
 
   it('stays loading while a later empty window is pending before final empty', async () => {
@@ -317,6 +332,7 @@ describe('useReleases', () => {
         page([], {
           from: '2026-05-13',
           to: '2026-08-11',
+          generatedAt: '2026-05-13T10:00:00.000Z',
         }),
       );
       await finalEmpty.promise;
@@ -325,7 +341,20 @@ describe('useReleases', () => {
     await waitFor(() => {
       expect(result.current.state.status).toBe('empty');
     });
-    expect(result.current.state).toEqual({ status: 'empty', response: initialEmpty });
+    expect(result.current.state).toEqual({
+      status: 'empty',
+      response: {
+        data: [],
+        meta: {
+          from: '2024-08-11',
+          to: '2026-08-11',
+          count: 0,
+          limit: 100,
+          generatedAt: '2026-08-11T12:00:00.000Z',
+          sourceTruncated: false,
+        },
+      },
+    });
     expect(result.current.pagination).toEqual({ status: 'complete' });
     expect(load).toHaveBeenCalledTimes(2);
   });
@@ -360,6 +389,42 @@ describe('useReleases', () => {
       code: 'SERVICE_UNAVAILABLE',
     });
     expect(JSON.stringify(log.error.mock.calls)).not.toContain('secret');
+  });
+
+  it('exposes a scan error before any items and retries the exact failed window', async () => {
+    const failedQuery = {
+      from: '2026-11-10',
+      to: '2027-02-08',
+      limit: 100,
+    };
+    const load = vi
+      .fn<ReleasesDependencies['load']>()
+      .mockResolvedValueOnce(emptyResponse)
+      .mockRejectedValueOnce(new ReleasesClientError(503, 'SERVICE_UNAVAILABLE', 'secret'))
+      .mockResolvedValueOnce(nextResponse);
+    const { result } = renderHook(() => useReleases({ load, logger: logger() }));
+
+    await waitFor(() => {
+      expect(result.current.state.status).toBe('error');
+    });
+    expect(result.current.state).toEqual({
+      status: 'error',
+      error: { status: 503, code: 'SERVICE_UNAVAILABLE' },
+    });
+    expect(result.current.pagination).toEqual({
+      status: 'error',
+      error: { status: 503, code: 'SERVICE_UNAVAILABLE' },
+    });
+    expect(load.mock.calls[1]?.[0]).toEqual(failedQuery);
+
+    act(() => {
+      result.current.retry();
+    });
+    await waitFor(() => {
+      expect(result.current.state.status).toBe('success');
+    });
+    expect(load.mock.calls[2]?.[0]).toEqual(failedQuery);
+    expect(successData(result.current.state)).toEqual(nextResponse.data);
   });
 
   it('retries only the exact failed window and appends its success', async () => {
@@ -437,10 +502,20 @@ describe('useReleases', () => {
       to: '2028-08-10',
       limit: 100,
     });
-    expect(successData(result.current.state)).toEqual(initial.data);
+    expect(successResponse(result.current.state)).toEqual({
+      data: initial.data,
+      meta: {
+        from: '2026-08-11',
+        to: '2028-08-10',
+        count: 1,
+        limit: 100,
+        generatedAt: '2026-08-11T12:00:00.000Z',
+        sourceTruncated: false,
+      },
+    });
   });
 
-  it('reports an incremental error for a saturated one-day page without appending it', async () => {
+  it('exposes an initial error and retries the exact saturated one-day window', async () => {
     const saturatedDay = page([release(99, '2026-08-11')], {
       from: '2026-08-11',
       to: '2026-08-11',
@@ -454,10 +529,25 @@ describe('useReleases', () => {
     });
 
     expect(load).toHaveBeenCalledTimes(1);
-    expect(result.current.state).toEqual({ status: 'loading' });
+    expect(result.current.state).toEqual({
+      status: 'error',
+      error: { status: 0, code: 'INTERNAL_ERROR' },
+    });
     expect(result.current.pagination).toEqual({
       status: 'error',
       error: { status: 0, code: 'INTERNAL_ERROR' },
+    });
+
+    act(() => {
+      result.current.retry();
+    });
+    await waitFor(() => {
+      expect(load).toHaveBeenCalledTimes(2);
+    });
+    expect(load.mock.calls[1]?.[0]).toEqual({
+      from: '2026-08-11',
+      to: '2026-08-11',
+      limit: 100,
     });
   });
 

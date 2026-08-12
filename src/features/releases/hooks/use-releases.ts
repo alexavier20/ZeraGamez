@@ -75,7 +75,6 @@ export function useReleases(
   const [state, setState] = useState<ReleasesState>({ status: 'loading' });
   const [pagination, setPagination] = useState<ReleasesPagination>({ status: 'idle' });
   const responseRef = useRef<ReleasesResponse | null>(null);
-  const firstResponseRef = useRef<ReleasesResponse | null>(null);
   const horizonRef = useRef<string | null>(null);
   const pendingWindowsRef = useRef<ReleaseWindow[]>([]);
   const failedWindowRef = useRef<ReleaseWindow | null>(null);
@@ -100,19 +99,9 @@ export function useReleases(
       while (sessionRef.current === session) {
         const window = pendingWindowsRef.current.shift();
         if (!window) {
-          if (responseRef.current === null && firstResponseRef.current) {
-            const first = firstResponseRef.current;
-            const empty = mergeReleaseResponses(null, {
-              ...first,
-              data: [],
-              meta: {
-                ...first.meta,
-                count: 0,
-                limit: PAGE_LIMIT,
-                sourceTruncated: false,
-              },
-            });
-            setState({ status: 'empty', response: empty });
+          const response = responseRef.current;
+          if (response?.data.length === 0) {
+            setState({ status: 'empty', response });
           }
           setPagination({ status: 'complete' });
           return;
@@ -128,9 +117,13 @@ export function useReleases(
           const halves = splitReleaseWindow(window);
           if (!halves) {
             failedWindowRef.current = window;
+            const error = { status: 0, code: 'INTERNAL_ERROR' } as const;
+            if ((responseRef.current?.data.length ?? 0) === 0) {
+              setState({ status: 'error', error });
+            }
             setPagination({
               status: 'error',
-              error: { status: 0, code: 'INTERNAL_ERROR' },
+              error,
             });
             return;
           }
@@ -139,9 +132,9 @@ export function useReleases(
           continue;
         }
 
-        const hadItems = page.data.length > 0;
-        if (hadItems) {
-          responseRef.current = mergeReleaseResponses(responseRef.current, page);
+        responseRef.current = mergeReleaseResponses(responseRef.current, page);
+        const hasItems = responseRef.current.data.length > 0;
+        if (hasItems) {
           setState({ status: 'success', response: responseRef.current });
         }
 
@@ -151,7 +144,7 @@ export function useReleases(
           if (next) pendingWindowsRef.current.push(next);
         }
 
-        if (hadItems) {
+        if (hasItems) {
           setPagination(
             pendingWindowsRef.current.length > 0 ? { status: 'idle' } : { status: 'complete' },
           );
@@ -164,6 +157,9 @@ export function useReleases(
       failedWindowRef.current = requestWindow;
       const normalized = normalizeError(error);
       loggerRef.current.error('[releases] Falha ao carregar mais lançamentos', normalized);
+      if ((responseRef.current?.data.length ?? 0) === 0) {
+        setState({ status: 'error', error: normalized });
+      }
       setPagination({ status: 'error', error: normalized });
     } finally {
       if (sessionRef.current === session) {
@@ -184,6 +180,9 @@ export function useReleases(
     if (!failedWindow) return;
     failedWindowRef.current = null;
     pendingWindowsRef.current.unshift(failedWindow);
+    if ((responseRef.current?.data.length ?? 0) === 0) {
+      setState({ status: 'loading' });
+    }
     void consumePendingWindow(sessionRef.current);
   }, [consumePendingWindow]);
 
@@ -191,7 +190,6 @@ export function useReleases(
     const session = sessionRef.current + 1;
     sessionRef.current = session;
     responseRef.current = null;
-    firstResponseRef.current = null;
     horizonRef.current = null;
     pendingWindowsRef.current = [];
     failedWindowRef.current = null;
@@ -210,7 +208,6 @@ export function useReleases(
           if (sessionRef.current !== session) return;
 
           loggerRef.current.info('[releases] Próximos lançamentos', page);
-          firstResponseRef.current = page;
           horizonRef.current = createReleaseHorizon(page.meta.from);
           const initialWindow = { from: page.meta.from, to: page.meta.to };
 
@@ -218,9 +215,11 @@ export function useReleases(
             const halves = splitReleaseWindow(initialWindow);
             if (!halves) {
               failedWindowRef.current = initialWindow;
+              const error = { status: 0, code: 'INTERNAL_ERROR' } as const;
+              setState({ status: 'error', error });
               setPagination({
                 status: 'error',
-                error: { status: 0, code: 'INTERNAL_ERROR' },
+                error,
               });
               return;
             }
@@ -231,20 +230,18 @@ export function useReleases(
             return;
           }
 
+          responseRef.current = mergeReleaseResponses(null, page);
           const next = nextReleaseWindow(page.meta.to, horizonRef.current);
           if (next) pendingWindowsRef.current.push(next);
 
           if (page.data.length > 0) {
-            responseRef.current = mergeReleaseResponses(null, page);
             setState({ status: 'success', response: responseRef.current });
             setPagination(next ? { status: 'idle' } : { status: 'complete' });
             return;
           }
 
           if (!next) {
-            responseRef.current = null;
-            const empty = mergeReleaseResponses(null, page);
-            setState({ status: 'empty', response: empty });
+            setState({ status: 'empty', response: responseRef.current });
             setPagination({ status: 'complete' });
             return;
           }
@@ -276,10 +273,15 @@ export function useReleases(
   }, [attempt, consumePendingWindow, load]);
 
   const retry = useCallback(() => {
+    if (failedWindowRef.current) {
+      retryMore();
+      return;
+    }
+
     activeControllerRef.current?.abort();
     setState({ status: 'loading' });
     setAttempt((current) => current + 1);
-  }, []);
+  }, [retryMore]);
 
   return { loadMore, pagination, retry, retryMore, state };
 }

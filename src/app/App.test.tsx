@@ -337,6 +337,60 @@ describe('Zera GameZ', () => {
     expect(fetchReleasesMock.mock.calls.at(-1)?.[0]).toEqual(failedNextQuery);
   });
 
+  it('shows an initial split-scan error and retries the exact failed window', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const saturatedInitial = {
+      ...emptyPayload,
+      meta: {
+        ...emptyPayload.meta,
+        to: '2026-08-08',
+        count: 100,
+      },
+    };
+    const recoveredPage = {
+      ...emptyPayload,
+      data: [
+        {
+          id: 4,
+          slug: 'recovered-game',
+          name: 'Recovered Game',
+          coverUrl: null,
+          releaseDate: '2026-08-07',
+          platforms: [{ id: 6, name: 'PC (Microsoft Windows)', abbreviation: 'PC' }],
+          genres: [],
+        },
+      ],
+      meta: {
+        ...emptyPayload.meta,
+        to: '2026-08-07',
+        count: 1,
+      },
+    };
+    fetchReleasesMock
+      .mockResolvedValueOnce(saturatedInitial)
+      .mockRejectedValueOnce(new Error('secret'))
+      .mockResolvedValueOnce(recoveredPage);
+    window.history.replaceState({}, '', '/lancamentos');
+    render(<AppRouter />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'N\u00e3o foi poss\u00edvel carregar os jogos',
+    );
+    expect(screen.getByRole('button', { name: 'Tentar novamente' })).toBeInTheDocument();
+    const failedQuery = {
+      from: '2026-08-07',
+      to: '2026-08-07',
+      limit: 100,
+    };
+    expect(fetchReleasesMock.mock.calls[1]?.[0]).toEqual(failedQuery);
+
+    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+
+    expect(await screen.findAllByText('Recovered Game')).toHaveLength(2);
+    expect(fetchReleasesMock.mock.calls[2]?.[0]).toEqual(failedQuery);
+  });
+
   it('shows loading while the release request is pending', async () => {
     const user = userEvent.setup();
     fetchReleasesMock.mockImplementation(() => new Promise<never>(() => undefined));
