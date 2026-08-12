@@ -3,7 +3,7 @@
   "devCommand": "npm run dev:vite -- --port $PORT",
   "rewrites": [
     {
-      "source": "/((?!api/|@|src/|shared/|node_modules/|__vite).*)",
+      "source": "/((?!api/|assets/|@|src/|shared/|node_modules/|__vite).*)",
       "destination": "/index.html"
     }
   ]
