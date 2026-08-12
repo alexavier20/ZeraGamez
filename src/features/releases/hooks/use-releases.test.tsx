@@ -4,11 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ReleasesClientError } from '../api/releases-client';
 
-import {
-  useReleases,
-  type ReleasesDependencies,
-  type ReleasesState,
-} from './use-releases';
+import { useReleases, type ReleasesDependencies, type ReleasesState } from './use-releases';
 
 import type { ReleasesResponse } from '../../../../shared/contracts/releases';
 
@@ -26,10 +22,7 @@ function release(id: number, releaseDate: string): ReleaseItem {
   };
 }
 
-function page(
-  data: ReleaseItem[],
-  meta: Partial<ReleasesResponse['meta']> = {},
-): ReleasesResponse {
+function page(data: ReleaseItem[], meta: Partial<ReleasesResponse['meta']> = {}): ReleasesResponse {
   return {
     data,
     meta: {

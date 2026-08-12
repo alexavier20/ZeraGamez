@@ -44,10 +44,7 @@ export interface UseReleasesResult {
 }
 
 export interface ReleasesDependencies {
-  readonly load: (
-    query: ReleasesClientQuery,
-    signal: AbortSignal,
-  ) => Promise<ReleasesResponse>;
+  readonly load: (query: ReleasesClientQuery, signal: AbortSignal) => Promise<ReleasesResponse>;
   readonly logger: Pick<Console, 'info' | 'error'>;
 }
 
@@ -124,10 +121,7 @@ export function useReleases(
         requestWindow = window;
         const controller = new AbortController();
         activeControllerRef.current = controller;
-        const page = await loadRef.current(
-          { ...window, limit: PAGE_LIMIT },
-          controller.signal,
-        );
+        const page = await loadRef.current({ ...window, limit: PAGE_LIMIT }, controller.signal);
         if (sessionRef.current !== session) return;
 
         if (isReleaseWindowIncomplete(page)) {

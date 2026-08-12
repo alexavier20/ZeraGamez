@@ -185,10 +185,7 @@ describe('Zera GameZ', () => {
     expect(screen.getAllByText('Eclipse Protocol')).toHaveLength(2);
     expect(fetchReleasesMock).toHaveBeenCalledTimes(1);
     const expectedSignal: unknown = expect.any(AbortSignal);
-    expect(fetchReleasesMock).toHaveBeenCalledWith(
-      { limit: 100 },
-      { signal: expectedSignal },
-    );
+    expect(fetchReleasesMock).toHaveBeenCalledWith({ limit: 100 }, { signal: expectedSignal });
 
     await user.click(calendarButton);
 
@@ -374,9 +371,7 @@ describe('Zera GameZ', () => {
 
     expect(await screen.findByRole('status')).toHaveTextContent('Nenhum jogo encontrado');
     expect(fetchReleasesMock.mock.calls.length).toBeGreaterThan(1);
-    const lastQuery = fetchReleasesMock.mock.calls.at(-1)?.[0] as
-      | ReleasesClientQuery
-      | undefined;
+    const lastQuery = fetchReleasesMock.mock.calls.at(-1)?.[0] as ReleasesClientQuery | undefined;
     expect(lastQuery?.to).toBeDefined();
     expect((lastQuery?.to ?? '') <= '2028-08-06').toBe(true);
   });
