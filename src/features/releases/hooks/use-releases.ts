@@ -48,6 +48,24 @@ export interface ReleasesDependencies {
   readonly logger: Pick<Console, 'info' | 'error'>;
 }
 
+export interface ReleasesFilters {
+  readonly platformIds?: readonly number[];
+  readonly genreIds?: readonly number[];
+}
+
+function idsFromKey(key: string): number[] {
+  return key === '' ? [] : key.split(',').map(Number);
+}
+
+function filtersFromKeys(platformIdsKey: string, genreIdsKey: string): ReleasesClientQuery {
+  const platformIds = idsFromKey(platformIdsKey);
+  const genreIds = idsFromKey(genreIdsKey);
+  return {
+    ...(platformIds.length > 0 ? { platformIds } : {}),
+    ...(genreIds.length > 0 ? { genreIds } : {}),
+  };
+}
+
 const defaultDependencies: ReleasesDependencies = {
   load: (query, signal) => fetchReleases(query, { signal }),
   logger: console,
@@ -68,9 +86,12 @@ function normalizeError(error: unknown): { status: number; code: ApiErrorCode } 
 }
 
 export function useReleases(
+  filters: ReleasesFilters = {},
   dependencies: ReleasesDependencies = defaultDependencies,
 ): UseReleasesResult {
   const { load, logger } = dependencies;
+  const platformIdsKey = filters.platformIds?.join(',') ?? '';
+  const genreIdsKey = filters.genreIds?.join(',') ?? '';
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<ReleasesState>({ status: 'loading' });
   const [pagination, setPagination] = useState<ReleasesPagination>({ status: 'idle' });
@@ -83,6 +104,7 @@ export function useReleases(
   const sessionRef = useRef(0);
   const loadRef = useRef(load);
   const loggerRef = useRef(logger);
+  const filtersRef = useRef<ReleasesClientQuery>({});
 
   useEffect(() => {
     loadRef.current = load;
@@ -110,7 +132,10 @@ export function useReleases(
         requestWindow = window;
         const controller = new AbortController();
         activeControllerRef.current = controller;
-        const page = await loadRef.current({ ...window, limit: PAGE_LIMIT }, controller.signal);
+        const page = await loadRef.current(
+          { ...window, ...filtersRef.current, limit: PAGE_LIMIT },
+          controller.signal,
+        );
         if (sessionRef.current !== session) return;
 
         if (isReleaseWindowIncomplete(page)) {
@@ -187,6 +212,8 @@ export function useReleases(
   }, [consumePendingWindow]);
 
   useEffect(() => {
+    const sessionFilters = filtersFromKeys(platformIdsKey, genreIdsKey);
+    filtersRef.current = sessionFilters;
     const session = sessionRef.current + 1;
     sessionRef.current = session;
     responseRef.current = null;
@@ -204,7 +231,7 @@ export function useReleases(
         const controller = new AbortController();
         activeControllerRef.current = controller;
         try {
-          const page = await load({ limit: PAGE_LIMIT }, controller.signal);
+          const page = await load({ ...sessionFilters, limit: PAGE_LIMIT }, controller.signal);
           if (sessionRef.current !== session) return;
 
           loggerRef.current.info('[releases] Próximos lançamentos', page);
@@ -270,7 +297,7 @@ export function useReleases(
       activeControllerRef.current = null;
       inFlightRef.current = false;
     };
-  }, [attempt, consumePendingWindow, load]);
+  }, [attempt, consumePendingWindow, genreIdsKey, load, platformIdsKey]);
 
   const retry = useCallback(() => {
     if (failedWindowRef.current) {
