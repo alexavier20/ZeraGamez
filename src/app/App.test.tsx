@@ -231,6 +231,33 @@ describe('Zera GameZ', () => {
     expect(info).toHaveBeenCalledTimes(1);
   });
 
+  it('controls release filters locally without changing the initial unfiltered request', async () => {
+    const user = userEvent.setup();
+    window.history.replaceState({}, '', '/lancamentos');
+    render(<AppRouter />);
+
+    await screen.findByRole('list', { name: 'Hoje 10 de agosto' });
+    const expectedSignal: unknown = expect.any(AbortSignal);
+    expect(fetchReleasesMock).toHaveBeenCalledWith({ limit: 100 }, { signal: expectedSignal });
+
+    await user.click(screen.getByRole('button', { name: 'PC' }));
+    expect(screen.getByRole('button', { name: 'PC' })).toHaveAttribute('aria-pressed', 'true');
+
+    const genreSelects = screen.getAllByRole('combobox', { name: 'Gênero' });
+    await user.selectOptions(genreSelects[0], 'rpg');
+    for (const genreSelect of screen.getAllByRole('combobox', { name: 'Gênero' })) {
+      expect(genreSelect).toHaveValue('rpg');
+    }
+
+    await user.click(screen.getAllByRole('button', { name: 'Limpar filtros' })[0]);
+    expect(screen.getByRole('button', { name: 'PC' })).toHaveAttribute('aria-pressed', 'false');
+    for (const genreSelect of screen.getAllByRole('combobox', { name: 'Gênero' })) {
+      expect(genreSelect).toHaveValue('all');
+    }
+    expect(fetchReleasesMock).toHaveBeenCalledTimes(1);
+    expect(fetchReleasesMock).toHaveBeenLastCalledWith({ limit: 100 }, { signal: expectedSignal });
+  });
+
   it('loads and appends the next release window when the sentinel intersects', async () => {
     fetchReleasesMock.mockResolvedValueOnce(payload).mockResolvedValueOnce(nextPayload);
     window.history.replaceState({}, '', '/lancamentos');
