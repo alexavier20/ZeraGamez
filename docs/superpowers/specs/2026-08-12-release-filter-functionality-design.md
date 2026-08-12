@@ -35,25 +35,25 @@ Each filter change starts a new `useReleases` session. The hook cancels the acti
 
 Platform choices map directly to IGDB platform IDs:
 
-| Label | IDs sent to the API |
-| --- | --- |
-| Todas as plataformas | none |
-| PC | `6` |
-| PlayStation 5 | `167` |
-| Xbox Series X\|S | `169` |
-| Nintendo Switch | `130` |
+| Label                | IDs sent to the API |
+| -------------------- | ------------------- |
+| Todas as plataformas | none                |
+| PC                   | `6`                 |
+| PlayStation 5        | `167`               |
+| Xbox Series X\|S     | `169`               |
+| Nintendo Switch      | `130`               |
 
 Genre choices are fixed UI categories. Most map to one native IGDB genre. `Ação` is an explicit umbrella for the native Fighting and Hack and slash/Beat 'em up genres so the approved Portuguese label is not incorrectly represented by a single unrelated IGDB ID.
 
-| Label | IDs sent to the API |
-| --- | --- |
-| Todos os gêneros | none |
-| Ação | `4,25` |
-| Aventura | `31` |
-| RPG | `12` |
-| Estratégia | `15` |
-| Tiro | `5` |
-| Indie | `32` |
+| Label            | IDs sent to the API |
+| ---------------- | ------------------- |
+| Todos os gêneros | none                |
+| Ação             | `4,25`              |
+| Aventura         | `31`                |
+| RPG              | `12`                |
+| Estratégia       | `15`                |
+| Tiro             | `5`                 |
+| Indie            | `32`                |
 
 The user still selects exactly one genre option; an option may map to more than one API ID.
 
