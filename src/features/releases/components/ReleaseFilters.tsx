@@ -142,7 +142,7 @@ export function ReleaseFilters({
         })}
         <FilterSelect
           ariaLabel="Gênero"
-          className={`${desktopChipClassName} relative ${value.genre === 'all' ? 'border-border-brand bg-bg-secondary font-medium text-text-muted' : 'border-brand bg-filter-active font-semibold text-filter-active-text'}`}
+          className={`${desktopChipClassName} relative focus-within:ring-2 focus-within:ring-brand ${value.genre === 'all' ? 'border-border-brand bg-bg-secondary font-medium text-text-muted' : 'border-brand bg-filter-active font-semibold text-filter-active-text'}`}
           onChange={onGenreChange}
           options={releaseGenreOptions}
           value={value.genre}

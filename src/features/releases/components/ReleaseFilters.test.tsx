@@ -45,6 +45,18 @@ describe('ReleaseFilters', () => {
     expect(region.querySelector('svg.lucide-calendar-days')).not.toBeInTheDocument();
   });
 
+  it('shows the filter ring on every genre select wrapper when its control receives focus', () => {
+    setup();
+
+    const genreSelects = screen
+      .getAllByRole('combobox')
+      .filter((combobox) => combobox.querySelector('option[value="rpg"]'));
+
+    for (const genre of genreSelects) {
+      expect(genre.parentElement).toHaveClass('focus-within:ring-2', 'focus-within:ring-brand');
+    }
+  });
+
   it('emits one platform, one genre, and clear actions with active semantics', async () => {
     const user = userEvent.setup();
     const callbacks = {
