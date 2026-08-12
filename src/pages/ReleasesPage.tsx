@@ -14,13 +14,35 @@ import {
   type ReleaseView,
 } from '@/features/releases/components/ReleaseViewSwitcher';
 import { useReleases } from '@/features/releases/hooks/use-releases';
+import {
+  defaultReleaseFilterSelection,
+  toReleaseFilterIds,
+  type ReleaseFilterSelection,
+  type ReleaseGenreFilterKey,
+  type ReleasePlatformFilterKey,
+} from '@/features/releases/model/release-filter-options';
 import { PageHeading } from '@/shared/components/page-heading/PageHeading';
 
 const resultsId = 'release-results';
 
 export function ReleasesPage() {
-  const { loadMore, pagination, retry, retryMore, state } = useReleases();
+  const [filters, setFilters] = useState<ReleaseFilterSelection>(defaultReleaseFilterSelection);
+  const { loadMore, pagination, retry, retryMore, state } = useReleases(
+    toReleaseFilterIds(filters),
+  );
   const [view, setView] = useState<ReleaseView>('list');
+
+  const handlePlatformChange = (platform: ReleasePlatformFilterKey) => {
+    setFilters((current) => ({ ...current, platform }));
+  };
+
+  const handleGenreChange = (genre: ReleaseGenreFilterKey) => {
+    setFilters((current) => ({ ...current, genre }));
+  };
+
+  const handleClearFilters = () => {
+    setFilters(defaultReleaseFilterSelection);
+  };
 
   return (
     <main
@@ -31,7 +53,12 @@ export function ReleasesPage() {
         <PageHeading title="Próximos lançamentos" subtitle="Descubra os games que estão chegando" />
         <ReleaseViewSwitcher controlsId={resultsId} onChange={setView} value={view} />
       </div>
-      <ReleaseFilters />
+      <ReleaseFilters
+        onClear={handleClearFilters}
+        onGenreChange={handleGenreChange}
+        onPlatformChange={handlePlatformChange}
+        value={filters}
+      />
       <section aria-label={'Resultados de lan\u00e7amentos'} id={resultsId}>
         {view === 'calendar' ? (
           <ReleaseCalendarPlaceholder />

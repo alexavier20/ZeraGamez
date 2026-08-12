@@ -85,7 +85,7 @@ describe('useReleases', () => {
   it('moves from loading to success and logs once in StrictMode', async () => {
     const load = vi.fn<ReleasesDependencies['load']>().mockResolvedValue(responseWithOneRelease);
     const log = logger();
-    const { result } = renderHook(() => useReleases({ load, logger: log }), {
+    const { result } = renderHook(() => useReleases({}, { load, logger: log }), {
       wrapper: StrictWrapper,
     });
     const initialRetry = result.current.retry;
@@ -112,7 +112,7 @@ describe('useReleases', () => {
   it('exposes empty when the validated response has no items', async () => {
     const load = vi.fn().mockResolvedValue(completeEmptyResponse);
     const log = logger();
-    const { result } = renderHook(() => useReleases({ load, logger: log }));
+    const { result } = renderHook(() => useReleases({}, { load, logger: log }));
 
     await waitFor(() => {
       expect(result.current.state.status).toBe('empty');
@@ -126,7 +126,7 @@ describe('useReleases', () => {
       .fn<ReleasesDependencies['load']>()
       .mockResolvedValueOnce(responseWithOneRelease)
       .mockReturnValueOnce(second.promise);
-    const { result } = renderHook(() => useReleases({ load, logger: logger() }));
+    const { result } = renderHook(() => useReleases({}, { load, logger: logger() }));
 
     await waitFor(() => {
       expect(result.current.state.status).toBe('success');
@@ -173,7 +173,7 @@ describe('useReleases', () => {
       .mockResolvedValueOnce(saturated)
       .mockResolvedValueOnce(left);
 
-    const { result } = renderHook(() => useReleases({ load, logger: logger() }));
+    const { result } = renderHook(() => useReleases({}, { load, logger: logger() }));
 
     await waitFor(() => {
       expect(result.current.state.status).toBe('success');
@@ -199,7 +199,7 @@ describe('useReleases', () => {
       .fn<ReleasesDependencies['load']>()
       .mockResolvedValueOnce(saturated)
       .mockResolvedValueOnce(left);
-    const { result } = renderHook(() => useReleases({ load, logger: logger() }));
+    const { result } = renderHook(() => useReleases({}, { load, logger: logger() }));
 
     await waitFor(() => {
       expect(result.current.state.status).toBe('success');
@@ -231,7 +231,7 @@ describe('useReleases', () => {
       .mockResolvedValueOnce(firstQuarter)
       .mockReturnValueOnce(secondQuarter.promise)
       .mockResolvedValue(page([], { from: '2026-08-16', to: '2026-08-20' }));
-    const { result } = renderHook(() => useReleases({ load, logger: logger() }));
+    const { result } = renderHook(() => useReleases({}, { load, logger: logger() }));
 
     await waitFor(() => {
       expect(result.current.state.status).toBe('success');
@@ -285,7 +285,7 @@ describe('useReleases', () => {
       .mockResolvedValueOnce(nextEmptyPage)
       .mockResolvedValueOnce(laterPage);
 
-    const { result } = renderHook(() => useReleases({ load, logger: logger() }));
+    const { result } = renderHook(() => useReleases({}, { load, logger: logger() }));
 
     await waitFor(() => {
       expect(result.current.state.status).toBe('success');
@@ -314,7 +314,7 @@ describe('useReleases', () => {
       .fn<ReleasesDependencies['load']>()
       .mockResolvedValueOnce(initialEmpty)
       .mockReturnValueOnce(finalEmpty.promise);
-    const { result } = renderHook(() => useReleases({ load, logger: logger() }));
+    const { result } = renderHook(() => useReleases({}, { load, logger: logger() }));
 
     await waitFor(() => {
       expect(load).toHaveBeenCalledTimes(2);
@@ -365,7 +365,7 @@ describe('useReleases', () => {
       .mockResolvedValueOnce(responseWithOneRelease)
       .mockRejectedValueOnce(new ReleasesClientError(503, 'SERVICE_UNAVAILABLE', 'secret'));
     const log = logger();
-    const { result } = renderHook(() => useReleases({ load, logger: log }));
+    const { result } = renderHook(() => useReleases({}, { load, logger: log }));
 
     await waitFor(() => {
       expect(result.current.state.status).toBe('success');
@@ -402,7 +402,7 @@ describe('useReleases', () => {
       .mockResolvedValueOnce(emptyResponse)
       .mockRejectedValueOnce(new ReleasesClientError(503, 'SERVICE_UNAVAILABLE', 'secret'))
       .mockResolvedValueOnce(nextResponse);
-    const { result } = renderHook(() => useReleases({ load, logger: logger() }));
+    const { result } = renderHook(() => useReleases({}, { load, logger: logger() }));
 
     await waitFor(() => {
       expect(result.current.state.status).toBe('error');
@@ -438,7 +438,7 @@ describe('useReleases', () => {
       .mockResolvedValueOnce(responseWithOneRelease)
       .mockRejectedValueOnce(new Error('temporary'))
       .mockResolvedValueOnce(nextResponse);
-    const { result } = renderHook(() => useReleases({ load, logger: logger() }));
+    const { result } = renderHook(() => useReleases({}, { load, logger: logger() }));
 
     await waitFor(() => {
       expect(result.current.state.status).toBe('success');
@@ -484,7 +484,7 @@ describe('useReleases', () => {
       .fn<ReleasesDependencies['load']>()
       .mockResolvedValueOnce(initial)
       .mockResolvedValueOnce(finalEmpty);
-    const { result } = renderHook(() => useReleases({ load, logger: logger() }));
+    const { result } = renderHook(() => useReleases({}, { load, logger: logger() }));
 
     await waitFor(() => {
       expect(result.current.state.status).toBe('success');
@@ -522,7 +522,7 @@ describe('useReleases', () => {
       count: 100,
     });
     const load = vi.fn<ReleasesDependencies['load']>().mockResolvedValueOnce(saturatedDay);
-    const { result } = renderHook(() => useReleases({ load, logger: logger() }));
+    const { result } = renderHook(() => useReleases({}, { load, logger: logger() }));
 
     await waitFor(() => {
       expect(result.current.pagination.status).toBe('error');
@@ -570,7 +570,7 @@ describe('useReleases', () => {
       .fn<ReleasesDependencies['load']>()
       .mockResolvedValueOnce(initial)
       .mockResolvedValue(saturatedDay);
-    const { result } = renderHook(() => useReleases({ load, logger: logger() }));
+    const { result } = renderHook(() => useReleases({}, { load, logger: logger() }));
 
     await waitFor(() => {
       expect(result.current.state.status).toBe('success');
@@ -613,7 +613,7 @@ describe('useReleases', () => {
       .mockRejectedValueOnce(new ReleasesClientError(503, 'SERVICE_UNAVAILABLE', 'secret'))
       .mockResolvedValueOnce(responseWithOneRelease);
     const log = logger();
-    const { result } = renderHook(() => useReleases({ load, logger: log }));
+    const { result } = renderHook(() => useReleases({}, { load, logger: log }));
     const initialRetry = result.current.retry;
 
     await waitFor(() => {
@@ -642,7 +642,7 @@ describe('useReleases', () => {
   it('normalizes unexpected errors without exposing their messages in error logs', async () => {
     const log = logger();
     const load = vi.fn().mockRejectedValue(new Error('secret'));
-    const { result } = renderHook(() => useReleases({ load, logger: log }));
+    const { result } = renderHook(() => useReleases({}, { load, logger: log }));
 
     await waitFor(() => {
       expect(result.current.state.status).toBe('error');
@@ -663,7 +663,7 @@ describe('useReleases', () => {
     const request = deferred<ReleasesResponse>();
     const log = logger();
     const load = vi.fn<ReleasesDependencies['load']>().mockReturnValue(request.promise);
-    const { unmount } = renderHook(() => useReleases({ load, logger: log }));
+    const { unmount } = renderHook(() => useReleases({}, { load, logger: log }));
 
     await waitFor(() => {
       expect(load).toHaveBeenCalledTimes(1);
@@ -689,7 +689,7 @@ describe('useReleases', () => {
       .fn<ReleasesDependencies['load']>()
       .mockResolvedValueOnce(responseWithOneRelease)
       .mockReturnValueOnce(incremental.promise);
-    const { result, unmount } = renderHook(() => useReleases({ load, logger: log }));
+    const { result, unmount } = renderHook(() => useReleases({}, { load, logger: log }));
 
     await waitFor(() => {
       expect(result.current.state.status).toBe('success');
@@ -718,7 +718,7 @@ describe('useReleases', () => {
   it('skips a scheduled request when cleanup occurs before its microtask', async () => {
     const load = vi.fn<ReleasesDependencies['load']>().mockResolvedValue(emptyResponse);
     const log = logger();
-    const { unmount } = renderHook(() => useReleases({ load, logger: log }));
+    const { unmount } = renderHook(() => useReleases({}, { load, logger: log }));
 
     unmount();
     await act(async () => {
@@ -732,7 +732,7 @@ describe('useReleases', () => {
     const request = deferred<ReleasesResponse>();
     const log = logger();
     const load = vi.fn<ReleasesDependencies['load']>().mockReturnValue(request.promise);
-    const { unmount } = renderHook(() => useReleases({ load, logger: log }));
+    const { unmount } = renderHook(() => useReleases({}, { load, logger: log }));
 
     await waitFor(() => {
       expect(load).toHaveBeenCalledTimes(1);
@@ -752,7 +752,7 @@ describe('useReleases', () => {
   ])('ignores AbortError-shaped rejections', async (abortError) => {
     const log = logger();
     const load = vi.fn().mockRejectedValue(abortError);
-    const { result } = renderHook(() => useReleases({ load, logger: log }));
+    const { result } = renderHook(() => useReleases({}, { load, logger: log }));
 
     await waitFor(() => {
       expect(result.current.state.status).toBe('loading');
@@ -772,7 +772,7 @@ describe('useReleases', () => {
       .fn<ReleasesDependencies['load']>()
       .mockReturnValueOnce(first.promise)
       .mockReturnValueOnce(second.promise);
-    const { result } = renderHook(() => useReleases({ load, logger: log }));
+    const { result } = renderHook(() => useReleases({}, { load, logger: log }));
 
     await waitFor(() => {
       expect(load).toHaveBeenCalledTimes(1);
@@ -811,7 +811,7 @@ describe('useReleases', () => {
       .mockResolvedValueOnce(responseWithOneRelease)
       .mockReturnValueOnce(incremental.promise)
       .mockResolvedValueOnce(responseWithOneRelease);
-    const { result } = renderHook(() => useReleases({ load, logger: log }));
+    const { result } = renderHook(() => useReleases({}, { load, logger: log }));
 
     await waitFor(() => {
       expect(result.current.state.status).toBe('success');
@@ -852,7 +852,7 @@ describe('useReleases', () => {
       .mockResolvedValueOnce(responseWithOneRelease)
       .mockReturnValueOnce(incremental.promise)
       .mockReturnValueOnce(replacement.promise);
-    const { result, unmount } = renderHook(() => useReleases({ load, logger: logger() }));
+    const { result, unmount } = renderHook(() => useReleases({}, { load, logger: logger() }));
 
     await waitFor(() => {
       expect(result.current.state.status).toBe('success');
@@ -881,5 +881,118 @@ describe('useReleases', () => {
     expect(replacementSignal.aborted).toBe(true);
     replacement.reject(new DOMException('aborted', 'AbortError'));
     await replacement.promise.catch(() => undefined);
+  });
+
+  it('keeps platform and genre IDs on initial, incremental, and retry requests', async () => {
+    const filters = { platformIds: [167], genreIds: [12] };
+    const load = vi
+      .fn<ReleasesDependencies['load']>()
+      .mockResolvedValueOnce(responseWithOneRelease)
+      .mockRejectedValueOnce(new Error('temporary'))
+      .mockResolvedValueOnce(nextResponse);
+    const { result } = renderHook(() => useReleases(filters, { load, logger: logger() }));
+
+    await waitFor(() => {
+      expect(result.current.state.status).toBe('success');
+    });
+    expect(load.mock.calls[0]?.[0]).toEqual({
+      platformIds: [167],
+      genreIds: [12],
+      limit: 100,
+    });
+
+    act(() => {
+      result.current.loadMore();
+    });
+    await waitFor(() => {
+      expect(result.current.pagination.status).toBe('error');
+    });
+    const filteredWindow = {
+      from: '2026-11-10',
+      to: '2027-02-08',
+      platformIds: [167],
+      genreIds: [12],
+      limit: 100,
+    };
+    expect(load.mock.calls[1]?.[0]).toEqual(filteredWindow);
+
+    act(() => {
+      result.current.retryMore();
+    });
+    await waitFor(() => {
+      expect(result.current.pagination.status).toBe('idle');
+    });
+    expect(load.mock.calls[2]?.[0]).toEqual(filteredWindow);
+  });
+
+  it('keeps filters when a saturated response splits into smaller windows', async () => {
+    const saturated = page([], {
+      from: '2026-08-11',
+      to: '2026-08-20',
+      count: 100,
+      limit: 100,
+    });
+    const left = page([release(1, '2026-08-12')], {
+      from: '2026-08-11',
+      to: '2026-08-15',
+    });
+    const load = vi
+      .fn<ReleasesDependencies['load']>()
+      .mockResolvedValueOnce(saturated)
+      .mockResolvedValueOnce(left);
+
+    const { result } = renderHook(() =>
+      useReleases({ platformIds: [6], genreIds: [31] }, { load, logger: logger() }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.state.status).toBe('success');
+    });
+    expect(load.mock.calls.map(([query]) => query)).toEqual([
+      { platformIds: [6], genreIds: [31], limit: 100 },
+      {
+        from: '2026-08-11',
+        to: '2026-08-15',
+        platformIds: [6],
+        genreIds: [31],
+        limit: 100,
+      },
+    ]);
+  });
+
+  it('aborts the old session and ignores its late result when filters change', async () => {
+    const first = deferred<ReleasesResponse>();
+    const filteredResponse = page([release(2, '2026-08-15')]);
+    const load = vi
+      .fn<ReleasesDependencies['load']>()
+      .mockReturnValueOnce(first.promise)
+      .mockResolvedValueOnce(filteredResponse);
+    const log = logger();
+    const { result, rerender } = renderHook(
+      ({ platformIds }) => useReleases({ platformIds }, { load, logger: log }),
+      { initialProps: { platformIds: [] as number[] } },
+    );
+
+    await waitFor(() => {
+      expect(load).toHaveBeenCalledTimes(1);
+    });
+    const firstSignal = load.mock.calls[0]?.[1];
+
+    rerender({ platformIds: [167] });
+
+    expect(firstSignal.aborted).toBe(true);
+    expect(result.current.state.status).toBe('loading');
+    await waitFor(() => {
+      expect(result.current.state.status).toBe('success');
+    });
+    expect(load.mock.calls[1]?.[0]).toEqual({ platformIds: [167], limit: 100 });
+    expect(successData(result.current.state).map(({ id }) => id)).toEqual([2]);
+
+    await act(async () => {
+      first.resolve(responseWithOneRelease);
+      await first.promise;
+    });
+    expect(successData(result.current.state).map(({ id }) => id)).toEqual([2]);
+    expect(log.error).not.toHaveBeenCalled();
   });
 });

@@ -231,6 +231,49 @@ describe('Zera GameZ', () => {
     expect(info).toHaveBeenCalledTimes(1);
   });
 
+  it('filters releases by one platform and one genre and clears both', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    window.history.replaceState({}, '', '/lancamentos');
+    render(<AppRouter />);
+
+    expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
+    expect(fetchReleasesMock.mock.calls[0]?.[0]).toEqual({ limit: 100 });
+
+    await user.click(screen.getByRole('button', { name: 'PC' }));
+    await waitFor(() => {
+      expect(fetchReleasesMock.mock.calls.at(-1)?.[0]).toEqual({
+        platformIds: [6],
+        limit: 100,
+      });
+    });
+
+    await user.selectOptions(screen.getAllByRole('combobox', { name: 'Gênero' })[0], 'rpg');
+    await waitFor(() => {
+      expect(fetchReleasesMock.mock.calls.at(-1)?.[0]).toEqual({
+        platformIds: [6],
+        genreIds: [12],
+        limit: 100,
+      });
+    });
+
+    const clearButtons = screen.getAllByRole('button', { name: 'Limpar filtros' });
+    expect(clearButtons.every((button) => !button.hasAttribute('disabled'))).toBe(true);
+    await user.click(clearButtons[0]);
+    await waitFor(() => {
+      expect(fetchReleasesMock.mock.calls.at(-1)?.[0]).toEqual({ limit: 100 });
+    });
+
+    expect(screen.getByRole('button', { name: 'Todas as plataformas' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    for (const genre of screen.getAllByRole('combobox', { name: 'Gênero' })) {
+      expect(genre).toHaveValue('all');
+    }
+    expect(screen.queryByText('Período')).not.toBeInTheDocument();
+  });
+
   it('loads and appends the next release window when the sentinel intersects', async () => {
     fetchReleasesMock.mockResolvedValueOnce(payload).mockResolvedValueOnce(nextPayload);
     window.history.replaceState({}, '', '/lancamentos');
