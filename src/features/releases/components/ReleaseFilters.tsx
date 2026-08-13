@@ -32,14 +32,18 @@ function FilterSelect<TKey extends string>({
     <span className={className}>
       <select
         aria-label={ariaLabel}
-        className="min-w-0 max-w-full appearance-none truncate bg-transparent pr-5 outline-none"
+        className="min-w-0 max-w-full appearance-none truncate bg-transparent pr-5 font-body [color-scheme:dark] outline-none"
         onChange={(event) => {
           onChange(event.target.value as TKey);
         }}
         value={value}
       >
         {options.map((option) => (
-          <option key={option.key} value={option.key}>
+          <option
+            className="bg-surface font-body text-content-primary"
+            key={option.key}
+            value={option.key}
+          >
             {option.label}
           </option>
         ))}

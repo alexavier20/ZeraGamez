@@ -57,6 +57,18 @@ describe('ReleaseFilters', () => {
     }
   });
 
+  it('themes every native dropdown with the site palette and typography', () => {
+    setup();
+
+    for (const dropdown of screen.getAllByRole('combobox')) {
+      expect(dropdown).toHaveClass('font-body', '[color-scheme:dark]');
+
+      for (const option of within(dropdown).getAllByRole('option')) {
+        expect(option).toHaveClass('bg-surface', 'font-body', 'text-content-primary');
+      }
+    }
+  });
+
   it('emits one platform, one genre, and clear actions with active semantics', async () => {
     const user = userEvent.setup();
     const callbacks = {
