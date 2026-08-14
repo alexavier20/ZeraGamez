@@ -63,6 +63,22 @@ describe('ReleaseDatePicker', () => {
       'true',
     );
     expect(screen.getByTestId('release-indicator-2026-07-29')).toHaveClass('size-1', 'bg-brand');
+
+    const title = screen.getByText('Julho de 2026');
+    const previous = screen.getByRole('button', { name: 'Mês anterior' });
+    const next = screen.getByRole('button', { name: 'Próximo mês' });
+    expect(title).toHaveClass('font-heading', 'text-base');
+    expect(previous.parentElement).toBe(next.parentElement);
+    expect(previous.parentElement).not.toBe(title.parentElement);
+    expect(previous).toHaveClass('focus-visible:ring-2', 'focus-visible:ring-brand');
+    expect(next).toHaveClass('focus-visible:ring-2', 'focus-visible:ring-brand');
+    for (const weekday of within(dialog).getAllByRole('columnheader')) {
+      expect(weekday).toHaveClass('rounded', 'bg-bg-secondary', 'font-semibold');
+    }
+    expect(screen.getByRole('button', { name: '29 de julho de 2026' })).toHaveClass(
+      'focus-visible:ring-2',
+      'focus-visible:ring-brand',
+    );
   });
 
   it('requests the previous and next calendar months from its real header buttons', async () => {
@@ -93,9 +109,7 @@ describe('ReleaseDatePicker', () => {
     rerender(<ReleaseDatePicker {...defaultProps} selectedDate={null} />);
     expect(screen.getByRole('button', { name: '29 de julho de 2026' })).toHaveFocus();
 
-    rerender(
-      <ReleaseDatePicker {...defaultProps} currentDate="2026-08-01" selectedDate={null} />,
-    );
+    rerender(<ReleaseDatePicker {...defaultProps} currentDate="2026-08-01" selectedDate={null} />);
     expect(screen.getByRole('button', { name: '1 de julho de 2026' })).toHaveFocus();
   });
 

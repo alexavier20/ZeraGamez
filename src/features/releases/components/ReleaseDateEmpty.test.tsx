@@ -16,6 +16,7 @@ describe('ReleaseDateEmpty', () => {
     expect(status).toHaveTextContent(
       'Não encontramos jogos com lançamento em 31 de julho de 2026. Escolha outro dia ou limpe o filtro.',
     );
+    expect(status.querySelector('.lucide-calendar-x')).toHaveAttribute('width', '24');
     const clear = screen.getByRole('button', { name: 'Limpar data' });
     expect(clear).toHaveClass('h-9', 'rounded-[9px]', 'bg-surface-hover');
     await user.click(clear);

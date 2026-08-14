@@ -35,7 +35,8 @@ export function ReleaseCalendarControl({
   const rootRef = useRef<HTMLDivElement>(null);
   const calendarButtonRef = useRef<HTMLButtonElement>(null);
   const value: ReleaseView = open || selectedDate !== null ? 'calendar' : 'list';
-  const calendarLabel = selectedDate === null ? 'Calendário' : formatCalendarShortDate(selectedDate);
+  const calendarLabel =
+    selectedDate === null ? 'Calendário' : formatCalendarShortDate(selectedDate);
 
   useEffect(() => {
     if (!open) {

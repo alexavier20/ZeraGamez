@@ -17,7 +17,7 @@ export function ReleaseDateEmpty({ date, onClearDate }: ReleaseDateEmptyProps): 
       role="status"
     >
       <div className="grid size-14 place-items-center rounded-2xl border border-border-brand bg-bg-secondary text-brand">
-        <CalendarX aria-hidden="true" size={28} />
+        <CalendarX aria-hidden="true" size={24} />
       </div>
       <h2 className="mt-[14px] font-heading text-[22px] font-semibold text-content-primary">
         Nenhum lançamento nesta data

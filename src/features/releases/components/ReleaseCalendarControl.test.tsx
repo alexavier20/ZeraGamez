@@ -121,7 +121,9 @@ describe('ReleaseCalendarControl', () => {
 
   it('removes its global pointerdown listener when unmounted', () => {
     const onOpenChange = vi.fn();
-    const { unmount } = render(<ControlledCalendarControl initialOpen onOpenChange={onOpenChange} />);
+    const { unmount } = render(
+      <ControlledCalendarControl initialOpen onOpenChange={onOpenChange} />,
+    );
 
     unmount();
     fireEvent.pointerDown(document.body);

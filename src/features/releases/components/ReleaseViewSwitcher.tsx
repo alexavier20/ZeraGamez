@@ -1,4 +1,5 @@
 import { CalendarDays, List } from 'lucide-react';
+
 import type { Ref } from 'react';
 
 export type ReleaseView = 'list' | 'calendar';
@@ -48,7 +49,9 @@ export function ReleaseViewSwitcher({
         Lista
       </button>
       <button
-        aria-controls={calendarPopupId === undefined ? controlsId : `${controlsId} ${calendarPopupId}`}
+        aria-controls={
+          calendarPopupId === undefined ? controlsId : `${controlsId} ${calendarPopupId}`
+        }
         aria-expanded={calendarPopupId === undefined ? undefined : calendarExpanded}
         aria-haspopup={calendarPopupId === undefined ? undefined : 'dialog'}
         aria-pressed={value === 'calendar'}

@@ -1009,7 +1009,9 @@ describe('useReleases', () => {
       ),
     );
 
-    await waitFor(() => expect(result.current.state.status).toBe('success'));
+    await waitFor(() => {
+      expect(result.current.state.status).toBe('success');
+    });
     expect(load.mock.calls[0]?.[0]).toEqual({
       from: '2026-08-29',
       to: '2026-08-29',
@@ -1019,7 +1021,9 @@ describe('useReleases', () => {
     });
     expect(result.current.pagination).toEqual({ status: 'complete' });
 
-    act(() => result.current.loadMore());
+    act(() => {
+      result.current.loadMore();
+    });
     expect(load).toHaveBeenCalledTimes(1);
   });
 
@@ -1030,7 +1034,9 @@ describe('useReleases', () => {
       useReleases({ date: '2026-08-31' }, { load, logger: logger() }),
     );
 
-    await waitFor(() => expect(result.current.state.status).toBe('empty'));
+    await waitFor(() => {
+      expect(result.current.state.status).toBe('empty');
+    });
     expect(load).toHaveBeenCalledTimes(1);
     expect(result.current.pagination).toEqual({ status: 'complete' });
   });
@@ -1048,9 +1054,15 @@ describe('useReleases', () => {
       useReleases({ date: '2026-08-29' }, { load, logger: logger() }),
     );
 
-    await waitFor(() => expect(result.current.state.status).toBe('error'));
-    act(() => result.current.retry());
-    await waitFor(() => expect(result.current.state.status).toBe('success'));
+    await waitFor(() => {
+      expect(result.current.state.status).toBe('error');
+    });
+    act(() => {
+      result.current.retry();
+    });
+    await waitFor(() => {
+      expect(result.current.state.status).toBe('success');
+    });
 
     expect(load.mock.calls.map(([query]) => query)).toEqual([
       { from: '2026-08-29', to: '2026-08-29', limit: 100 },
@@ -1074,13 +1086,17 @@ describe('useReleases', () => {
       { initialProps: { date: '2026-08-29' } },
     );
 
-    await waitFor(() => expect(load).toHaveBeenCalledTimes(1));
+    await waitFor(() => {
+      expect(load).toHaveBeenCalledTimes(1);
+    });
     const firstSignal = load.mock.calls[0]?.[1];
 
     rerender({ date: '2026-08-30' });
 
     expect(firstSignal.aborted).toBe(true);
-    await waitFor(() => expect(result.current.state.status).toBe('success'));
+    await waitFor(() => {
+      expect(result.current.state.status).toBe('success');
+    });
     expect(load.mock.calls.map(([query]) => query)).toEqual([
       { from: '2026-08-29', to: '2026-08-29', limit: 100 },
       { from: '2026-08-30', to: '2026-08-30', limit: 100 },

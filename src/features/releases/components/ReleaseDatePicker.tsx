@@ -50,7 +50,6 @@ export function ReleaseDatePicker({
   const focusInputs = useRef({ currentDate, selectedDate });
   const dayRefs = useRef(new Map<string, HTMLButtonElement>());
   const days = buildCalendarMonth(month);
-  const hasFocusDate = days.some((day) => day.date === focusDate);
   const weeks = Array.from({ length: 6 }, (_, index) => days.slice(index * 7, (index + 1) * 7));
 
   useEffect(() => {
@@ -67,12 +66,6 @@ export function ReleaseDatePicker({
     dayRefs.current.get(focusDate)?.focus();
   }, [focusDate, month]);
 
-  useEffect(() => {
-    if (!hasFocusDate) {
-      setFocusDate(calendarMonthStart(month));
-    }
-  }, [hasFocusDate, month]);
-
   function moveFocus(amount: number) {
     const nextFocusDate = addCalendarDays(focusDate, amount);
     setFocusDate(nextFocusDate);
@@ -87,13 +80,23 @@ export function ReleaseDatePicker({
     onMonthChange(addCalendarMonths(month, amount));
   }
 
-  function handleDialogKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+  function moveToHeaderMonth(amount: number) {
+    const nextMonth = addCalendarMonths(month, amount);
+    setFocusDate(calendarMonthStart(nextMonth));
+    onMonthChange(nextMonth);
+  }
+
+  function handleEscape(event: React.KeyboardEvent<HTMLElement>) {
     if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
       onRequestClose();
-      return;
     }
+  }
+
+  function handleGridKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    handleEscape(event);
+    if (event.defaultPrevented) return;
 
     if (!(event.target as HTMLElement).closest('[data-calendar-day]')) {
       return;
@@ -134,39 +137,44 @@ export function ReleaseDatePicker({
       aria-label={formatCalendarMonth(month)}
       className="h-[344px] w-80 rounded-[14px] border border-border-brand bg-surface p-4 shadow-[0_8px_20px_#00000066]"
       id="release-date-picker"
-      onKeyDown={handleDialogKeyDown}
       role="dialog"
     >
       <div className="flex h-full flex-col gap-3">
         <div className="flex h-8 items-center justify-between">
-          <button
-            aria-label="Mês anterior"
-            className="grid size-8 place-items-center rounded-lg bg-surface-hover"
-            onClick={() => {
-              onMonthChange(addCalendarMonths(month, -1));
-            }}
-            type="button"
-          >
-            <ChevronLeft aria-hidden="true" size={16} />
-          </button>
-          <span className="text-sm font-semibold text-content-primary">{formatCalendarMonth(month)}</span>
-          <button
-            aria-label="Próximo mês"
-            className="grid size-8 place-items-center rounded-lg bg-surface-hover"
-            onClick={() => {
-              onMonthChange(addCalendarMonths(month, 1));
-            }}
-            type="button"
-          >
-            <ChevronRight aria-hidden="true" size={16} />
-          </button>
+          <span className="font-heading text-base font-semibold text-content-primary">
+            {formatCalendarMonth(month)}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              aria-label="Mês anterior"
+              className="grid size-8 place-items-center rounded-lg bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+              onClick={() => {
+                moveToHeaderMonth(-1);
+              }}
+              onKeyDown={handleEscape}
+              type="button"
+            >
+              <ChevronLeft aria-hidden="true" size={16} />
+            </button>
+            <button
+              aria-label="Próximo mês"
+              className="grid size-8 place-items-center rounded-lg bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+              onClick={() => {
+                moveToHeaderMonth(1);
+              }}
+              onKeyDown={handleEscape}
+              type="button"
+            >
+              <ChevronRight aria-hidden="true" size={16} />
+            </button>
+          </div>
         </div>
 
-        <div className="grid gap-1" role="grid">
+        <div className="grid gap-1" onKeyDown={handleGridKeyDown} role="grid" tabIndex={-1}>
           <div className="grid grid-cols-7 gap-1" role="row">
             {weekdays.map((weekday) => (
               <div
-                className="grid h-5 w-9 place-items-center text-[11px] font-medium text-text-muted"
+                className="grid h-5 w-9 place-items-center rounded bg-bg-secondary text-[11px] font-semibold text-text-muted"
                 key={weekday}
                 role="columnheader"
               >
@@ -193,7 +201,7 @@ export function ReleaseDatePicker({
                     <button
                       aria-label={formatCalendarLongDate(day.date)}
                       aria-pressed={selected}
-                      className={`relative grid size-9 place-items-center rounded-lg text-[13px] ${dayClassName}`}
+                      className={`relative grid size-9 place-items-center rounded-lg text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface ${dayClassName}`}
                       data-calendar-day="true"
                       data-today={today || undefined}
                       onClick={() => {

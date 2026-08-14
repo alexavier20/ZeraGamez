@@ -71,17 +71,25 @@ export function ReleasesPage() {
   const handleClearFilters = () => {
     setFilters(defaultReleaseFilterSelection);
     setSelectedDate(null);
+    setVisibleMonth(calendarMonthStart(currentDate));
     setCalendarOpen(false);
   };
 
   const handleSelectDate = (date: string) => {
     setSelectedDate(date);
+    setVisibleMonth(calendarMonthStart(date));
     setCalendarOpen(false);
   };
 
   const handleClearDate = () => {
     setSelectedDate(null);
+    setVisibleMonth(calendarMonthStart(currentDate));
     setCalendarOpen(false);
+  };
+
+  const handleCalendarOpenChange = (open: boolean) => {
+    if (open) setVisibleMonth(calendarMonthStart(selectedDate ?? currentDate));
+    setCalendarOpen(open);
   };
 
   return (
@@ -98,7 +106,7 @@ export function ReleasesPage() {
           month={visibleMonth}
           onClearDate={handleClearDate}
           onMonthChange={setVisibleMonth}
-          onOpenChange={setCalendarOpen}
+          onOpenChange={handleCalendarOpenChange}
           onSelectDate={handleSelectDate}
           open={calendarOpen}
           selectedDate={selectedDate}

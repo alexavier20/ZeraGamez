@@ -4,7 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppRouter } from '@/app/router';
 import {
+  addCalendarMonths,
+  buildCalendarMonth,
+  calendarMonthStart,
   formatCalendarLongDate,
+  formatCalendarMonth,
   formatCalendarShortDate,
   todayInSaoPaulo,
 } from '@/features/releases/model/release-calendar';
@@ -74,19 +78,15 @@ const nextPayload = {
   },
 };
 
-function exactPayload(releaseDate: string) {
+function exactPayload(releaseDate: string, count = 1) {
+  const data = payload.data.slice(0, count).map((item) => ({ ...item, releaseDate }));
   return {
-    data: [
-      {
-        ...payload.data[0],
-        releaseDate,
-      },
-    ],
+    data,
     meta: {
       ...emptyPayload.meta,
       from: releaseDate,
       to: releaseDate,
-      count: 1,
+      count: data.length,
       generatedAt: `${releaseDate}T12:00:00.000Z`,
     },
   };
@@ -218,6 +218,7 @@ describe('Zera GameZ', () => {
     expect(calendarButton).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Hoje 10 de agosto' })).toBeInTheDocument();
+    expect(await screen.findByTestId('release-indicator-2026-08-10')).toBeInTheDocument();
     expect(fetchReleasesMock).toHaveBeenCalledTimes(1);
 
     await user.click(listButton);
@@ -257,6 +258,54 @@ describe('Zera GameZ', () => {
     expect(info).toHaveBeenCalledTimes(1);
   });
 
+  it('resets an unselected calendar to the current month whenever it reopens', async () => {
+    const user = userEvent.setup();
+    const currentDate = todayInSaoPaulo();
+    const currentMonth = calendarMonthStart(currentDate);
+    const nextMonth = addCalendarMonths(currentMonth, 1);
+    window.history.replaceState({}, '', '/lancamentos');
+    render(<AppRouter />);
+
+    expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
+    await user.click(screen.getByRole('button', { name: 'Calendário' }));
+    await user.click(screen.getByRole('button', { name: 'Próximo mês' }));
+    expect(
+      screen.getByRole('dialog', { name: formatCalendarMonth(nextMonth) }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Lista' }));
+    await user.click(screen.getByRole('button', { name: 'Calendário' }));
+
+    expect(
+      screen.getByRole('dialog', { name: formatCalendarMonth(currentMonth) }),
+    ).toBeInTheDocument();
+  });
+
+  it('reopens on the selected date month after choosing an adjacent-month day', async () => {
+    const user = userEvent.setup();
+    const currentDate = todayInSaoPaulo();
+    const adjacentDay = buildCalendarMonth(currentDate).find((day) => !day.inCurrentMonth);
+    if (!adjacentDay) throw new Error('Expected an adjacent-month calendar day');
+    fetchReleasesMock.mockImplementation((query: ReleasesClientQuery = {}) =>
+      query.from === undefined ? payload : exactPayload(query.from),
+    );
+    window.history.replaceState({}, '', '/lancamentos');
+    render(<AppRouter />);
+
+    expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
+    await user.click(screen.getByRole('button', { name: 'Calendário' }));
+    await user.click(
+      screen.getByRole('button', { name: formatCalendarLongDate(adjacentDay.date) }),
+    );
+    await user.click(
+      screen.getByRole('button', { name: formatCalendarShortDate(adjacentDay.date) }),
+    );
+
+    expect(
+      screen.getByRole('dialog', { name: formatCalendarMonth(adjacentDay.date) }),
+    ).toBeInTheDocument();
+  });
+
   it('searches releases for the exact selected calendar date', async () => {
     const user = userEvent.setup();
     const selectedDate = todayInSaoPaulo();
@@ -294,6 +343,27 @@ describe('Zera GameZ', () => {
     expect(screen.getByRole('region', { name: 'Resultados de lançamentos' })).not.toContainElement(
       broadSentinel,
     );
+  });
+
+  it('uses the plural exact-date subtitle for multiple releases', async () => {
+    const user = userEvent.setup();
+    const selectedDate = todayInSaoPaulo();
+    fetchReleasesMock.mockImplementation((query: ReleasesClientQuery = {}) =>
+      query.from === undefined ? payload : exactPayload(query.from, 2),
+    );
+    window.history.replaceState({}, '', '/lancamentos');
+    render(<AppRouter />);
+
+    expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
+    await user.click(screen.getByRole('button', { name: 'Calendário' }));
+    await user.click(screen.getByRole('button', { name: formatCalendarLongDate(selectedDate) }));
+
+    expect(
+      await screen.findByText(
+        `2 lançamentos encontrados em ${formatReleaseDate(selectedDate, false)}`,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
   });
 
   it('shows the exact-date empty state and clears only the selected date', async () => {
@@ -369,6 +439,49 @@ describe('Zera GameZ', () => {
     await waitFor(() => {
       expect(fetchReleasesMock.mock.calls.at(-1)?.[0]).toEqual({ limit: 100 });
     });
+  });
+
+  it('retries an exact-date failure without losing the selected date or active filters', async () => {
+    const user = userEvent.setup();
+    const selectedDate = todayInSaoPaulo();
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    let exactAttempts = 0;
+    fetchReleasesMock.mockImplementation((query: ReleasesClientQuery = {}) => {
+      if (query.from === undefined) return payload;
+      exactAttempts += 1;
+      return exactAttempts === 1
+        ? Promise.reject(new Error('temporary'))
+        : exactPayload(query.from);
+    });
+    window.history.replaceState({}, '', '/lancamentos');
+    render(<AppRouter />);
+
+    expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
+    await user.click(screen.getByRole('button', { name: 'PC' }));
+    await user.selectOptions(screen.getAllByRole('combobox', { name: 'Gênero' })[0], 'rpg');
+    await user.click(screen.getByRole('button', { name: 'Calendário' }));
+    await user.click(screen.getByRole('button', { name: formatCalendarLongDate(selectedDate) }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Não foi possível carregar os jogos',
+    );
+    expect(
+      screen.getByRole('button', { name: formatCalendarShortDate(selectedDate) }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'PC' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getAllByRole('combobox', { name: 'Gênero' })[0]).toHaveValue('rpg');
+
+    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+
+    expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
+    expect(fetchReleasesMock.mock.calls.at(-1)?.[0]).toEqual({
+      from: selectedDate,
+      to: selectedDate,
+      platformIds: [6],
+      genreIds: [12],
+      limit: 100,
+    });
+    expect(error).toHaveBeenCalledTimes(1);
   });
 
   it('filters releases by one platform and one genre and clears both', async () => {
