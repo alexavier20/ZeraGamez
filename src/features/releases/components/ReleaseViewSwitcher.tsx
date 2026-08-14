@@ -1,8 +1,13 @@
 import { CalendarDays, List } from 'lucide-react';
+import type { Ref } from 'react';
 
 export type ReleaseView = 'list' | 'calendar';
 
 type ReleaseViewSwitcherProps = Readonly<{
+  calendarButtonRef?: Ref<HTMLButtonElement>;
+  calendarExpanded?: boolean;
+  calendarLabel?: string;
+  calendarPopupId?: string;
   controlsId: string;
   onChange: (value: ReleaseView) => void;
   value: ReleaseView;
@@ -11,11 +16,19 @@ type ReleaseViewSwitcherProps = Readonly<{
 const optionClassName =
   'flex h-8 items-center gap-[7px] rounded-[9px] px-[11px] text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand';
 
-export function ReleaseViewSwitcher({ controlsId, onChange, value }: ReleaseViewSwitcherProps) {
+export function ReleaseViewSwitcher({
+  calendarButtonRef,
+  calendarExpanded,
+  calendarLabel,
+  calendarPopupId,
+  controlsId,
+  onChange,
+  value,
+}: ReleaseViewSwitcherProps) {
   return (
     <div
       aria-label="Alternar visualização"
-      className="hidden h-10 w-[189px] items-center gap-1 rounded-xl bg-bg-secondary p-1 lg:flex"
+      className="hidden h-10 w-fit min-w-[189px] items-center gap-1 rounded-xl bg-bg-secondary p-1 lg:flex"
       role="group"
     >
       <button
@@ -35,7 +48,9 @@ export function ReleaseViewSwitcher({ controlsId, onChange, value }: ReleaseView
         Lista
       </button>
       <button
-        aria-controls={controlsId}
+        aria-controls={calendarPopupId === undefined ? controlsId : `${controlsId} ${calendarPopupId}`}
+        aria-expanded={calendarPopupId === undefined ? undefined : calendarExpanded}
+        aria-haspopup={calendarPopupId === undefined ? undefined : 'dialog'}
         aria-pressed={value === 'calendar'}
         className={`${optionClassName} ${
           value === 'calendar'
@@ -45,10 +60,11 @@ export function ReleaseViewSwitcher({ controlsId, onChange, value }: ReleaseView
         onClick={() => {
           onChange('calendar');
         }}
+        ref={calendarButtonRef}
         type="button"
       >
         <CalendarDays aria-hidden="true" size={15} />
-        Calendário
+        {calendarLabel ?? 'Calendário'}
       </button>
     </div>
   );

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   ReleaseViewSwitcher,
@@ -15,6 +15,24 @@ function ControlledSwitcher() {
 }
 
 describe('ReleaseViewSwitcher', () => {
+  it('exposes the calendar popover to assistive technology', () => {
+    render(
+      <ReleaseViewSwitcher
+        calendarExpanded
+        calendarLabel="29 jul. 2026"
+        calendarPopupId="release-date-picker"
+        controlsId="release-results"
+        onChange={vi.fn()}
+        value="calendar"
+      />,
+    );
+
+    const calendar = screen.getByRole('button', { name: '29 jul. 2026' });
+    expect(calendar).toHaveAttribute('aria-expanded', 'true');
+    expect(calendar).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(calendar).toHaveAttribute('aria-controls', 'release-results release-date-picker');
+  });
+
   it('alterna o modo selecionado com semântica acessível', async () => {
     const user = userEvent.setup();
     render(<ControlledSwitcher />);
