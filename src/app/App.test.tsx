@@ -3,6 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppRouter } from '@/app/router';
+import {
+  formatCalendarLongDate,
+  formatCalendarShortDate,
+  todayInSaoPaulo,
+} from '@/features/releases/model/release-calendar';
+import { formatReleaseDate } from '@/features/releases/model/release-presentation';
 
 import type { ReleasesClientQuery } from '@/features/releases/api/releases-client';
 
@@ -67,6 +73,24 @@ const nextPayload = {
     generatedAt: '2026-11-06T12:00:00.000Z',
   },
 };
+
+function exactPayload(releaseDate: string) {
+  return {
+    data: [
+      {
+        ...payload.data[0],
+        releaseDate,
+      },
+    ],
+    meta: {
+      ...emptyPayload.meta,
+      from: releaseDate,
+      to: releaseDate,
+      count: 1,
+      generatedAt: `${releaseDate}T12:00:00.000Z`,
+    },
+  };
+}
 
 const fetchReleasesMock = vi.hoisted(() => vi.fn());
 
@@ -191,8 +215,10 @@ describe('Zera GameZ', () => {
 
     expect(listButton).toHaveAttribute('aria-pressed', 'false');
     expect(calendarButton).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('status')).toHaveTextContent('Visualiza\u00e7\u00e3o em breve');
-    expect(screen.queryByRole('list', { name: 'Hoje 10 de agosto' })).not.toBeInTheDocument();
+    expect(calendarButton).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Hoje 10 de agosto' })).toBeInTheDocument();
+    expect(fetchReleasesMock).toHaveBeenCalledTimes(1);
 
     await user.click(listButton);
 
@@ -229,6 +255,120 @@ describe('Zera GameZ', () => {
       expect(info).toHaveBeenCalledWith('[releases] Próximos lançamentos', payload);
     });
     expect(info).toHaveBeenCalledTimes(1);
+  });
+
+  it('searches releases for the exact selected calendar date', async () => {
+    const user = userEvent.setup();
+    const selectedDate = todayInSaoPaulo();
+    fetchReleasesMock.mockImplementation((query: ReleasesClientQuery = {}) =>
+      query.from === undefined ? payload : exactPayload(query.from),
+    );
+    window.history.replaceState({}, '', '/lancamentos');
+    render(<AppRouter />);
+
+    expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
+    await waitFor(() => {
+      expect(releaseObservedTarget).toBeDefined();
+    });
+    const broadSentinel = releaseObservedTarget as HTMLElement;
+    await user.click(screen.getByRole('button', { name: 'Calendário' }));
+    await user.click(screen.getByRole('button', { name: formatCalendarLongDate(selectedDate) }));
+
+    await waitFor(() => {
+      expect(fetchReleasesMock.mock.calls.at(-1)?.[0]).toEqual({
+        from: selectedDate,
+        to: selectedDate,
+        limit: 100,
+      });
+    });
+    expect(
+      screen.getByRole('button', { name: formatCalendarShortDate(selectedDate) }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(`1 lançamento encontrado em ${formatReleaseDate(selectedDate, false)}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 2, name: formatCalendarLongDate(selectedDate) }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Resultados de lançamentos' })).not.toContainElement(
+      broadSentinel,
+    );
+  });
+
+  it('shows the exact-date empty state and clears only the selected date', async () => {
+    const user = userEvent.setup();
+    const selectedDate = todayInSaoPaulo();
+    fetchReleasesMock.mockImplementation((query: ReleasesClientQuery = {}) =>
+      query.from === undefined
+        ? payload
+        : {
+            ...emptyPayload,
+            meta: { ...emptyPayload.meta, from: query.from, to: query.to ?? query.from },
+          },
+    );
+    window.history.replaceState({}, '', '/lancamentos');
+    render(<AppRouter />);
+
+    expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
+    await user.click(screen.getByRole('button', { name: 'Calendário' }));
+    await user.click(screen.getByRole('button', { name: formatCalendarLongDate(selectedDate) }));
+
+    expect(
+      await screen.findByText(
+        `Nenhum lançamento encontrado em ${formatReleaseDate(selectedDate, false)}`,
+      ),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Limpar data' }));
+    await waitFor(() => {
+      expect(fetchReleasesMock.mock.calls.at(-1)?.[0]).toEqual({ limit: 100 });
+    });
+    expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
+  });
+
+  it('combines an exact date with platform and genre and preserves clear semantics', async () => {
+    const user = userEvent.setup();
+    const selectedDate = todayInSaoPaulo();
+    fetchReleasesMock.mockImplementation((query: ReleasesClientQuery = {}) =>
+      query.from === undefined
+        ? payload
+        : {
+            ...emptyPayload,
+            meta: { ...emptyPayload.meta, from: query.from, to: query.to ?? query.from },
+          },
+    );
+    window.history.replaceState({}, '', '/lancamentos');
+    render(<AppRouter />);
+
+    expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
+    await user.click(screen.getByRole('button', { name: 'PC' }));
+    await user.selectOptions(screen.getAllByRole('combobox', { name: 'Gênero' })[0], 'rpg');
+    await user.click(screen.getByRole('button', { name: 'Calendário' }));
+    await user.click(screen.getByRole('button', { name: formatCalendarLongDate(selectedDate) }));
+
+    await waitFor(() => {
+      expect(fetchReleasesMock.mock.calls.at(-1)?.[0]).toEqual({
+        from: selectedDate,
+        to: selectedDate,
+        platformIds: [6],
+        genreIds: [12],
+        limit: 100,
+      });
+    });
+
+    await user.click(await screen.findByRole('button', { name: 'Limpar data' }));
+    await waitFor(() => {
+      expect(fetchReleasesMock.mock.calls.at(-1)?.[0]).toEqual({
+        platformIds: [6],
+        genreIds: [12],
+        limit: 100,
+      });
+    });
+
+    await user.click(screen.getAllByRole('button', { name: 'Limpar filtros' })[0]);
+    await waitFor(() => {
+      expect(fetchReleasesMock.mock.calls.at(-1)?.[0]).toEqual({ limit: 100 });
+    });
   });
 
   it('filters releases by one platform and one genre and clears both', async () => {
@@ -323,6 +463,8 @@ describe('Zera GameZ', () => {
     await user.click(screen.getByRole('button', { name: 'Calend\u00e1rio' }));
     expect(results).not.toContainElement(listSentinel as HTMLElement);
     expect(results).not.toContainElement(releaseObservedTarget as HTMLElement);
+    expect(screen.getAllByText('Eclipse Protocol')).toHaveLength(2);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
     act(() => {
       pausedObserverCallback(
         [{ isIntersecting: true } as IntersectionObserverEntry],
