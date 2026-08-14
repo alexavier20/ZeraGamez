@@ -1,4 +1,4 @@
-import { CalendarDays, LoaderCircle, SearchX, TriangleAlert } from 'lucide-react';
+import { LoaderCircle, SearchX, TriangleAlert } from 'lucide-react';
 
 import type { LucideIcon } from 'lucide-react';
 import type * as React from 'react';
@@ -81,17 +81,6 @@ export function ReleasesError({ onRetry }: { readonly onRetry: () => void }): Re
       icon={TriangleAlert}
       role="alert"
       title="Não foi possível carregar os jogos"
-    />
-  );
-}
-
-export function ReleaseCalendarPlaceholder(): React.ReactElement {
-  return (
-    <StatePanel
-      body="A visualização de calendário estará disponível em breve."
-      icon={CalendarDays}
-      role="status"
-      title="Visualização em breve"
     />
   );
 }

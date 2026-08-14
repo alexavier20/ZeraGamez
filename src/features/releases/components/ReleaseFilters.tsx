@@ -54,6 +54,7 @@ function FilterSelect<TKey extends string>({
 }
 
 export interface ReleaseFiltersProps {
+  readonly additionalFilterActive?: boolean;
   readonly value: ReleaseFilterSelection;
   readonly onPlatformChange: (value: ReleasePlatformFilterKey) => void;
   readonly onGenreChange: (value: ReleaseGenreFilterKey) => void;
@@ -61,12 +62,14 @@ export interface ReleaseFiltersProps {
 }
 
 export function ReleaseFilters({
+  additionalFilterActive = false,
   value,
   onPlatformChange,
   onGenreChange,
   onClear,
 }: ReleaseFiltersProps) {
-  const hasActiveFilters = value.platform !== 'all' || value.genre !== 'all';
+  const hasActiveFilters =
+    additionalFilterActive || value.platform !== 'all' || value.genre !== 'all';
   const clearClassName =
     'shrink-0 font-semibold text-brand-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-40';
 

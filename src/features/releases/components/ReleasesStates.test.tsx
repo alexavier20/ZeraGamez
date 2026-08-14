@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  ReleaseCalendarPlaceholder,
   ReleasesEmpty,
   ReleasesError,
   ReleasesLoading,
@@ -43,13 +42,5 @@ describe('release list states', () => {
     expect(retryButton).toHaveClass('focus-visible:outline-2', 'focus-visible:outline-brand');
     await user.click(retryButton);
     expect(onRetry).toHaveBeenCalledTimes(1);
-  });
-
-  it('renders the unavailable calendar state without a call to action', () => {
-    render(<ReleaseCalendarPlaceholder />);
-
-    expect(screen.getByRole('status')).toHaveTextContent('Visualização em breve');
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
-    expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 });
