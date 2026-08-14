@@ -108,4 +108,20 @@ describe('ReleaseFilters', () => {
       expect(clear).toBeDisabled();
     }
   });
+
+  it('enables each clear control when an additional filter is active', () => {
+    render(
+      <ReleaseFilters
+        additionalFilterActive
+        onClear={vi.fn()}
+        onGenreChange={vi.fn()}
+        onPlatformChange={vi.fn()}
+        value={defaultReleaseFilterSelection}
+      />,
+    );
+
+    for (const clear of screen.getAllByRole('button', { name: 'Limpar filtros' })) {
+      expect(clear).toBeEnabled();
+    }
+  });
 });

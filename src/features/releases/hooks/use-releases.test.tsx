@@ -995,4 +995,123 @@ describe('useReleases', () => {
     expect(successData(result.current.state).map(({ id }) => id)).toEqual([2]);
     expect(log.error).not.toHaveBeenCalled();
   });
+
+  it('loads one exact date with active filters and never creates a next window', async () => {
+    const exact = page([release(29, '2026-08-29')], {
+      from: '2026-08-29',
+      to: '2026-08-29',
+    });
+    const load = vi.fn<ReleasesDependencies['load']>().mockResolvedValue(exact);
+    const { result } = renderHook(() =>
+      useReleases(
+        { date: '2026-08-29', platformIds: [167], genreIds: [12] },
+        { load, logger: logger() },
+      ),
+    );
+
+    await waitFor(() => {
+      expect(result.current.state.status).toBe('success');
+    });
+    expect(load.mock.calls[0]?.[0]).toEqual({
+      from: '2026-08-29',
+      to: '2026-08-29',
+      platformIds: [167],
+      genreIds: [12],
+      limit: 100,
+    });
+    expect(result.current.pagination).toEqual({ status: 'complete' });
+
+    act(() => {
+      result.current.loadMore();
+    });
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it('finishes an empty exact date without scanning later windows', async () => {
+    const exactEmpty = page([], { from: '2026-08-31', to: '2026-08-31' });
+    const load = vi.fn<ReleasesDependencies['load']>().mockResolvedValue(exactEmpty);
+    const { result } = renderHook(() =>
+      useReleases({ date: '2026-08-31' }, { load, logger: logger() }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.state.status).toBe('empty');
+    });
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(result.current.pagination).toEqual({ status: 'complete' });
+  });
+
+  it('retries the same exact date after an initial failure', async () => {
+    const exact = page([release(29, '2026-08-29')], {
+      from: '2026-08-29',
+      to: '2026-08-29',
+    });
+    const load = vi
+      .fn<ReleasesDependencies['load']>()
+      .mockRejectedValueOnce(new Error('temporary'))
+      .mockResolvedValueOnce(exact);
+    const { result } = renderHook(() =>
+      useReleases({ date: '2026-08-29' }, { load, logger: logger() }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.state.status).toBe('error');
+    });
+    act(() => {
+      result.current.retry();
+    });
+    await waitFor(() => {
+      expect(result.current.state.status).toBe('success');
+    });
+
+    expect(load.mock.calls.map(([query]) => query)).toEqual([
+      { from: '2026-08-29', to: '2026-08-29', limit: 100 },
+      { from: '2026-08-29', to: '2026-08-29', limit: 100 },
+    ]);
+    expect(result.current.pagination).toEqual({ status: 'complete' });
+  });
+
+  it('aborts a pending exact-date session and ignores its stale success after the date changes', async () => {
+    const first = deferred<ReleasesResponse>();
+    const second = page([release(30, '2026-08-30')], {
+      from: '2026-08-30',
+      to: '2026-08-30',
+    });
+    const load = vi
+      .fn<ReleasesDependencies['load']>()
+      .mockReturnValueOnce(first.promise)
+      .mockResolvedValueOnce(second);
+    const { result, rerender } = renderHook(
+      ({ date }) => useReleases({ date }, { load, logger: logger() }),
+      { initialProps: { date: '2026-08-29' } },
+    );
+
+    await waitFor(() => {
+      expect(load).toHaveBeenCalledTimes(1);
+    });
+    const firstSignal = load.mock.calls[0]?.[1];
+
+    rerender({ date: '2026-08-30' });
+
+    expect(firstSignal.aborted).toBe(true);
+    await waitFor(() => {
+      expect(result.current.state.status).toBe('success');
+    });
+    expect(load.mock.calls.map(([query]) => query)).toEqual([
+      { from: '2026-08-29', to: '2026-08-29', limit: 100 },
+      { from: '2026-08-30', to: '2026-08-30', limit: 100 },
+    ]);
+    expect(successData(result.current.state).map(({ id }) => id)).toEqual([30]);
+
+    await act(async () => {
+      first.resolve(
+        page([release(29, '2026-08-29')], {
+          from: '2026-08-29',
+          to: '2026-08-29',
+        }),
+      );
+      await first.promise;
+    });
+    expect(successData(result.current.state).map(({ id }) => id)).toEqual([30]);
+  });
 });

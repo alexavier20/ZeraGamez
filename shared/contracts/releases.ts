@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const civilDateSchema = z.string().refine((value) => {
+export const civilDateSchema = z.string().refine((value) => {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) return false;
   const date = new Date(value + 'T00:00:00.000Z');

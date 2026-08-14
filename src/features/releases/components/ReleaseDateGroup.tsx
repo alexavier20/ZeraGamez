@@ -10,30 +10,43 @@ import type * as React from 'react';
 export interface ReleaseDateGroupProps {
   readonly generatedAt: string;
   readonly group: ReleaseGroup;
+  readonly headingMode?: 'full' | 'relative';
 }
 
 export function ReleaseDateGroup({
   generatedAt,
   group,
+  headingMode = 'relative',
 }: ReleaseDateGroupProps): React.ReactElement {
   const dayKind = getReleaseDayKind(group.releaseDate, generatedAt);
-  const date = formatReleaseDate(group.releaseDate, false);
+  const date = formatReleaseDate(group.releaseDate, headingMode === 'full');
   const headingId = `release-date-${group.releaseDate}`;
   const heading =
-    dayKind === 'today' ? `Hoje ${date}` : dayKind === 'tomorrow' ? `Amanhã — ${date}` : date;
-  const mobileHeading = dayKind === 'today' ? `Hoje — ${date}` : heading;
+    headingMode === 'full'
+      ? date
+      : dayKind === 'today'
+        ? `Hoje ${date}`
+        : dayKind === 'tomorrow'
+          ? `Amanhã — ${date}`
+          : date;
+  const mobileHeading =
+    headingMode === 'full' ? date : dayKind === 'today' ? `Hoje — ${date}` : heading;
 
   return (
     <section aria-labelledby={headingId}>
       <h2 aria-label={heading} className="font-heading" id={headingId}>
         <span className="hidden items-center gap-2 text-xl font-semibold text-text-primary sm:flex">
-          {dayKind === 'today' ? (
+          {headingMode === 'relative' && dayKind === 'today' ? (
             <span className="rounded-md bg-brand px-2 py-1 text-xs font-semibold text-content-primary">
               Hoje
             </span>
           ) : null}
-          {dayKind === 'today' ? ' ' : null}
-          {dayKind === 'tomorrow' ? <span>Amanhã — {date}</span> : <span>{date}</span>}
+          {headingMode === 'relative' && dayKind === 'today' ? ' ' : null}
+          {headingMode === 'relative' && dayKind === 'tomorrow' ? (
+            <span>Amanhã — {date}</span>
+          ) : (
+            <span>{date}</span>
+          )}
         </span>
         <span className="text-xs font-semibold uppercase text-text-muted sm:hidden">
           {mobileHeading}

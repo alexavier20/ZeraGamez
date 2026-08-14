@@ -87,6 +87,14 @@ describe('ReleaseList', () => {
     expect(response).toEqual(snapshot);
   });
 
+  it('uses full date headings without relative copy for exact-date results', () => {
+    render(<ReleaseList exactDate response={responseWithThreeReleasesAcrossTwoDates} />);
+
+    expect(screen.getByRole('region', { name: '10 de agosto de 2026' })).toBeInTheDocument();
+    expect(screen.queryByText('Hoje')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Amanhã/)).not.toBeInTheDocument();
+  });
+
   it('keeps one exposed semantic heading per date group across responsive presentations', () => {
     render(<ReleaseList response={responseWithThreeReleasesAcrossTwoDates} />);
 

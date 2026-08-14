@@ -5,10 +5,11 @@ import type { ReleasesResponse } from '../../../../shared/contracts/releases';
 import type * as React from 'react';
 
 export interface ReleaseListProps {
+  readonly exactDate?: boolean;
   readonly response: ReleasesResponse;
 }
 
-export function ReleaseList({ response }: ReleaseListProps): React.ReactElement {
+export function ReleaseList({ exactDate = false, response }: ReleaseListProps): React.ReactElement {
   const groups = groupReleasesByDate(response.data);
 
   return (
@@ -17,6 +18,7 @@ export function ReleaseList({ response }: ReleaseListProps): React.ReactElement 
         <ReleaseDateGroup
           generatedAt={response.meta.generatedAt}
           group={group}
+          headingMode={exactDate ? 'full' : 'relative'}
           key={group.releaseDate}
         />
       ))}
