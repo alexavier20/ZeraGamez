@@ -22,7 +22,11 @@ export interface ReleaseDatePickerProps {
 
 const weekdays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
-function getInitialFocusDate({ currentDate, month, selectedDate }: ReleaseDatePickerProps): string {
+function getInitialFocusDate({
+  currentDate,
+  month,
+  selectedDate,
+}: Pick<ReleaseDatePickerProps, 'currentDate' | 'month' | 'selectedDate'>): string {
   if (selectedDate !== null) {
     return selectedDate;
   }
@@ -41,23 +45,22 @@ export function ReleaseDatePicker({
   onSelect,
   selectedDate,
 }: ReleaseDatePickerProps) {
-  const focusTarget = getInitialFocusDate({
-    currentDate,
-    knownReleaseDates,
-    month,
-    onMonthChange,
-    onRequestClose,
-    onSelect,
-    selectedDate,
-  });
+  const focusTarget = getInitialFocusDate({ currentDate, month, selectedDate });
   const [focusDate, setFocusDate] = useState(focusTarget);
+  const focusInputs = useRef({ currentDate, selectedDate });
   const dayRefs = useRef(new Map<string, HTMLButtonElement>());
   const days = buildCalendarMonth(month);
   const weeks = Array.from({ length: 6 }, (_, index) => days.slice(index * 7, (index + 1) * 7));
 
   useEffect(() => {
-    setFocusDate(focusTarget);
-  }, [focusTarget]);
+    if (
+      focusInputs.current.currentDate !== currentDate ||
+      focusInputs.current.selectedDate !== selectedDate
+    ) {
+      focusInputs.current = { currentDate, selectedDate };
+      setFocusDate(getInitialFocusDate({ currentDate, month, selectedDate }));
+    }
+  }, [currentDate, month, selectedDate]);
 
   useEffect(() => {
     dayRefs.current.get(focusDate)?.focus();
@@ -72,7 +75,23 @@ export function ReleaseDatePicker({
     }
   }
 
+  function moveFocusToMonth(amount: number) {
+    setFocusDate(addCalendarMonths(focusDate, amount));
+    onMonthChange(addCalendarMonths(month, amount));
+  }
+
   function handleDialogKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      onRequestClose();
+      return;
+    }
+
+    if (!(event.target as HTMLElement).closest('[data-calendar-day]')) {
+      return;
+    }
+
     switch (event.key) {
       case 'ArrowRight':
         event.preventDefault();
@@ -92,16 +111,11 @@ export function ReleaseDatePicker({
         break;
       case 'PageDown':
         event.preventDefault();
-        onMonthChange(addCalendarMonths(month, 1));
+        moveFocusToMonth(1);
         break;
       case 'PageUp':
         event.preventDefault();
-        onMonthChange(addCalendarMonths(month, -1));
-        break;
-      case 'Escape':
-        event.preventDefault();
-        event.stopPropagation();
-        onRequestClose();
+        moveFocusToMonth(-1);
         break;
       default:
         break;
@@ -141,19 +155,18 @@ export function ReleaseDatePicker({
           </button>
         </div>
 
-        <div className="grid grid-cols-7 gap-1" role="row">
-          {weekdays.map((weekday) => (
-            <div
-              className="grid h-5 w-9 place-items-center text-[11px] font-medium text-text-muted"
-              key={weekday}
-              role="columnheader"
-            >
-              {weekday}
-            </div>
-          ))}
-        </div>
-
         <div className="grid gap-1" role="grid">
+          <div className="grid grid-cols-7 gap-1" role="row">
+            {weekdays.map((weekday) => (
+              <div
+                className="grid h-5 w-9 place-items-center text-[11px] font-medium text-text-muted"
+                key={weekday}
+                role="columnheader"
+              >
+                {weekday}
+              </div>
+            ))}
+          </div>
           {weeks.map((week) => (
             <div className="grid grid-cols-7 gap-1" key={week[0].date} role="row">
               {week.map((day) => {
@@ -174,9 +187,13 @@ export function ReleaseDatePicker({
                       aria-label={formatCalendarLongDate(day.date)}
                       aria-pressed={selected}
                       className={`relative grid size-9 place-items-center rounded-lg text-[13px] ${dayClassName}`}
+                      data-calendar-day="true"
                       data-today={today || undefined}
                       onClick={() => {
                         onSelect(day.date);
+                      }}
+                      onFocus={() => {
+                        setFocusDate(day.date);
                       }}
                       ref={(element) => {
                         if (element === null) {
@@ -185,6 +202,7 @@ export function ReleaseDatePicker({
                           dayRefs.current.set(day.date, element);
                         }
                       }}
+                      tabIndex={day.date === focusDate ? 0 : -1}
                       type="button"
                     >
                       {day.dayNumber}

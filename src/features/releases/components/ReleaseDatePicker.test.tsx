@@ -1,8 +1,12 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ReleaseDatePicker } from '@/features/releases/components/ReleaseDatePicker';
+import {
+  ReleaseDatePicker,
+  type ReleaseDatePickerProps,
+} from '@/features/releases/components/ReleaseDatePicker';
 
 const defaultProps = {
   currentDate: '2026-07-29',
@@ -19,6 +23,23 @@ function setup(overrides: Partial<typeof defaultProps> = {}) {
   const view = render(<ReleaseDatePicker {...props} />);
 
   return { ...props, ...view };
+}
+
+function ControlledReleaseDatePicker({
+  selectedDate = defaultProps.selectedDate,
+}: {
+  readonly selectedDate?: ReleaseDatePickerProps['selectedDate'];
+}) {
+  const [month, setMonth] = useState(defaultProps.month);
+
+  return (
+    <ReleaseDatePicker
+      {...defaultProps}
+      month={month}
+      onMonthChange={setMonth}
+      selectedDate={selectedDate}
+    />
+  );
 }
 
 describe('ReleaseDatePicker', () => {
@@ -78,32 +99,85 @@ describe('ReleaseDatePicker', () => {
     expect(screen.getByRole('button', { name: '1 de julho de 2026' })).toHaveFocus();
   });
 
-  it('moves focus by calendar days with arrow keys', async () => {
+  it('keeps the exact arrow-key destination after a controlled month transition', async () => {
+    const user = userEvent.setup();
+    render(<ControlledReleaseDatePicker selectedDate={null} />);
+
+    await user.keyboard('{ArrowDown}');
+
+    expect(screen.getByRole('dialog', { name: 'Agosto de 2026' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '5 de agosto de 2026' })).toHaveFocus();
+  });
+
+  it('moves focus by calendar days with arrow keys through controlled month transitions', async () => {
+    const user = userEvent.setup();
+    render(<ControlledReleaseDatePicker selectedDate={null} />);
+
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('button', { name: '30 de julho de 2026' })).toHaveFocus();
+
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('button', { name: '6 de agosto de 2026' })).toHaveFocus();
+
+    await user.keyboard('{ArrowLeft}');
+    expect(screen.getByRole('button', { name: '5 de agosto de 2026' })).toHaveFocus();
+
+    await user.keyboard('{ArrowUp}');
+    expect(screen.getByRole('button', { name: '29 de julho de 2026' })).toHaveFocus();
+  });
+
+  it('uses a roving tab stop and synchronizes keyboard navigation with the focused day', async () => {
     const user = userEvent.setup();
     const { onMonthChange } = setup();
 
+    const dialog = screen.getByRole('dialog');
+    const dayButtons = within(dialog)
+      .getAllByRole('gridcell')
+      .map((cell) => within(cell).getByRole('button'));
+    const selectedDay = screen.getByRole('button', { name: '31 de julho de 2026' });
+
+    expect(dayButtons.filter((button) => button.tabIndex === 0)).toEqual([selectedDay]);
+    expect(screen.getByRole('button', { name: '30 de julho de 2026' })).toHaveAttribute(
+      'tabindex',
+      '-1',
+    );
+
+    screen.getByRole('button', { name: '1 de agosto de 2026' }).focus();
     await user.keyboard('{ArrowRight}');
-    expect(screen.getByRole('button', { name: '1 de agosto de 2026' })).toHaveFocus();
 
-    await user.keyboard('{ArrowDown}');
-    expect(screen.getByRole('button', { name: '8 de agosto de 2026' })).toHaveFocus();
-
-    await user.keyboard('{ArrowLeft}');
-    expect(screen.getByRole('button', { name: '7 de agosto de 2026' })).toHaveFocus();
-
-    await user.keyboard('{ArrowUp}');
-    expect(screen.getByRole('button', { name: '31 de julho de 2026' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: '2 de agosto de 2026' })).toHaveFocus();
     expect(onMonthChange).toHaveBeenCalledWith('2026-08-01');
   });
 
-  it('requests adjacent months with PageDown and PageUp', async () => {
+  it('does not handle calendar navigation keys while a header button has focus', async () => {
     const user = userEvent.setup();
     const { onMonthChange } = setup();
 
-    await user.keyboard('{PageDown}{PageUp}');
+    screen.getByRole('button', { name: 'Mês anterior' }).focus();
+    await user.keyboard('{ArrowRight}');
 
-    expect(onMonthChange).toHaveBeenNthCalledWith(1, '2026-08-01');
-    expect(onMonthChange).toHaveBeenNthCalledWith(2, '2026-06-01');
+    expect(onMonthChange).not.toHaveBeenCalled();
+  });
+
+  it('keeps weekday headers inside the calendar grid', () => {
+    setup();
+
+    const grid = screen.getByRole('grid');
+    expect(within(grid).getAllByRole('columnheader')).toHaveLength(7);
+    expect(within(grid).getAllByRole('row')).toHaveLength(7);
+  });
+
+  it('changes controlled months and focuses their starts with PageDown and PageUp', async () => {
+    const user = userEvent.setup();
+    render(<ControlledReleaseDatePicker />);
+
+    await user.keyboard('{PageDown}');
+    expect(screen.getByRole('dialog', { name: 'Agosto de 2026' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '1 de agosto de 2026' })).toHaveFocus();
+
+    await user.keyboard('{PageUp}');
+    expect(screen.getByRole('dialog', { name: 'Julho de 2026' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '1 de julho de 2026' })).toHaveFocus();
   });
 
   it('closes when Escape is pressed', async () => {
