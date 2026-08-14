@@ -159,6 +159,23 @@ describe('ReleaseDatePicker', () => {
     expect(onMonthChange).not.toHaveBeenCalled();
   });
 
+  it('keeps one focusable day after header navigation removes the prior focus date', async () => {
+    const user = userEvent.setup();
+    render(<ControlledReleaseDatePicker />);
+
+    await user.click(screen.getByRole('button', { name: 'Próximo mês' }));
+    await user.click(screen.getByRole('button', { name: 'Próximo mês' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Setembro de 2026' });
+    const dayButtons = within(dialog)
+      .getAllByRole('gridcell')
+      .map((cell) => within(cell).getByRole('button'));
+    const expectedFocus = screen.getByRole('button', { name: '1 de setembro de 2026' });
+
+    expect(dayButtons.filter((button) => button.tabIndex === 0)).toEqual([expectedFocus]);
+    expect(expectedFocus).toHaveFocus();
+  });
+
   it('keeps weekday headers inside the calendar grid', () => {
     setup();
 

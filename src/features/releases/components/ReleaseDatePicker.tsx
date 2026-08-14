@@ -50,6 +50,7 @@ export function ReleaseDatePicker({
   const focusInputs = useRef({ currentDate, selectedDate });
   const dayRefs = useRef(new Map<string, HTMLButtonElement>());
   const days = buildCalendarMonth(month);
+  const hasFocusDate = days.some((day) => day.date === focusDate);
   const weeks = Array.from({ length: 6 }, (_, index) => days.slice(index * 7, (index + 1) * 7));
 
   useEffect(() => {
@@ -65,6 +66,12 @@ export function ReleaseDatePicker({
   useEffect(() => {
     dayRefs.current.get(focusDate)?.focus();
   }, [focusDate, month]);
+
+  useEffect(() => {
+    if (!hasFocusDate) {
+      setFocusDate(calendarMonthStart(month));
+    }
+  }, [hasFocusDate, month]);
 
   function moveFocus(amount: number) {
     const nextFocusDate = addCalendarDays(focusDate, amount);
