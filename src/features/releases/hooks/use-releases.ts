@@ -49,6 +49,7 @@ export interface ReleasesDependencies {
 }
 
 export interface ReleasesFilters {
+  readonly date?: string;
   readonly platformIds?: readonly number[];
   readonly genreIds?: readonly number[];
 }
@@ -57,10 +58,15 @@ function idsFromKey(key: string): number[] {
   return key === '' ? [] : key.split(',').map(Number);
 }
 
-function filtersFromKeys(platformIdsKey: string, genreIdsKey: string): ReleasesClientQuery {
+function filtersFromKeys(
+  date: string,
+  platformIdsKey: string,
+  genreIdsKey: string,
+): ReleasesClientQuery {
   const platformIds = idsFromKey(platformIdsKey);
   const genreIds = idsFromKey(genreIdsKey);
   return {
+    ...(date === '' ? {} : { from: date, to: date }),
     ...(platformIds.length > 0 ? { platformIds } : {}),
     ...(genreIds.length > 0 ? { genreIds } : {}),
   };
@@ -90,6 +96,7 @@ export function useReleases(
   dependencies: ReleasesDependencies = defaultDependencies,
 ): UseReleasesResult {
   const { load, logger } = dependencies;
+  const dateKey = filters.date ?? '';
   const platformIdsKey = filters.platformIds?.join(',') ?? '';
   const genreIdsKey = filters.genreIds?.join(',') ?? '';
   const [attempt, setAttempt] = useState(0);
@@ -212,7 +219,7 @@ export function useReleases(
   }, [consumePendingWindow]);
 
   useEffect(() => {
-    const sessionFilters = filtersFromKeys(platformIdsKey, genreIdsKey);
+    const sessionFilters = filtersFromKeys(dateKey, platformIdsKey, genreIdsKey);
     filtersRef.current = sessionFilters;
     const session = sessionRef.current + 1;
     sessionRef.current = session;
@@ -235,7 +242,8 @@ export function useReleases(
           if (sessionRef.current !== session) return;
 
           loggerRef.current.info('[releases] Próximos lançamentos', page);
-          horizonRef.current = createReleaseHorizon(page.meta.from);
+          const exactDateSession = dateKey !== '';
+          horizonRef.current = exactDateSession ? null : createReleaseHorizon(page.meta.from);
           const initialWindow = { from: page.meta.from, to: page.meta.to };
 
           if (isReleaseWindowIncomplete(page)) {
@@ -258,7 +266,8 @@ export function useReleases(
           }
 
           responseRef.current = mergeReleaseResponses(null, page);
-          const next = nextReleaseWindow(page.meta.to, horizonRef.current);
+          const horizon = horizonRef.current;
+          const next = horizon === null ? null : nextReleaseWindow(page.meta.to, horizon);
           if (next) pendingWindowsRef.current.push(next);
 
           if (page.data.length > 0) {
@@ -297,7 +306,7 @@ export function useReleases(
       activeControllerRef.current = null;
       inFlightRef.current = false;
     };
-  }, [attempt, consumePendingWindow, genreIdsKey, load, platformIdsKey]);
+  }, [attempt, consumePendingWindow, dateKey, genreIdsKey, load, platformIdsKey]);
 
   const retry = useCallback(() => {
     if (failedWindowRef.current) {
