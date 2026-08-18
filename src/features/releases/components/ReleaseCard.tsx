@@ -1,4 +1,4 @@
-import { BookmarkPlus, Ellipsis, Gamepad2, Heart, Plus } from 'lucide-react';
+import { BookmarkPlus, CircleCheck, Ellipsis, Gamepad2, Plus } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import { AddToListsModal } from '@/features/lists/components/AddToListsModal';
@@ -35,11 +35,52 @@ interface ReleasePlatformChip {
 interface ReleaseCardLayoutProps {
   readonly item: ReleaseItem;
   readonly onAddToLists: React.MouseEventHandler<HTMLButtonElement>;
+  readonly onToggleWantToPlay: () => void;
   readonly presentation: ReleasePresentation;
+  readonly wantToPlay: boolean;
 }
 
 const disabledActionClassName =
-  'inline-flex items-center justify-center rounded-lg text-text-muted transition-colors disabled:cursor-not-allowed disabled:opacity-100';
+  'inline-flex items-center justify-center rounded-lg text-text-muted transition-colors disabled:opacity-100';
+
+interface WantToPlayButtonProps {
+  readonly compact?: boolean;
+  readonly gameName: string;
+  readonly onToggle: () => void;
+  readonly selected: boolean;
+}
+
+function WantToPlayButton({
+  compact = false,
+  gameName,
+  onToggle,
+  selected,
+}: WantToPlayButtonProps) {
+  const Icon = selected ? CircleCheck : Gamepad2;
+
+  return (
+    <button
+      aria-label={
+        selected ? `Remover ${gameName} de Quero jogar` : `Marcar ${gameName} como quero jogar`
+      }
+      aria-pressed={selected}
+      className={`inline-flex shrink-0 items-center justify-center border text-content-primary transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${
+        compact
+          ? 'size-7 rounded-lg'
+          : 'h-7 w-[104px] gap-[7px] rounded-[10px] px-2 text-[11px] font-semibold'
+      } ${
+        selected
+          ? 'border-success bg-success hover:bg-success/90'
+          : 'border-transparent bg-app/80 hover:bg-app'
+      }`}
+      onClick={onToggle}
+      type="button"
+    >
+      <Icon aria-hidden="true" size={15} />
+      {compact ? null : <span>Quero jogar!</span>}
+    </button>
+  );
+}
 
 function desktopPlatformChips(platforms: ReleaseItem['platforms']): ReleasePlatformChip[] {
   const chips = platforms.slice(0, 2).map((platform, index) => ({
@@ -61,7 +102,13 @@ function desktopPlatformChips(platforms: ReleaseItem['platforms']): ReleasePlatf
     : chips;
 }
 
-function ReleaseCardDesktop({ item, onAddToLists, presentation }: ReleaseCardLayoutProps) {
+function ReleaseCardDesktop({
+  item,
+  onAddToLists,
+  onToggleWantToPlay,
+  presentation,
+  wantToPlay,
+}: ReleaseCardLayoutProps) {
   return (
     <>
       <div className="relative">
@@ -84,14 +131,13 @@ function ReleaseCardDesktop({ item, onAddToLists, presentation }: ReleaseCardLay
         <span className="absolute bottom-2 left-2 rounded-md bg-app/85 px-2 py-1 text-[11px] font-semibold text-content-primary">
           {presentation.status}
         </span>
-        <button
-          aria-label={`Favoritar ${item.name}`}
-          className={`${disabledActionClassName} absolute right-2 top-2 size-8 bg-app/85 hover:text-content-primary`}
-          disabled
-          type="button"
-        >
-          <Heart aria-hidden="true" size={16} />
-        </button>
+        <div className="absolute right-2 top-2">
+          <WantToPlayButton
+            gameName={item.name}
+            onToggle={onToggleWantToPlay}
+            selected={wantToPlay}
+          />
+        </div>
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -151,7 +197,13 @@ function ReleaseCardDesktop({ item, onAddToLists, presentation }: ReleaseCardLay
   );
 }
 
-function ReleaseCardMobile({ item, onAddToLists, presentation }: ReleaseCardLayoutProps) {
+function ReleaseCardMobile({
+  item,
+  onAddToLists,
+  onToggleWantToPlay,
+  presentation,
+  wantToPlay,
+}: ReleaseCardLayoutProps) {
   return (
     <>
       <div className="relative h-full">
@@ -182,14 +234,14 @@ function ReleaseCardMobile({ item, onAddToLists, presentation }: ReleaseCardLayo
             >
               {item.name}
             </h3>
-            <button
-              aria-label={`Favoritar ${item.name}`}
-              className={`${disabledActionClassName} -mr-1 -mt-1 size-7 shrink-0`}
-              disabled
-              type="button"
-            >
-              <Heart aria-hidden="true" size={15} />
-            </button>
+            <div className="-mr-1 -mt-1">
+              <WantToPlayButton
+                compact
+                gameName={item.name}
+                onToggle={onToggleWantToPlay}
+                selected={wantToPlay}
+              />
+            </div>
           </div>
           <p
             className="mt-1 truncate text-[11px] text-text-muted"
@@ -235,6 +287,7 @@ function ReleaseCardMobile({ item, onAddToLists, presentation }: ReleaseCardLayo
 
 export function ReleaseCard({ item, generatedAt }: ReleaseCardProps): React.ReactElement {
   const [addToListsOpen, setAddToListsOpen] = useState(false);
+  const [wantToPlay, setWantToPlay] = useState(false);
   const listTriggerRef = useRef<HTMLButtonElement | null>(null);
   const presentation: ReleasePresentation = {
     date: formatReleaseDate(item.releaseDate),
@@ -247,6 +300,10 @@ export function ReleaseCard({ item, generatedAt }: ReleaseCardProps): React.Reac
   const handleOpenAddToLists: React.MouseEventHandler<HTMLButtonElement> = (event) => {
     listTriggerRef.current = event.currentTarget;
     setAddToListsOpen(true);
+  };
+
+  const handleToggleWantToPlay = () => {
+    setWantToPlay((current) => !current);
   };
 
   const handleCloseAddToLists = () => {
@@ -265,7 +322,9 @@ export function ReleaseCard({ item, generatedAt }: ReleaseCardProps): React.Reac
         <ReleaseCardDesktop
           item={item}
           onAddToLists={handleOpenAddToLists}
+          onToggleWantToPlay={handleToggleWantToPlay}
           presentation={presentation}
+          wantToPlay={wantToPlay}
         />
       </article>
       <article
@@ -275,7 +334,9 @@ export function ReleaseCard({ item, generatedAt }: ReleaseCardProps): React.Reac
         <ReleaseCardMobile
           item={item}
           onAddToLists={handleOpenAddToLists}
+          onToggleWantToPlay={handleToggleWantToPlay}
           presentation={presentation}
+          wantToPlay={wantToPlay}
         />
       </article>
       {addToListsOpen ? (

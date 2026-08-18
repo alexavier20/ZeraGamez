@@ -146,7 +146,7 @@ describe('ReleaseCard', () => {
     );
   });
 
-  it('keeps unfinished favorite and menu actions disabled while list actions stay available', () => {
+  it('keeps menu actions disabled while want-to-play and list actions stay available', () => {
     render(<ReleaseCard generatedAt="2026-08-10T12:00:00.000Z" item={release} />);
 
     for (const layout of [
@@ -154,8 +154,10 @@ describe('ReleaseCard', () => {
       screen.getByTestId('release-card-mobile-42'),
     ]) {
       expect(
-        within(layout).getByRole('button', { name: 'Favoritar Eclipse Protocol' }),
-      ).toBeDisabled();
+        within(layout).getByRole('button', {
+          name: 'Marcar Eclipse Protocol como quero jogar',
+        }),
+      ).toBeEnabled();
       expect(
         within(layout).getByRole('button', { name: 'Adicionar Eclipse Protocol à lista' }),
       ).toBeEnabled();
@@ -168,6 +170,58 @@ describe('ReleaseCard', () => {
     expect(icons).toHaveLength(6);
     for (const icon of icons) {
       expect(icon).toHaveAttribute('aria-hidden', 'true');
+    }
+  });
+
+  it('toggles want-to-play from either layout and keeps desktop and mobile in sync', async () => {
+    const user = userEvent.setup();
+    render(<ReleaseCard generatedAt="2026-08-10T12:00:00.000Z" item={release} />);
+
+    const desktop = screen.getByTestId('release-card-desktop-42');
+    const mobile = screen.getByTestId('release-card-mobile-42');
+    const desktopButton = within(desktop).getByRole('button', {
+      name: 'Marcar Eclipse Protocol como quero jogar',
+    });
+    const mobileButton = within(mobile).getByRole('button', {
+      name: 'Marcar Eclipse Protocol como quero jogar',
+    });
+
+    expect(desktopButton).toHaveAttribute('aria-pressed', 'false');
+    expect(mobileButton).toHaveAttribute('aria-pressed', 'false');
+    expect(desktopButton).toHaveClass('h-7', 'w-[104px]', 'bg-app/80');
+    expect(mobileButton).not.toHaveClass('w-[104px]');
+    expect(within(desktopButton).getByText('Quero jogar!')).toBeInTheDocument();
+    expect(within(mobileButton).queryByText('Quero jogar!')).not.toBeInTheDocument();
+    expect(desktopButton.querySelector('svg.lucide-gamepad-2')).toBeInTheDocument();
+    expect(mobileButton.querySelector('svg.lucide-gamepad-2')).toBeInTheDocument();
+
+    await user.click(desktopButton);
+
+    const selectedDesktopButton = within(desktop).getByRole('button', {
+      name: 'Remover Eclipse Protocol de Quero jogar',
+    });
+    const selectedMobileButton = within(mobile).getByRole('button', {
+      name: 'Remover Eclipse Protocol de Quero jogar',
+    });
+    for (const button of [selectedDesktopButton, selectedMobileButton]) {
+      expect(button).toHaveAttribute('aria-pressed', 'true');
+      expect(button).toHaveClass('bg-success');
+      expect(button.querySelector('svg.lucide-circle-check')).toBeInTheDocument();
+    }
+
+    await user.click(selectedMobileButton);
+
+    const restoredDesktopButton = within(desktop).getByRole('button', {
+      name: 'Marcar Eclipse Protocol como quero jogar',
+    });
+    const restoredMobileButton = within(mobile).getByRole('button', {
+      name: 'Marcar Eclipse Protocol como quero jogar',
+    });
+    for (const button of [restoredDesktopButton, restoredMobileButton]) {
+      expect(button).toHaveAttribute('aria-pressed', 'false');
+      expect(button).not.toHaveClass('bg-success');
+      expect(button.querySelector('svg.lucide-gamepad-2')).toBeInTheDocument();
+      expect(button.querySelector('svg.lucide-circle-check')).not.toBeInTheDocument();
     }
   });
 

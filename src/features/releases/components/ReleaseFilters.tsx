@@ -71,7 +71,7 @@ export function ReleaseFilters({
   const hasActiveFilters =
     additionalFilterActive || value.platform !== 'all' || value.genre !== 'all';
   const clearClassName =
-    'shrink-0 font-semibold text-brand-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-40';
+    'shrink-0 font-semibold text-brand-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-40';
 
   return (
     <section aria-label="Filtros de lançamentos" className="mt-[18px] sm:mt-[22px] lg:mt-7">

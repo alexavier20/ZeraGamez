@@ -140,7 +140,7 @@ function AddToListsDialog({
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto px-4 py-[88px] sm:py-[160px]">
       <button
         aria-label="Fechar ao clicar fora do modal"
-        className="absolute inset-0 size-full cursor-default bg-black/70"
+        className="absolute inset-0 size-full bg-black/70"
         data-testid="add-to-lists-backdrop"
         onClick={onClose}
         tabIndex={-1}
@@ -207,7 +207,7 @@ function AddToListsDialog({
               <div className="flex h-11 items-center justify-center gap-2 sm:h-10 sm:gap-2.5">
                 <button
                   aria-label="Página anterior"
-                  className="flex size-11 items-center justify-center rounded-[11px] border border-border-brand bg-bg-secondary text-text-muted transition-colors enabled:hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-55 sm:size-10 sm:rounded-[10px]"
+                  className="flex size-11 items-center justify-center rounded-[11px] border border-border-brand bg-bg-secondary text-text-muted transition-colors enabled:hover:text-content-primary disabled:opacity-55 sm:size-10 sm:rounded-[10px]"
                   disabled={page === 0}
                   onClick={() => {
                     setPage((current) => current - 1);
@@ -221,7 +221,7 @@ function AddToListsDialog({
                 </span>
                 <button
                   aria-label="Próxima página"
-                  className="flex size-11 items-center justify-center rounded-[11px] border border-border-brand bg-brand text-white transition-colors enabled:hover:bg-brand-bright disabled:cursor-not-allowed disabled:bg-bg-secondary disabled:text-text-muted disabled:opacity-55 sm:size-10 sm:rounded-[10px]"
+                  className="flex size-11 items-center justify-center rounded-[11px] border border-border-brand bg-brand text-white transition-colors enabled:hover:bg-brand-bright disabled:bg-bg-secondary disabled:text-text-muted disabled:opacity-55 sm:size-10 sm:rounded-[10px]"
                   disabled={page === pageCount - 1}
                   onClick={() => {
                     setPage((current) => current + 1);
@@ -242,7 +242,7 @@ function AddToListsDialog({
                 Cancelar
               </button>
               <button
-                className="rounded-[10px] bg-brand px-4 text-xs font-semibold text-white transition-colors enabled:hover:bg-brand-bright disabled:cursor-not-allowed disabled:bg-bg-secondary disabled:text-text-muted"
+                className="rounded-[10px] bg-brand px-4 text-xs font-semibold text-white transition-colors enabled:hover:bg-brand-bright disabled:bg-bg-secondary disabled:text-text-muted"
                 disabled={selectedIds.size === 0}
                 onClick={() => {
                   onConfirm?.([...selectedIds]);
