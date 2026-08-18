@@ -1,5 +1,8 @@
 import { BookmarkPlus, Ellipsis, Gamepad2, Heart, Plus } from 'lucide-react';
+import { useRef, useState } from 'react';
 
+import { AddToListsModal } from '@/features/lists/components/AddToListsModal';
+import { demoAddToListsOptions } from '@/features/lists/model/add-to-lists';
 import {
   compactPlatformLabel,
   formatReleaseDate,
@@ -31,6 +34,7 @@ interface ReleasePlatformChip {
 
 interface ReleaseCardLayoutProps {
   readonly item: ReleaseItem;
+  readonly onAddToLists: React.MouseEventHandler<HTMLButtonElement>;
   readonly presentation: ReleasePresentation;
 }
 
@@ -57,7 +61,7 @@ function desktopPlatformChips(platforms: ReleaseItem['platforms']): ReleasePlatf
     : chips;
 }
 
-function ReleaseCardDesktop({ item, presentation }: ReleaseCardLayoutProps) {
+function ReleaseCardDesktop({ item, onAddToLists, presentation }: ReleaseCardLayoutProps) {
   return (
     <>
       <div className="relative">
@@ -127,8 +131,8 @@ function ReleaseCardDesktop({ item, presentation }: ReleaseCardLayoutProps) {
       <div className="flex items-center gap-2 border-t border-border-brand pt-2">
         <button
           aria-label={`Adicionar ${item.name} à lista`}
-          className={`${disabledActionClassName} h-9 flex-1 gap-2 border border-border-brand bg-bg-secondary px-3 text-xs font-semibold text-content-primary`}
-          disabled
+          className={`${disabledActionClassName} h-9 flex-1 gap-2 border border-border-brand bg-bg-secondary px-3 text-xs font-semibold text-content-primary hover:border-brand hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand`}
+          onClick={onAddToLists}
           type="button"
         >
           <BookmarkPlus aria-hidden="true" size={15} />
@@ -147,7 +151,7 @@ function ReleaseCardDesktop({ item, presentation }: ReleaseCardLayoutProps) {
   );
 }
 
-function ReleaseCardMobile({ item, presentation }: ReleaseCardLayoutProps) {
+function ReleaseCardMobile({ item, onAddToLists, presentation }: ReleaseCardLayoutProps) {
   return (
     <>
       <div className="relative h-full">
@@ -209,8 +213,8 @@ function ReleaseCardMobile({ item, presentation }: ReleaseCardLayoutProps) {
           </span>
           <button
             aria-label={`Adicionar ${item.name} à lista`}
-            className={`${disabledActionClassName} size-7 shrink-0 border border-border-brand bg-bg-secondary`}
-            disabled
+            className={`${disabledActionClassName} size-7 shrink-0 border border-border-brand bg-bg-secondary hover:border-brand hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand`}
+            onClick={onAddToLists}
             type="button"
           >
             <Plus aria-hidden="true" size={15} />
@@ -230,6 +234,8 @@ function ReleaseCardMobile({ item, presentation }: ReleaseCardLayoutProps) {
 }
 
 export function ReleaseCard({ item, generatedAt }: ReleaseCardProps): React.ReactElement {
+  const [addToListsOpen, setAddToListsOpen] = useState(false);
+  const listTriggerRef = useRef<HTMLButtonElement | null>(null);
   const presentation: ReleasePresentation = {
     date: formatReleaseDate(item.releaseDate),
     status: formatReleaseStatus(item.releaseDate, generatedAt),
@@ -238,20 +244,48 @@ export function ReleaseCard({ item, generatedAt }: ReleaseCardProps): React.Reac
     genre: item.genres.at(0)?.name,
   };
 
+  const handleOpenAddToLists: React.MouseEventHandler<HTMLButtonElement> = (event) => {
+    listTriggerRef.current = event.currentTarget;
+    setAddToListsOpen(true);
+  };
+
+  const handleCloseAddToLists = () => {
+    setAddToListsOpen(false);
+    queueMicrotask(() => {
+      listTriggerRef.current?.focus();
+    });
+  };
+
   return (
     <>
       <article
         className="hidden h-[407px] rounded-2xl border border-border-brand bg-surface p-3 shadow-[0_8px_24px_#00000040] sm:flex sm:flex-col sm:gap-2"
         data-testid={`release-card-desktop-${String(item.id)}`}
       >
-        <ReleaseCardDesktop item={item} presentation={presentation} />
+        <ReleaseCardDesktop
+          item={item}
+          onAddToLists={handleOpenAddToLists}
+          presentation={presentation}
+        />
       </article>
       <article
         className="grid h-[132px] grid-cols-[82px_minmax(0,1fr)] gap-3 rounded-[14px] border border-border-brand bg-surface p-2.5 sm:hidden"
         data-testid={`release-card-mobile-${String(item.id)}`}
       >
-        <ReleaseCardMobile item={item} presentation={presentation} />
+        <ReleaseCardMobile
+          item={item}
+          onAddToLists={handleOpenAddToLists}
+          presentation={presentation}
+        />
       </article>
+      {addToListsOpen ? (
+        <AddToListsModal
+          gameName={item.name}
+          lists={demoAddToListsOptions}
+          onClose={handleCloseAddToLists}
+          open
+        />
+      ) : null}
     </>
   );
 }

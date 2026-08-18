@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ReleaseCard } from '@/features/releases/components/ReleaseCard';
@@ -145,7 +146,7 @@ describe('ReleaseCard', () => {
     );
   });
 
-  it('keeps named visual actions disabled and decorative icons out of the accessibility tree', () => {
+  it('keeps unfinished favorite and menu actions disabled while list actions stay available', () => {
     render(<ReleaseCard generatedAt="2026-08-10T12:00:00.000Z" item={release} />);
 
     for (const layout of [
@@ -157,7 +158,7 @@ describe('ReleaseCard', () => {
       ).toBeDisabled();
       expect(
         within(layout).getByRole('button', { name: 'Adicionar Eclipse Protocol à lista' }),
-      ).toBeDisabled();
+      ).toBeEnabled();
       expect(
         within(layout).getByRole('button', { name: 'Mais opções para Eclipse Protocol' }),
       ).toBeDisabled();
@@ -168,6 +169,26 @@ describe('ReleaseCard', () => {
     for (const icon of icons) {
       expect(icon).toHaveAttribute('aria-hidden', 'true');
     }
+  });
+
+  it('opens one modal for the selected game and restores focus to its trigger on close', async () => {
+    const user = userEvent.setup();
+    render(<ReleaseCard generatedAt="2026-08-10T12:00:00.000Z" item={release} />);
+
+    const trigger = within(screen.getByTestId('release-card-desktop-42')).getByRole('button', {
+      name: 'Adicionar Eclipse Protocol à lista',
+    });
+    await user.click(trigger);
+
+    expect(
+      screen.getByRole('dialog', { name: 'Adicionar Eclipse Protocol à lista' }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+
+    await user.click(screen.getByRole('button', { name: 'Fechar modal' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
   });
 
   it('renders accessible desktop and mobile placeholders with decorative gamepad icons', () => {
