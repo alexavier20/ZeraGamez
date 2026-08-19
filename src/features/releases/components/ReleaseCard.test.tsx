@@ -146,7 +146,7 @@ describe('ReleaseCard', () => {
     );
   });
 
-  it('keeps menu actions disabled while want-to-play and list actions stay available', () => {
+  it('keeps want-to-play and list actions available', () => {
     render(<ReleaseCard generatedAt="2026-08-10T12:00:00.000Z" item={release} />);
 
     for (const layout of [
@@ -161,15 +161,24 @@ describe('ReleaseCard', () => {
       expect(
         within(layout).getByRole('button', { name: 'Adicionar Eclipse Protocol à lista' }),
       ).toBeEnabled();
-      expect(
-        within(layout).getByRole('button', { name: 'Mais opções para Eclipse Protocol' }),
-      ).toBeDisabled();
     }
 
     const icons = document.querySelectorAll('svg.lucide');
-    expect(icons).toHaveLength(6);
     for (const icon of icons) {
       expect(icon).toHaveAttribute('aria-hidden', 'true');
+    }
+  });
+
+  it('omits the more-options action from desktop and mobile cards', () => {
+    render(<ReleaseCard generatedAt="2026-08-10T12:00:00.000Z" item={release} />);
+
+    for (const layout of [
+      screen.getByTestId('release-card-desktop-42'),
+      screen.getByTestId('release-card-mobile-42'),
+    ]) {
+      expect(
+        within(layout).queryByRole('button', { name: 'Mais opções para Eclipse Protocol' }),
+      ).not.toBeInTheDocument();
     }
   });
 

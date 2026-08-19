@@ -1,4 +1,4 @@
-import { BookmarkPlus, CircleCheck, Ellipsis, Gamepad2, Plus } from 'lucide-react';
+import { BookmarkPlus, CircleCheck, Gamepad2, Plus } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import { AddToListsModal } from '@/features/lists/components/AddToListsModal';
@@ -184,14 +184,6 @@ function ReleaseCardDesktop({
           <BookmarkPlus aria-hidden="true" size={15} />
           Adicionar à lista
         </button>
-        <button
-          aria-label={`Mais opções para ${item.name}`}
-          className={`${disabledActionClassName} size-9 border border-border-brand bg-bg-secondary`}
-          disabled
-          type="button"
-        >
-          <Ellipsis aria-hidden="true" size={17} />
-        </button>
       </div>
     </>
   );
@@ -270,14 +262,6 @@ function ReleaseCardMobile({
             type="button"
           >
             <Plus aria-hidden="true" size={15} />
-          </button>
-          <button
-            aria-label={`Mais opções para ${item.name}`}
-            className={`${disabledActionClassName} size-7 shrink-0`}
-            disabled
-            type="button"
-          >
-            <Ellipsis aria-hidden="true" size={16} />
           </button>
         </div>
       </div>
