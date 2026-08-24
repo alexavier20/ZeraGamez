@@ -1,8 +1,11 @@
 import { BookmarkPlus, CircleCheck, Gamepad2, Plus } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router';
 
+import { useAuth } from '@/features/auth/context/AuthProvider';
+import { savePendingAuthIntent } from '@/features/auth/model/pending-auth-intent';
 import { AddToListsModal } from '@/features/lists/components/AddToListsModal';
-import { demoAddToListsOptions } from '@/features/lists/model/add-to-lists';
+import { isListsOperationCancelled, useLists } from '@/features/lists/context/ListsProvider';
 import {
   compactPlatformLabel,
   formatReleaseDate,
@@ -11,11 +14,16 @@ import {
   type ReleaseItem,
 } from '@/features/releases/model/release-presentation';
 
+import type { GameSnapshot } from '@/features/lists/model/lists';
 import type * as React from 'react';
+
+export type PendingReleaseActionType = 'open-add-to-lists' | 'toggle-want-to-play';
 
 export interface ReleaseCardProps {
   readonly item: ReleaseItem;
   readonly generatedAt: string;
+  readonly onPendingActionConsumed?: () => void;
+  readonly pendingAction?: PendingReleaseActionType;
 }
 
 interface ReleasePresentation {
@@ -33,6 +41,7 @@ interface ReleasePlatformChip {
 }
 
 interface ReleaseCardLayoutProps {
+  readonly actionPending: boolean;
   readonly item: ReleaseItem;
   readonly onAddToLists: React.MouseEventHandler<HTMLButtonElement>;
   readonly onToggleWantToPlay: () => void;
@@ -45,6 +54,7 @@ const disabledActionClassName =
 
 interface WantToPlayButtonProps {
   readonly compact?: boolean;
+  readonly disabled: boolean;
   readonly gameName: string;
   readonly onToggle: () => void;
   readonly selected: boolean;
@@ -52,6 +62,7 @@ interface WantToPlayButtonProps {
 
 function WantToPlayButton({
   compact = false,
+  disabled,
   gameName,
   onToggle,
   selected,
@@ -73,6 +84,7 @@ function WantToPlayButton({
           ? 'border-success bg-success hover:bg-success/90'
           : 'border-transparent bg-app/80 hover:bg-app'
       }`}
+      disabled={disabled}
       onClick={onToggle}
       type="button"
     >
@@ -103,6 +115,7 @@ function desktopPlatformChips(platforms: ReleaseItem['platforms']): ReleasePlatf
 }
 
 function ReleaseCardDesktop({
+  actionPending,
   item,
   onAddToLists,
   onToggleWantToPlay,
@@ -133,6 +146,7 @@ function ReleaseCardDesktop({
         </span>
         <div className="absolute right-2 top-2">
           <WantToPlayButton
+            disabled={actionPending}
             gameName={item.name}
             onToggle={onToggleWantToPlay}
             selected={wantToPlay}
@@ -190,6 +204,7 @@ function ReleaseCardDesktop({
 }
 
 function ReleaseCardMobile({
+  actionPending,
   item,
   onAddToLists,
   onToggleWantToPlay,
@@ -229,6 +244,7 @@ function ReleaseCardMobile({
             <div className="-mr-1 -mt-1">
               <WantToPlayButton
                 compact
+                disabled={actionPending}
                 gameName={item.name}
                 onToggle={onToggleWantToPlay}
                 selected={wantToPlay}
@@ -269,10 +285,31 @@ function ReleaseCardMobile({
   );
 }
 
-export function ReleaseCard({ item, generatedAt }: ReleaseCardProps): React.ReactElement {
+function toGameSnapshot(item: ReleaseItem): GameSnapshot {
+  return {
+    igdbId: item.id,
+    name: item.name,
+    coverUrl: item.coverUrl,
+    releaseDate: item.releaseDate,
+  };
+}
+
+export function ReleaseCard({
+  item,
+  generatedAt,
+  onPendingActionConsumed,
+  pendingAction,
+}: ReleaseCardProps): React.ReactElement {
+  const { state: authState } = useAuth();
+  const { addGameToLists, listsState, loadLists, toggleWantToPlay, wantToPlayIds } = useLists();
+  const navigate = useNavigate();
   const [addToListsOpen, setAddToListsOpen] = useState(false);
-  const [wantToPlay, setWantToPlay] = useState(false);
+  const [togglePending, setTogglePending] = useState(false);
+  const [toggleError, setToggleError] = useState<string | null>(null);
   const listTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const togglePendingRef = useRef(false);
+  const resumedActionRef = useRef<PendingReleaseActionType | null>(null);
+  const wantToPlay = wantToPlayIds.has(item.id);
   const presentation: ReleasePresentation = {
     date: formatReleaseDate(item.releaseDate),
     status: formatReleaseStatus(item.releaseDate, generatedAt),
@@ -281,21 +318,93 @@ export function ReleaseCard({ item, generatedAt }: ReleaseCardProps): React.Reac
     genre: item.genres.at(0)?.name,
   };
 
+  const requestAuthentication = useCallback(
+    (type: PendingReleaseActionType) => {
+      savePendingAuthIntent(sessionStorage, {
+        version: 1,
+        type,
+        returnTo: '/lancamentos',
+        igdbId: item.id,
+      });
+      void navigate('/entrar');
+    },
+    [item.id, navigate],
+  );
+
+  const openAddToLists = useCallback(
+    (trigger?: HTMLButtonElement) => {
+      if (authState.status !== 'authenticated') {
+        requestAuthentication('open-add-to-lists');
+        return;
+      }
+
+      listTriggerRef.current = trigger ?? null;
+      setAddToListsOpen(true);
+      void loadLists();
+    },
+    [authState.status, loadLists, requestAuthentication],
+  );
+
   const handleOpenAddToLists: React.MouseEventHandler<HTMLButtonElement> = (event) => {
-    listTriggerRef.current = event.currentTarget;
-    setAddToListsOpen(true);
+    openAddToLists(event.currentTarget);
   };
 
-  const handleToggleWantToPlay = () => {
-    setWantToPlay((current) => !current);
-  };
+  const handleToggleWantToPlay = useCallback(() => {
+    if (authState.status !== 'authenticated') {
+      requestAuthentication('toggle-want-to-play');
+      return;
+    }
+    if (togglePendingRef.current) return;
 
-  const handleCloseAddToLists = () => {
+    togglePendingRef.current = true;
+    setTogglePending(true);
+    setToggleError(null);
+    void toggleWantToPlay(toGameSnapshot(item))
+      .catch((error: unknown) => {
+        if (!isListsOperationCancelled(error)) {
+          setToggleError('Não foi possível atualizar Quero jogar. Tente novamente.');
+        }
+      })
+      .finally(() => {
+        togglePendingRef.current = false;
+        setTogglePending(false);
+      });
+  }, [authState.status, item, requestAuthentication, toggleWantToPlay]);
+
+  const handleCloseAddToLists = useCallback(() => {
     setAddToListsOpen(false);
     queueMicrotask(() => {
       listTriggerRef.current?.focus();
     });
-  };
+  }, []);
+
+  useEffect(() => {
+    if (pendingAction === undefined) {
+      resumedActionRef.current = null;
+      return;
+    }
+    if (authState.status !== 'authenticated') return;
+
+    const action = pendingAction;
+    let active = true;
+    queueMicrotask(() => {
+      if (!active || resumedActionRef.current === action) return;
+      resumedActionRef.current = action;
+      onPendingActionConsumed?.();
+      if (action === 'open-add-to-lists') openAddToLists();
+      else handleToggleWantToPlay();
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [
+    authState.status,
+    handleToggleWantToPlay,
+    onPendingActionConsumed,
+    openAddToLists,
+    pendingAction,
+  ]);
 
   return (
     <>
@@ -304,6 +413,7 @@ export function ReleaseCard({ item, generatedAt }: ReleaseCardProps): React.Reac
         data-testid={`release-card-desktop-${String(item.id)}`}
       >
         <ReleaseCardDesktop
+          actionPending={togglePending}
           item={item}
           onAddToLists={handleOpenAddToLists}
           onToggleWantToPlay={handleToggleWantToPlay}
@@ -316,6 +426,7 @@ export function ReleaseCard({ item, generatedAt }: ReleaseCardProps): React.Reac
         data-testid={`release-card-mobile-${String(item.id)}`}
       >
         <ReleaseCardMobile
+          actionPending={togglePending}
           item={item}
           onAddToLists={handleOpenAddToLists}
           onToggleWantToPlay={handleToggleWantToPlay}
@@ -323,11 +434,20 @@ export function ReleaseCard({ item, generatedAt }: ReleaseCardProps): React.Reac
           wantToPlay={wantToPlay}
         />
       </article>
+      {toggleError === null ? null : (
+        <p className="sr-only" role="alert">
+          {toggleError}
+        </p>
+      )}
       {addToListsOpen ? (
         <AddToListsModal
           gameName={item.name}
-          lists={demoAddToListsOptions}
+          listsState={listsState}
           onClose={handleCloseAddToLists}
+          onConfirm={(listIds) => addGameToLists(toGameSnapshot(item), listIds)}
+          onRetry={() => {
+            void loadLists({ force: true });
+          }}
           open
         />
       ) : null}

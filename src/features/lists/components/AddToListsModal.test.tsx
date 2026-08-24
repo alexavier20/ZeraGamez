@@ -1,56 +1,89 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  AddToListsModal,
-  type AddToListsOption,
-} from '@/features/lists/components/AddToListsModal';
+import { AddToListsModal } from '@/features/lists/components/AddToListsModal';
 
-const lists: readonly AddToListsOption[] = [
+import type { ListsState } from '@/features/lists/context/ListsProvider';
+import type { UserListSummary } from '@/features/lists/model/lists';
+
+const lists: readonly UserListSummary[] = [
   {
-    id: 'want-to-play',
-    name: 'Quero jogar',
+    id: 7,
+    name: 'RPGs',
     covers: ['/cover-a.png', '/cover-b.png', '/cover-c.png'],
+    description: 'Campanhas longas',
+    gameCount: 2,
+    systemKey: null,
   },
   {
-    id: 'completed',
-    name: 'Já zerei',
+    id: 9,
+    name: 'Quero jogar',
     covers: ['/cover-d.png', '/cover-e.png', '/cover-f.png'],
+    description: null,
+    gameCount: 1,
+    systemKey: 'want_to_play',
   },
   {
-    id: 'liked',
+    id: 11,
     name: 'Jogos que gostei',
     covers: ['/cover-g.png', '/cover-h.png', '/cover-i.png'],
+    description: null,
+    gameCount: 3,
+    systemKey: null,
   },
   {
-    id: 'waiting',
+    id: 13,
     name: 'Aguardando lançamento',
     covers: ['/cover-j.png', '/cover-k.png', '/cover-l.png'],
+    description: null,
+    gameCount: 4,
+    systemKey: null,
   },
   {
-    id: 'favorites',
+    id: 15,
     name: 'Favoritos',
     covers: ['/cover-m.png', '/cover-n.png', '/cover-o.png'],
+    description: null,
+    gameCount: 5,
+    systemKey: null,
   },
 ];
 
+const successState: ListsState = { status: 'success', lists };
+
+function renderModal(overrides: Partial<React.ComponentProps<typeof AddToListsModal>> = {}) {
+  const props: React.ComponentProps<typeof AddToListsModal> = {
+    gameName: 'Eclipse Protocol',
+    listsState: successState,
+    onClose: vi.fn(),
+    onConfirm: vi.fn().mockResolvedValue(undefined),
+    onRetry: vi.fn(),
+    open: true,
+    ...overrides,
+  };
+
+  return { ...render(<AddToListsModal {...props} />), props };
+}
+
+function deferred<Value>() {
+  let resolve!: (value: Value | PromiseLike<Value>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<Value>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+  return { promise, reject, resolve };
+}
+
 describe('AddToListsModal', () => {
-  it('keeps selections across pages and confirms the selected list ids', async () => {
+  it('keeps selections across pages and confirms numeric list ids', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
-    const onConfirm = vi.fn();
-    render(
-      <AddToListsModal
-        gameName="Eclipse Protocol"
-        lists={lists}
-        onClose={onClose}
-        onConfirm={onConfirm}
-        open
-      />,
-    );
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    renderModal({ onClose, onConfirm });
 
     const dialog = screen.getByRole('dialog', { name: 'Adicionar Eclipse Protocol à lista' });
     const addButton = screen.getByRole('button', { name: 'Adicionar' });
@@ -60,7 +93,7 @@ describe('AddToListsModal', () => {
     expect(screen.getByText('Página 1 de 2')).toBeInTheDocument();
     expect(addButton).toBeDisabled();
 
-    await user.click(screen.getByRole('button', { name: 'Quero jogar' }));
+    await user.click(screen.getByRole('button', { name: 'RPGs' }));
     await user.click(screen.getByRole('button', { name: 'Próxima página' }));
     await user.click(screen.getByRole('button', { name: 'Favoritos' }));
 
@@ -68,29 +101,116 @@ describe('AddToListsModal', () => {
     expect(addButton).toBeEnabled();
 
     await user.click(screen.getByRole('button', { name: 'Página anterior' }));
-    expect(screen.getByRole('button', { name: 'Quero jogar' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    expect(screen.getByRole('button', { name: 'RPGs' })).toHaveAttribute('aria-pressed', 'true');
 
     await user.click(addButton);
 
-    expect(onConfirm).toHaveBeenCalledWith(['want-to-play', 'favorites']);
-    expect(onClose).toHaveBeenCalledOnce();
+    expect(onConfirm).toHaveBeenCalledWith([7, 15]);
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+  });
+
+  it('keeps the modal open and preserves selection when persistence fails', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderModal({
+      onClose,
+      onConfirm: vi.fn().mockRejectedValue(new Error('raw provider detail')),
+    });
+
+    await user.click(screen.getByRole('button', { name: 'RPGs' }));
+    await user.click(screen.getByRole('button', { name: 'Adicionar' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Não foi possível adicionar o jogo. Tente novamente.',
+    );
+    expect(screen.getByRole('alert')).not.toHaveTextContent('raw provider detail');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'RPGs' })).toHaveAttribute('aria-pressed', 'true');
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('closes only after confirmed persistence', async () => {
+    const user = userEvent.setup();
+    const pending = deferred<undefined>();
+    const onClose = vi.fn();
+    renderModal({ onClose, onConfirm: vi.fn(() => pending.promise) });
+
+    await user.click(screen.getByRole('button', { name: 'RPGs' }));
+    await user.click(screen.getByRole('button', { name: 'Adicionar' }));
+
+    expect(onClose).not.toHaveBeenCalled();
+    pending.resolve(undefined);
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+  });
+
+  it('blocks duplicate selection, paging, confirmation, and dismissal while submitting', async () => {
+    const user = userEvent.setup();
+    const pending = deferred<undefined>();
+    const onClose = vi.fn();
+    const onConfirm = vi.fn(() => pending.promise);
+    renderModal({ onClose, onConfirm });
+
+    await user.click(screen.getByRole('button', { name: 'RPGs' }));
+    await user.click(screen.getByRole('button', { name: 'Adicionar' }));
+
+    expect(screen.getByRole('dialog')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('button', { name: 'RPGs' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Próxima página' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Adicionar' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Fechar modal' })).toBeDisabled();
+    expect(screen.getByTestId('add-to-lists-backdrop')).toBeDisabled();
+
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('button', { name: 'Adicionar' }));
+    expect(onClose).not.toHaveBeenCalled();
+    expect(onConfirm).toHaveBeenCalledOnce();
+
+    pending.resolve(undefined);
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+  });
+
+  it.each([{ status: 'idle' as const }, { status: 'loading' as const }])(
+    'announces list loading for $status state',
+    (listsState) => {
+      renderModal({ listsState });
+
+      expect(screen.getByRole('status')).toHaveTextContent('Carregando suas listas…');
+      expect(screen.queryByRole('button', { name: 'Adicionar' })).not.toBeInTheDocument();
+    },
+  );
+
+  it('shows a sanitized load error and offers retry', async () => {
+    const user = userEvent.setup();
+    const onRetry = vi.fn();
+    renderModal({
+      listsState: {
+        status: 'error',
+        message: 'Não foi possível carregar suas listas. Tente novamente.',
+      },
+      onRetry,
+    });
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Não foi possível carregar suas listas. Tente novamente.',
+    );
+    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(onRetry).toHaveBeenCalledOnce();
   });
 
   it('dismisses through Escape and focuses the close control when opened', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
-    render(
-      <AddToListsModal
-        gameName="Eclipse Protocol"
-        lists={lists.slice(0, 4)}
-        onClose={onClose}
-        onConfirm={vi.fn()}
-        open
-      />,
-    );
+    renderModal({
+      listsState: { status: 'success', lists: lists.slice(0, 4) },
+      onClose,
+    });
 
     expect(screen.queryByText(/Página 1 de/)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Fechar modal' })).toHaveFocus();
@@ -103,15 +223,7 @@ describe('AddToListsModal', () => {
   it('dismisses only when the backdrop itself is pressed', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
-    render(
-      <AddToListsModal
-        gameName="Eclipse Protocol"
-        lists={lists}
-        onClose={onClose}
-        onConfirm={vi.fn()}
-        open
-      />,
-    );
+    renderModal({ onClose });
 
     await user.click(screen.getByRole('dialog'));
     expect(onClose).not.toHaveBeenCalled();
@@ -125,9 +237,10 @@ describe('AddToListsModal', () => {
       <MemoryRouter>
         <AddToListsModal
           gameName="Eclipse Protocol"
-          lists={[]}
+          listsState={{ status: 'success', lists: [] }}
           onClose={vi.fn()}
-          onConfirm={vi.fn()}
+          onConfirm={vi.fn().mockResolvedValue(undefined)}
+          onRetry={vi.fn()}
           open
         />
       </MemoryRouter>,
@@ -145,15 +258,7 @@ describe('AddToListsModal', () => {
   });
 
   it('leaves the accessibility tree when closed', () => {
-    render(
-      <AddToListsModal
-        gameName="Eclipse Protocol"
-        lists={lists}
-        onClose={vi.fn()}
-        onConfirm={vi.fn()}
-        open={false}
-      />,
-    );
+    renderModal({ open: false });
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
@@ -176,11 +281,12 @@ describe('AddToListsModal', () => {
           </button>
           <AddToListsModal
             gameName="Eclipse Protocol"
-            lists={lists}
+            listsState={successState}
             onClose={() => {
               setOpen(false);
             }}
-            onConfirm={vi.fn()}
+            onConfirm={vi.fn().mockResolvedValue(undefined)}
+            onRetry={vi.fn()}
             open={open}
           />
         </>
@@ -189,7 +295,7 @@ describe('AddToListsModal', () => {
 
     render(<ControlledModal />);
 
-    await user.click(screen.getByRole('button', { name: 'Quero jogar' }));
+    await user.click(screen.getByRole('button', { name: 'RPGs' }));
     await user.click(screen.getByRole('button', { name: 'Próxima página' }));
     await user.click(screen.getByRole('button', { name: 'Cancelar' }));
     await user.click(screen.getByRole('button', { name: 'Abrir novamente' }));
@@ -197,9 +303,6 @@ describe('AddToListsModal', () => {
     expect(screen.getByText('Selecione uma ou mais listas')).toBeInTheDocument();
     expect(screen.getByText('Página 1 de 2')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Adicionar' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Quero jogar' })).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    );
+    expect(screen.getByRole('button', { name: 'RPGs' })).toHaveAttribute('aria-pressed', 'false');
   });
 });

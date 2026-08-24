@@ -5,18 +5,23 @@ import {
   type ReleaseGroup,
 } from '@/features/releases/model/release-presentation';
 
+import type { PendingReleaseAction } from '@/features/releases/components/ReleaseList';
 import type * as React from 'react';
 
 export interface ReleaseDateGroupProps {
   readonly generatedAt: string;
   readonly group: ReleaseGroup;
   readonly headingMode?: 'full' | 'relative';
+  readonly onPendingActionConsumed?: () => void;
+  readonly pendingAction?: PendingReleaseAction | null;
 }
 
 export function ReleaseDateGroup({
   generatedAt,
   group,
   headingMode = 'relative',
+  onPendingActionConsumed,
+  pendingAction,
 }: ReleaseDateGroupProps): React.ReactElement {
   const dayKind = getReleaseDayKind(group.releaseDate, generatedAt);
   const date = formatReleaseDate(group.releaseDate, headingMode === 'full');
@@ -62,7 +67,14 @@ export function ReleaseDateGroup({
             className="sm:[content-visibility:auto] sm:[contain-intrinsic-size:407px]"
             key={item.id}
           >
-            <ReleaseCard generatedAt={generatedAt} item={item} />
+            <ReleaseCard
+              generatedAt={generatedAt}
+              item={item}
+              onPendingActionConsumed={
+                pendingAction?.igdbId === item.id ? onPendingActionConsumed : undefined
+              }
+              pendingAction={pendingAction?.igdbId === item.id ? pendingAction.type : undefined}
+            />
           </li>
         ))}
       </ul>

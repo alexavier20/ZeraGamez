@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 
 import { ReleaseList } from '@/features/releases/components/ReleaseList';
@@ -45,9 +46,17 @@ const responseWithThreeReleasesAcrossTwoDates: ReleasesResponse = {
   },
 };
 
+function renderReleaseList(response: ReleasesResponse, exactDate = false) {
+  return render(
+    <MemoryRouter>
+      <ReleaseList exactDate={exactDate} response={response} />
+    </MemoryRouter>,
+  );
+}
+
 describe('ReleaseList', () => {
   it('renders every release once in chronological date groups', () => {
-    render(<ReleaseList response={responseWithThreeReleasesAcrossTwoDates} />);
+    renderReleaseList(responseWithThreeReleasesAcrossTwoDates);
 
     const groups = screen.getAllByRole('region', { name: /10 de agosto|11 de agosto/i });
 
@@ -79,7 +88,7 @@ describe('ReleaseList', () => {
     };
     const snapshot = structuredClone(response);
 
-    render(<ReleaseList response={response} />);
+    renderReleaseList(response);
 
     expect(screen.getByRole('region', { name: 'Hoje 10 de agosto' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Amanhã — 11 de agosto' })).toBeInTheDocument();
@@ -88,7 +97,7 @@ describe('ReleaseList', () => {
   });
 
   it('uses full date headings without relative copy for exact-date results', () => {
-    render(<ReleaseList exactDate response={responseWithThreeReleasesAcrossTwoDates} />);
+    renderReleaseList(responseWithThreeReleasesAcrossTwoDates, true);
 
     expect(screen.getByRole('region', { name: '10 de agosto de 2026' })).toBeInTheDocument();
     expect(screen.queryByText('Hoje')).not.toBeInTheDocument();
@@ -96,7 +105,7 @@ describe('ReleaseList', () => {
   });
 
   it('keeps one exposed semantic heading per date group across responsive presentations', () => {
-    render(<ReleaseList response={responseWithThreeReleasesAcrossTwoDates} />);
+    renderReleaseList(responseWithThreeReleasesAcrossTwoDates);
 
     const todayGroup = screen.getByRole('region', { name: 'Hoje 10 de agosto' });
     const dateHeadings = screen.getAllByRole('heading', { level: 2 });
@@ -114,7 +123,7 @@ describe('ReleaseList', () => {
   });
 
   it('owns direct list items from one heading-labelled list in each neutral date collection', () => {
-    render(<ReleaseList response={responseWithThreeReleasesAcrossTwoDates} />);
+    renderReleaseList(responseWithThreeReleasesAcrossTwoDates);
 
     const todayGroup = screen.getByRole('region', { name: 'Hoje 10 de agosto' });
     const heading = within(todayGroup).getByRole('heading', {

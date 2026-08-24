@@ -1,24 +1,26 @@
-import { Check, ChevronLeft, ChevronRight, Library, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Library, LoaderCircle, X } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router';
 
-import type { AddToListsOption } from '@/features/lists/model/add-to-lists';
-import type * as React from 'react';
+import { isListsOperationCancelled, type ListsState } from '@/features/lists/context/ListsProvider';
 
-export type { AddToListsOption } from '@/features/lists/model/add-to-lists';
+import type { UserListSummary } from '@/features/lists/model/lists';
+import type * as React from 'react';
 
 export interface AddToListsModalProps {
   readonly gameName: string;
-  readonly lists: readonly AddToListsOption[];
+  readonly listsState: ListsState;
   readonly onClose: () => void;
-  readonly onConfirm?: (listIds: readonly string[]) => void;
+  readonly onConfirm: (listIds: readonly number[]) => Promise<void>;
+  readonly onRetry: () => void;
   readonly open: boolean;
 }
 
 const pageSize = 4;
 const focusableSelector =
   'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+const addErrorMessage = 'Não foi possível adicionar o jogo. Tente novamente.';
 
 function selectedLabel(count: number): string {
   if (count === 0) return 'Selecione uma ou mais listas';
@@ -26,21 +28,23 @@ function selectedLabel(count: number): string {
 }
 
 interface ListOptionCardProps {
-  readonly list: AddToListsOption;
-  readonly onToggle: (id: string) => void;
+  readonly disabled: boolean;
+  readonly list: UserListSummary;
+  readonly onToggle: (id: number) => void;
   readonly selected: boolean;
 }
 
-function ListOptionCard({ list, onToggle, selected }: ListOptionCardProps) {
+function ListOptionCard({ disabled, list, onToggle, selected }: ListOptionCardProps) {
   return (
     <button
       aria-label={list.name}
       aria-pressed={selected}
-      className={`relative flex h-[126px] min-w-0 flex-col gap-2 overflow-hidden rounded-xl border bg-bg-secondary p-2 text-left transition-colors sm:h-[116px] ${
+      className={`relative flex h-[126px] min-w-0 flex-col gap-2 overflow-hidden rounded-xl border bg-bg-secondary p-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 sm:h-[116px] ${
         selected
           ? 'border-2 border-brand bg-list-selected'
-          : 'border-border-brand hover:border-brand/60'
+          : 'border-border-brand enabled:hover:border-brand/60'
       }`}
+      disabled={disabled}
       onClick={() => {
         onToggle(list.id);
       }}
@@ -79,15 +83,20 @@ type AddToListsDialogProps = Omit<AddToListsModalProps, 'open'>;
 
 function AddToListsDialog({
   gameName,
-  lists,
+  listsState,
   onClose,
   onConfirm,
+  onRetry,
 }: AddToListsDialogProps): React.ReactElement {
   const descriptionId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const submittingRef = useRef(false);
   const [page, setPage] = useState(0);
-  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(() => new Set());
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<number>>(() => new Set());
+  const [submitting, setSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const lists = listsState.status === 'success' ? listsState.lists : [];
   const pageCount = Math.ceil(lists.length / pageSize);
   const visibleLists = lists.slice(page * pageSize, (page + 1) * pageSize);
 
@@ -99,7 +108,7 @@ function AddToListsDialog({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        onClose();
+        if (!submittingRef.current) onClose();
         return;
       }
 
@@ -127,7 +136,9 @@ function AddToListsDialog({
     };
   }, [onClose]);
 
-  const toggleList = (id: string) => {
+  const toggleList = (id: number) => {
+    if (submittingRef.current) return;
+    setSubmissionError(null);
     setSelectedIds((current) => {
       const next = new Set(current);
       if (next.has(id)) next.delete(id);
@@ -136,18 +147,159 @@ function AddToListsDialog({
     });
   };
 
+  const close = () => {
+    if (!submittingRef.current) onClose();
+  };
+
+  const confirm = async () => {
+    if (submittingRef.current || selectedIds.size === 0) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    setSubmissionError(null);
+
+    try {
+      await onConfirm([...selectedIds]);
+      onClose();
+    } catch (error: unknown) {
+      if (!isListsOperationCancelled(error)) setSubmissionError(addErrorMessage);
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
+  };
+
+  const content =
+    listsState.status === 'idle' || listsState.status === 'loading' ? (
+      <div
+        className="flex h-[236px] flex-col items-center justify-center gap-3 text-text-muted sm:h-[230px]"
+        role="status"
+      >
+        <LoaderCircle aria-hidden="true" className="animate-spin text-brand" size={34} />
+        <span className="text-sm">Carregando suas listas…</span>
+      </div>
+    ) : listsState.status === 'error' ? (
+      <div className="flex h-[236px] flex-col items-center justify-center gap-4 sm:h-[230px]">
+        <p className="max-w-[320px] text-center text-sm text-text-muted" role="alert">
+          {listsState.message}
+        </p>
+        <button
+          className="h-11 rounded-[10px] bg-brand px-4 text-xs font-semibold text-white transition-colors hover:bg-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:h-10"
+          onClick={onRetry}
+          type="button"
+        >
+          Tentar novamente
+        </button>
+      </div>
+    ) : lists.length === 0 ? (
+      <div className="flex h-[236px] flex-col items-center justify-center gap-3 sm:h-[230px]">
+        <Library aria-hidden="true" className="text-brand" size={38} />
+        <h3 className="font-heading text-lg font-semibold text-content-primary">
+          Sua biblioteca começa aqui
+        </h3>
+        <p className="max-w-[280px] text-center text-xs text-text-muted sm:max-w-[320px]">
+          Crie uma lista para organizar os jogos que você quer acompanhar.
+        </p>
+        <Link
+          className="flex h-11 items-center rounded-[10px] bg-brand px-4 text-xs font-semibold text-white transition-colors hover:bg-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:h-10"
+          onClick={close}
+          to="/minhas-listas/nova"
+        >
+          Adicionar nova lista
+        </Link>
+      </div>
+    ) : (
+      <>
+        <p className="text-xs text-text-muted" id={descriptionId}>
+          {selectedLabel(selectedIds.size)}
+        </p>
+
+        <div className="grid grid-cols-2 gap-2.5">
+          {visibleLists.map((list) => (
+            <ListOptionCard
+              disabled={submitting}
+              key={list.id}
+              list={list}
+              onToggle={toggleList}
+              selected={selectedIds.has(list.id)}
+            />
+          ))}
+        </div>
+
+        {pageCount > 1 ? (
+          <div className="flex h-11 items-center justify-center gap-2 sm:h-10 sm:gap-2.5">
+            <button
+              aria-label="Página anterior"
+              className="flex size-11 items-center justify-center rounded-[11px] border border-border-brand bg-bg-secondary text-text-muted transition-colors enabled:hover:text-content-primary disabled:opacity-55 sm:size-10 sm:rounded-[10px]"
+              disabled={submitting || page === 0}
+              onClick={() => {
+                setPage((current) => current - 1);
+              }}
+              type="button"
+            >
+              <ChevronLeft aria-hidden="true" size={16} />
+            </button>
+            <span className="flex h-11 items-center rounded-[11px] border border-border-brand bg-bg-secondary px-3 text-xs font-semibold text-content-primary sm:h-10 sm:rounded-[10px]">
+              Página {String(page + 1)} de {String(pageCount)}
+            </span>
+            <button
+              aria-label="Próxima página"
+              className="flex size-11 items-center justify-center rounded-[11px] border border-border-brand bg-brand text-white transition-colors enabled:hover:bg-brand-bright disabled:bg-bg-secondary disabled:text-text-muted disabled:opacity-55 sm:size-10 sm:rounded-[10px]"
+              disabled={submitting || page === pageCount - 1}
+              onClick={() => {
+                setPage((current) => current + 1);
+              }}
+              type="button"
+            >
+              <ChevronRight aria-hidden="true" size={16} />
+            </button>
+          </div>
+        ) : null}
+
+        {submissionError === null ? null : (
+          <p className="text-sm text-brand-bright" role="alert">
+            {submissionError}
+          </p>
+        )}
+
+        <div className="flex h-11 justify-end gap-2.5 sm:h-10">
+          <button
+            className="rounded-[10px] bg-bg-secondary px-4 text-xs font-semibold text-content-primary transition-colors enabled:hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            disabled={submitting}
+            onClick={close}
+            type="button"
+          >
+            Cancelar
+          </button>
+          <button
+            className="rounded-[10px] bg-brand px-4 text-xs font-semibold text-white transition-colors enabled:hover:bg-brand-bright disabled:bg-bg-secondary disabled:text-text-muted"
+            disabled={submitting || selectedIds.size === 0}
+            onClick={() => {
+              void confirm();
+            }}
+            type="button"
+          >
+            Adicionar
+          </button>
+        </div>
+      </>
+    );
+
   const modal = (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto px-4 py-[88px] sm:py-[160px]">
       <button
         aria-label="Fechar ao clicar fora do modal"
-        className="absolute inset-0 size-full bg-black/70"
+        className="absolute inset-0 size-full bg-black/70 disabled:cursor-not-allowed"
         data-testid="add-to-lists-backdrop"
-        onClick={onClose}
+        disabled={submitting}
+        onClick={close}
         tabIndex={-1}
         type="button"
       />
       <div
-        aria-describedby={lists.length > 0 ? descriptionId : undefined}
+        aria-busy={submitting || undefined}
+        aria-describedby={
+          listsState.status === 'success' && lists.length > 0 ? descriptionId : undefined
+        }
         aria-label={`Adicionar ${gameName} à lista`}
         aria-modal="true"
         className="relative z-10 flex w-full max-w-[358px] flex-col gap-[18px] rounded-2xl border border-border-brand bg-surface p-5 shadow-[0_14px_36px_#00000077] sm:max-w-[480px] sm:p-6"
@@ -160,8 +312,9 @@ function AddToListsDialog({
           </h2>
           <button
             aria-label="Fechar modal"
-            className="flex size-11 items-center justify-center rounded-[11px] bg-bg-secondary text-text-muted transition-colors hover:text-content-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:size-[34px] sm:rounded-[9px]"
-            onClick={onClose}
+            className="flex size-11 items-center justify-center rounded-[11px] bg-bg-secondary text-text-muted transition-colors enabled:hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:size-[34px] sm:rounded-[9px]"
+            disabled={submitting}
+            onClick={close}
             ref={closeButtonRef}
             type="button"
           >
@@ -169,92 +322,7 @@ function AddToListsDialog({
           </button>
         </div>
 
-        {lists.length === 0 ? (
-          <div className="flex h-[236px] flex-col items-center justify-center gap-3 sm:h-[230px]">
-            <Library aria-hidden="true" className="text-brand" size={38} />
-            <h3 className="font-heading text-lg font-semibold text-content-primary">
-              Sua biblioteca começa aqui
-            </h3>
-            <p className="max-w-[280px] text-center text-xs text-text-muted sm:max-w-[320px]">
-              Crie uma lista para organizar os jogos que você quer acompanhar.
-            </p>
-            <Link
-              className="flex h-11 items-center rounded-[10px] bg-brand px-4 text-xs font-semibold text-white transition-colors hover:bg-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:h-10"
-              onClick={onClose}
-              to="/minhas-listas/nova"
-            >
-              Adicionar nova lista
-            </Link>
-          </div>
-        ) : (
-          <>
-            <p className="text-xs text-text-muted" id={descriptionId}>
-              {selectedLabel(selectedIds.size)}
-            </p>
-
-            <div className="grid grid-cols-2 gap-2.5">
-              {visibleLists.map((list) => (
-                <ListOptionCard
-                  key={list.id}
-                  list={list}
-                  onToggle={toggleList}
-                  selected={selectedIds.has(list.id)}
-                />
-              ))}
-            </div>
-
-            {pageCount > 1 ? (
-              <div className="flex h-11 items-center justify-center gap-2 sm:h-10 sm:gap-2.5">
-                <button
-                  aria-label="Página anterior"
-                  className="flex size-11 items-center justify-center rounded-[11px] border border-border-brand bg-bg-secondary text-text-muted transition-colors enabled:hover:text-content-primary disabled:opacity-55 sm:size-10 sm:rounded-[10px]"
-                  disabled={page === 0}
-                  onClick={() => {
-                    setPage((current) => current - 1);
-                  }}
-                  type="button"
-                >
-                  <ChevronLeft aria-hidden="true" size={16} />
-                </button>
-                <span className="flex h-11 items-center rounded-[11px] border border-border-brand bg-bg-secondary px-3 text-xs font-semibold text-content-primary sm:h-10 sm:rounded-[10px]">
-                  Página {String(page + 1)} de {String(pageCount)}
-                </span>
-                <button
-                  aria-label="Próxima página"
-                  className="flex size-11 items-center justify-center rounded-[11px] border border-border-brand bg-brand text-white transition-colors enabled:hover:bg-brand-bright disabled:bg-bg-secondary disabled:text-text-muted disabled:opacity-55 sm:size-10 sm:rounded-[10px]"
-                  disabled={page === pageCount - 1}
-                  onClick={() => {
-                    setPage((current) => current + 1);
-                  }}
-                  type="button"
-                >
-                  <ChevronRight aria-hidden="true" size={16} />
-                </button>
-              </div>
-            ) : null}
-
-            <div className="flex h-11 justify-end gap-2.5 sm:h-10">
-              <button
-                className="rounded-[10px] bg-bg-secondary px-4 text-xs font-semibold text-content-primary transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-                onClick={onClose}
-                type="button"
-              >
-                Cancelar
-              </button>
-              <button
-                className="rounded-[10px] bg-brand px-4 text-xs font-semibold text-white transition-colors enabled:hover:bg-brand-bright disabled:bg-bg-secondary disabled:text-text-muted"
-                disabled={selectedIds.size === 0}
-                onClick={() => {
-                  onConfirm?.([...selectedIds]);
-                  onClose();
-                }}
-                type="button"
-              >
-                Adicionar
-              </button>
-            </div>
-          </>
-        )}
+        {content}
       </div>
     </div>
   );
@@ -264,14 +332,21 @@ function AddToListsDialog({
 
 export function AddToListsModal({
   gameName,
-  lists,
+  listsState,
   onClose,
   onConfirm,
+  onRetry,
   open,
 }: AddToListsModalProps): React.ReactElement | null {
   if (!open) return null;
 
   return (
-    <AddToListsDialog gameName={gameName} lists={lists} onClose={onClose} onConfirm={onConfirm} />
+    <AddToListsDialog
+      gameName={gameName}
+      listsState={listsState}
+      onClose={onClose}
+      onConfirm={onConfirm}
+      onRetry={onRetry}
+    />
   );
 }

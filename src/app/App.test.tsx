@@ -1,8 +1,13 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppRouter } from '@/app/router';
+import {
+  peekPendingAuthIntent,
+  savePendingAuthIntent,
+} from '@/features/auth/model/pending-auth-intent';
 import {
   addCalendarMonths,
   buildCalendarMonth,
@@ -14,6 +19,10 @@ import {
 } from '@/features/releases/model/release-calendar';
 import { formatReleaseDate } from '@/features/releases/model/release-presentation';
 
+import type { AuthService } from '@/features/auth/api/auth-service';
+import type { AuthenticatedUser } from '@/features/auth/model/auth';
+import type { ListsRepository } from '@/features/lists/api/lists-repository';
+import type { UserListSummary } from '@/features/lists/model/lists';
 import type { ReleasesClientQuery } from '@/features/releases/api/releases-client';
 
 const emptyPayload = {
@@ -77,6 +86,45 @@ const nextPayload = {
     generatedAt: '2026-11-06T12:00:00.000Z',
   },
 };
+
+const authenticatedUser: AuthenticatedUser = {
+  avatarUrl: null,
+  email: 'alex@example.com',
+  id: '11111111-1111-4111-8111-111111111111',
+  initials: 'AX',
+  name: 'Alex Xavier',
+};
+
+const rpgList: UserListSummary = {
+  covers: [],
+  description: null,
+  gameCount: 0,
+  id: 7,
+  name: 'RPGs',
+  systemKey: null,
+};
+
+function createAuthService(initialUser: AuthenticatedUser | null): AuthService {
+  return {
+    getCurrentUser: vi.fn().mockResolvedValue(initialUser),
+    onAuthStateChange: vi.fn(() => vi.fn()),
+    requestEmailCode: vi.fn().mockResolvedValue(undefined),
+    verifyEmailCode: vi.fn().mockResolvedValue(undefined),
+    signInWithGoogle: vi.fn().mockResolvedValue(undefined),
+    signOut: vi.fn().mockResolvedValue(undefined),
+  };
+}
+
+function createListsRepository(overrides: Partial<ListsRepository> = {}): ListsRepository {
+  return {
+    addGameToLists: vi.fn().mockResolvedValue([]),
+    createList: vi.fn().mockResolvedValue(rpgList),
+    getWantToPlayIds: vi.fn().mockResolvedValue(new Set<number>()),
+    listSummaries: vi.fn().mockResolvedValue([rpgList]),
+    toggleWantToPlay: vi.fn().mockResolvedValue(true),
+    ...overrides,
+  };
+}
 
 function exactPayload(releaseDate: string, count = 1) {
   const data = payload.data.slice(0, count).map((item) => ({ ...item, releaseDate }));
@@ -146,6 +194,7 @@ function expectShellOrder() {
 
 describe('Zera GameZ', () => {
   beforeEach(() => {
+    sessionStorage.clear();
     fetchReleasesMock.mockReset();
     fetchReleasesMock.mockResolvedValue(payload);
     releaseObserverCallback = undefined;
@@ -256,6 +305,142 @@ describe('Zera GameZ', () => {
       expect(info).toHaveBeenCalledWith('[releases] Próximos lançamentos', payload);
     });
     expect(info).toHaveBeenCalledTimes(1);
+  });
+
+  it('loads want-to-play memberships once per successful accumulated response in Strict Mode', async () => {
+    const getWantToPlayIds = vi.fn().mockResolvedValue(new Set([1]));
+    const repository = createListsRepository({ getWantToPlayIds });
+    fetchReleasesMock.mockResolvedValueOnce(payload).mockResolvedValueOnce(nextPayload);
+    window.history.replaceState({}, '', '/lancamentos');
+
+    render(
+      <StrictMode>
+        <AppRouter
+          authService={createAuthService(authenticatedUser)}
+          listsRepository={repository}
+        />
+      </StrictMode>,
+    );
+
+    expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
+    await waitFor(() => {
+      expect(getWantToPlayIds).toHaveBeenCalledOnce();
+    });
+    expect(getWantToPlayIds).toHaveBeenLastCalledWith([1, 2]);
+    await waitFor(() => {
+      expect(releaseObservedTarget).toBeDefined();
+    });
+
+    act(() => {
+      intersectReleaseSentinel();
+    });
+
+    expect(await screen.findAllByText('Future Game')).toHaveLength(2);
+    await waitFor(() => {
+      expect(getWantToPlayIds).toHaveBeenCalledTimes(2);
+    });
+    expect(getWantToPlayIds).toHaveBeenLastCalledWith([1, 2, 3]);
+  });
+
+  it('never loads private memberships for an anonymous release response', async () => {
+    const authService = createAuthService(null);
+    const getWantToPlayIds = vi.fn().mockResolvedValue(new Set<number>());
+    const repository = createListsRepository({ getWantToPlayIds });
+    window.history.replaceState({}, '', '/lancamentos');
+
+    render(<AppRouter authService={authService} listsRepository={repository} />);
+
+    expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
+    expect(await screen.findAllByRole('link', { name: 'Entrar' })).not.toHaveLength(0);
+    expect(getWantToPlayIds).not.toHaveBeenCalled();
+  });
+
+  it('handles a failed membership batch and retries all accumulated ids on the next response', async () => {
+    const getWantToPlayIds = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('raw membership detail'))
+      .mockResolvedValueOnce(new Set([3]));
+    const repository = createListsRepository({ getWantToPlayIds });
+    fetchReleasesMock.mockResolvedValueOnce(payload).mockResolvedValueOnce(nextPayload);
+    window.history.replaceState({}, '', '/lancamentos');
+
+    render(
+      <AppRouter authService={createAuthService(authenticatedUser)} listsRepository={repository} />,
+    );
+
+    expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
+    await waitFor(() => {
+      expect(getWantToPlayIds).toHaveBeenCalledOnce();
+    });
+    await waitFor(() => {
+      expect(releaseObservedTarget).toBeDefined();
+    });
+    act(() => {
+      intersectReleaseSentinel();
+    });
+
+    expect(await screen.findAllByText('Future Game')).toHaveLength(2);
+    await waitFor(() => {
+      expect(getWantToPlayIds).toHaveBeenCalledTimes(2);
+    });
+    expect(getWantToPlayIds).toHaveBeenLastCalledWith([1, 2, 3]);
+  });
+
+  it('clears a matching pending action before consuming it once in Strict Mode', async () => {
+    savePendingAuthIntent(sessionStorage, {
+      version: 1,
+      type: 'toggle-want-to-play',
+      returnTo: '/lancamentos',
+      igdbId: 1,
+    });
+    const toggleWantToPlay = vi.fn().mockResolvedValue(true);
+    const repository = createListsRepository({ toggleWantToPlay });
+    window.history.replaceState({}, '', '/lancamentos');
+
+    render(
+      <StrictMode>
+        <AppRouter
+          authService={createAuthService(authenticatedUser)}
+          listsRepository={repository}
+        />
+      </StrictMode>,
+    );
+
+    expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
+    await waitFor(() => {
+      expect(toggleWantToPlay).toHaveBeenCalledOnce();
+    });
+    expect(toggleWantToPlay).toHaveBeenCalledWith({
+      coverUrl: null,
+      igdbId: 1,
+      name: 'Eclipse Protocol',
+      releaseDate: '2026-08-10',
+    });
+    expect(peekPendingAuthIntent(sessionStorage)).toBeNull();
+  });
+
+  it('clears an unmatched pending action after releases settle and announces exact recovery copy', async () => {
+    savePendingAuthIntent(sessionStorage, {
+      version: 1,
+      type: 'open-add-to-lists',
+      returnTo: '/lancamentos',
+      igdbId: 999,
+    });
+    const toggleWantToPlay = vi.fn().mockResolvedValue(true);
+    const addGameToLists = vi.fn().mockResolvedValue([]);
+    const repository = createListsRepository({ addGameToLists, toggleWantToPlay });
+    window.history.replaceState({}, '', '/lancamentos');
+
+    render(
+      <AppRouter authService={createAuthService(authenticatedUser)} listsRepository={repository} />,
+    );
+
+    expect(
+      await screen.findByText('O jogo não está mais nesta lista. Tente novamente.'),
+    ).toHaveAttribute('role', 'status');
+    expect(peekPendingAuthIntent(sessionStorage)).toBeNull();
+    expect(toggleWantToPlay).not.toHaveBeenCalled();
+    expect(addGameToLists).not.toHaveBeenCalled();
   });
 
   it('resets an unselected calendar to the current month whenever it reopens', async () => {

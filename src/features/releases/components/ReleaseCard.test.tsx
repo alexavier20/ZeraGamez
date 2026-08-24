@@ -1,9 +1,18 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { StrictMode } from 'react';
+import { BrowserRouter } from 'react-router';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AuthProvider, useAuth } from '@/features/auth/context/AuthProvider';
+import { peekPendingAuthIntent } from '@/features/auth/model/pending-auth-intent';
+import { ListsProvider } from '@/features/lists/context/ListsProvider';
 import { ReleaseCard } from '@/features/releases/components/ReleaseCard';
 
+import type { AuthService } from '@/features/auth/api/auth-service';
+import type { AuthenticatedUser } from '@/features/auth/model/auth';
+import type { ListsRepository } from '@/features/lists/api/lists-repository';
+import type { UserListSummary } from '@/features/lists/model/lists';
 import type { ReleaseItem } from '@/features/releases/model/release-presentation';
 
 const release: ReleaseItem = {
@@ -20,9 +29,115 @@ const release: ReleaseItem = {
   genres: [{ id: 31, name: 'Ação RPG' }],
 };
 
+const authenticatedUser: AuthenticatedUser = {
+  avatarUrl: null,
+  email: 'alex@example.com',
+  id: '11111111-1111-4111-8111-111111111111',
+  initials: 'AX',
+  name: 'Alex Xavier',
+};
+
+const rpgList: UserListSummary = {
+  covers: ['https://images.example/rpg.jpg'],
+  description: 'Campanhas longas',
+  gameCount: 2,
+  id: 7,
+  name: 'RPGs',
+  systemKey: null,
+};
+
+const expectedGameSnapshot = {
+  coverUrl: 'https://images.example.com/eclipse-protocol.jpg',
+  igdbId: 42,
+  name: 'Eclipse Protocol',
+  releaseDate: '2026-08-10',
+};
+
+function deferred<Value>() {
+  let resolve!: (value: Value | PromiseLike<Value>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<Value>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+  return { promise, reject, resolve };
+}
+
+function createAuthService(initialUser: AuthenticatedUser | null): AuthService {
+  return {
+    getCurrentUser: vi.fn().mockResolvedValue(initialUser),
+    onAuthStateChange: vi.fn(() => vi.fn()),
+    requestEmailCode: vi.fn().mockResolvedValue(undefined),
+    verifyEmailCode: vi.fn().mockResolvedValue(undefined),
+    signInWithGoogle: vi.fn().mockResolvedValue(undefined),
+    signOut: vi.fn().mockResolvedValue(undefined),
+  };
+}
+
+function createRepository(overrides: Partial<ListsRepository> = {}): ListsRepository {
+  let wantToPlay = false;
+  return {
+    addGameToLists: vi.fn().mockResolvedValue([]),
+    createList: vi.fn().mockResolvedValue(rpgList),
+    getWantToPlayIds: vi.fn().mockResolvedValue(new Set<number>()),
+    listSummaries: vi.fn().mockResolvedValue([rpgList]),
+    toggleWantToPlay: vi.fn().mockImplementation(() => {
+      wantToPlay = !wantToPlay;
+      return Promise.resolve(wantToPlay);
+    }),
+    ...overrides,
+  };
+}
+
+interface PersistentCardOptions {
+  readonly authService?: AuthService | null;
+  readonly repository?: ListsRepository;
+  readonly strict?: boolean;
+}
+
+function AuthStatus() {
+  const { state } = useAuth();
+  return <span data-testid="auth-status">{state.status}</span>;
+}
+
+function renderPersistentCard({
+  authService = createAuthService(authenticatedUser),
+  repository = createRepository(),
+  strict = false,
+}: PersistentCardOptions = {}) {
+  const card = (
+    <AuthProvider service={authService}>
+      <ListsProvider repository={repository}>
+        <BrowserRouter>
+          <AuthStatus />
+          <ReleaseCard generatedAt="2026-08-10T12:00:00.000Z" item={release} />
+        </BrowserRouter>
+      </ListsProvider>
+    </AuthProvider>
+  );
+
+  return { repository, ...render(strict ? <StrictMode>{card}</StrictMode> : card) };
+}
+
+function visualCard(item: ReleaseItem = release) {
+  return (
+    <BrowserRouter>
+      <ReleaseCard generatedAt="2026-08-10T12:00:00.000Z" item={item} />
+    </BrowserRouter>
+  );
+}
+
+async function waitForAuthenticated(): Promise<void> {
+  expect(await screen.findByTestId('auth-status')).toHaveTextContent('authenticated');
+}
+
 describe('ReleaseCard', () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+    window.history.replaceState({}, '', '/lancamentos');
+  });
   it('keeps CSS-selected desktop and mobile facades with their distinct cover geometry', () => {
-    render(<ReleaseCard generatedAt="2026-08-10T12:00:00.000Z" item={release} />);
+    render(visualCard());
 
     const desktop = screen.getByTestId('release-card-desktop-42');
     const mobile = screen.getByTestId('release-card-mobile-42');
@@ -42,9 +157,7 @@ describe('ReleaseCard', () => {
   });
 
   it('renders constrained metadata with full values available through titles', () => {
-    const { rerender } = render(
-      <ReleaseCard generatedAt="2026-08-10T12:00:00.000Z" item={release} />,
-    );
+    const { rerender } = render(visualCard());
 
     const desktop = screen.getByTestId('release-card-desktop-42');
     const mobile = screen.getByTestId('release-card-mobile-42');
@@ -81,9 +194,7 @@ describe('ReleaseCard', () => {
       '10 de agosto de 2026',
     );
 
-    rerender(
-      <ReleaseCard generatedAt="2026-08-10T12:00:00.000Z" item={{ ...release, genres: [] }} />,
-    );
+    rerender(visualCard({ ...release, genres: [] }));
 
     expect(screen.queryByText('Ação RPG')).not.toBeInTheDocument();
   });
@@ -100,7 +211,7 @@ describe('ReleaseCard', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     try {
-      render(<ReleaseCard generatedAt="2026-08-10T12:00:00.000Z" item={duplicatedPlatforms} />);
+      render(visualCard(duplicatedPlatforms));
 
       expect(consoleError).not.toHaveBeenCalled();
       expect(
@@ -116,18 +227,15 @@ describe('ReleaseCard', () => {
     const secondPlatform = 'Outro dispositivo de entretenimento com nome ainda mais extenso';
     const longGenre = 'Aventura narrativa cinematográfica de mundo aberto';
     render(
-      <ReleaseCard
-        generatedAt="2026-08-10T12:00:00.000Z"
-        item={{
-          ...release,
-          platforms: [
-            { id: 200, name: firstPlatform, abbreviation: null },
-            { id: 201, name: secondPlatform, abbreviation: null },
-            { id: 202, name: 'Console portátil', abbreviation: null },
-          ],
-          genres: [{ id: 301, name: longGenre }],
-        }}
-      />,
+      visualCard({
+        ...release,
+        platforms: [
+          { id: 200, name: firstPlatform, abbreviation: null },
+          { id: 201, name: secondPlatform, abbreviation: null },
+          { id: 202, name: 'Console portátil', abbreviation: null },
+        ],
+        genres: [{ id: 301, name: longGenre }],
+      }),
     );
 
     const desktop = screen.getByTestId('release-card-desktop-42');
@@ -147,7 +255,7 @@ describe('ReleaseCard', () => {
   });
 
   it('keeps want-to-play and list actions available', () => {
-    render(<ReleaseCard generatedAt="2026-08-10T12:00:00.000Z" item={release} />);
+    render(visualCard());
 
     for (const layout of [
       screen.getByTestId('release-card-desktop-42'),
@@ -170,7 +278,7 @@ describe('ReleaseCard', () => {
   });
 
   it('omits the more-options action from desktop and mobile cards', () => {
-    render(<ReleaseCard generatedAt="2026-08-10T12:00:00.000Z" item={release} />);
+    render(visualCard());
 
     for (const layout of [
       screen.getByTestId('release-card-desktop-42'),
@@ -182,9 +290,140 @@ describe('ReleaseCard', () => {
     }
   });
 
+  it('asks for authentication instead of mutating an anonymous card', async () => {
+    const user = userEvent.setup();
+    const toggleWantToPlay = vi.fn().mockResolvedValue(true);
+    const repository = createRepository({ toggleWantToPlay });
+    renderPersistentCard({
+      authService: createAuthService(null),
+      repository,
+    });
+    expect(await screen.findByTestId('auth-status')).toHaveTextContent('anonymous');
+
+    await user.click(
+      screen.getAllByRole('button', { name: 'Marcar Eclipse Protocol como quero jogar' })[0],
+    );
+
+    expect(window.location.pathname).toBe('/entrar');
+    expect(peekPendingAuthIntent(sessionStorage)).toMatchObject({
+      type: 'toggle-want-to-play',
+      igdbId: 42,
+    });
+    expect(toggleWantToPlay).not.toHaveBeenCalled();
+  });
+
+  it('stores a safe list intent when authentication is unavailable without loading lists', async () => {
+    const user = userEvent.setup();
+    const listSummaries = vi.fn().mockResolvedValue([rpgList]);
+    const addGameToLists = vi.fn().mockResolvedValue([]);
+    const repository = createRepository({ addGameToLists, listSummaries });
+    renderPersistentCard({ authService: null, repository });
+    expect(await screen.findByTestId('auth-status')).toHaveTextContent('unavailable');
+
+    await user.click(
+      screen.getAllByRole('button', { name: 'Adicionar Eclipse Protocol à lista' })[0],
+    );
+
+    expect(window.location.pathname).toBe('/entrar');
+    expect(peekPendingAuthIntent(sessionStorage)).toMatchObject({
+      type: 'open-add-to-lists',
+      igdbId: 42,
+    });
+    expect(listSummaries).not.toHaveBeenCalled();
+    expect(addGameToLists).not.toHaveBeenCalled();
+  });
+
+  it('changes want-to-play only after the RPC confirms and shares pending state', async () => {
+    const user = userEvent.setup();
+    const pending = deferred<boolean>();
+    const toggleWantToPlay = vi.fn(() => pending.promise);
+    const repository = createRepository({ toggleWantToPlay });
+    const authService = createAuthService(authenticatedUser);
+    renderPersistentCard({ authService, repository });
+    await waitForAuthenticated();
+    const buttons = screen.getAllByRole('button', {
+      name: 'Marcar Eclipse Protocol como quero jogar',
+    });
+
+    await user.click(buttons[0]);
+
+    for (const button of buttons) {
+      expect(button).toBeDisabled();
+      expect(button).toHaveAttribute('aria-pressed', 'false');
+    }
+    expect(toggleWantToPlay).toHaveBeenCalledWith(expectedGameSnapshot);
+
+    pending.resolve(true);
+    await waitFor(() => {
+      for (const button of screen.getAllByRole('button', {
+        name: 'Remover Eclipse Protocol de Quero jogar',
+      })) {
+        expect(button).toBeEnabled();
+        expect(button).toHaveAttribute('aria-pressed', 'true');
+      }
+    });
+  });
+
+  it('preserves confirmed want-to-play state and announces sanitized copy after RPC failure', async () => {
+    const user = userEvent.setup();
+    const toggleWantToPlay = vi.fn().mockRejectedValue(new Error('raw rpc detail'));
+    const repository = createRepository({ toggleWantToPlay });
+    const authService = createAuthService(authenticatedUser);
+    renderPersistentCard({ authService, repository });
+    await waitForAuthenticated();
+
+    await user.click(
+      screen.getAllByRole('button', { name: 'Marcar Eclipse Protocol como quero jogar' })[0],
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Não foi possível atualizar Quero jogar. Tente novamente.',
+    );
+    expect(screen.getByRole('alert')).not.toHaveTextContent('raw rpc detail');
+    for (const button of screen.getAllByRole('button', {
+      name: 'Marcar Eclipse Protocol como quero jogar',
+    })) {
+      expect(button).toBeEnabled();
+      expect(button).toHaveAttribute('aria-pressed', 'false');
+    }
+  });
+
+  it('loads real lists lazily and saves selected numeric ids with the exact game snapshot', async () => {
+    const user = userEvent.setup();
+    const addGameToLists = vi.fn().mockResolvedValue([rpgList.id]);
+    const listSummaries = vi.fn().mockResolvedValue([rpgList]);
+    const repository = createRepository({
+      addGameToLists,
+      listSummaries,
+    });
+    const authService = createAuthService(authenticatedUser);
+    renderPersistentCard({ authService, repository });
+    await waitForAuthenticated();
+    expect(listSummaries).not.toHaveBeenCalled();
+
+    await user.click(
+      screen.getAllByRole('button', { name: 'Adicionar Eclipse Protocol à lista' })[0],
+    );
+
+    await waitFor(() => {
+      expect(listSummaries).toHaveBeenCalledOnce();
+    });
+    await user.click(await screen.findByRole('button', { name: 'RPGs' }));
+    await user.click(screen.getByRole('button', { name: 'Adicionar' }));
+
+    await waitFor(() => {
+      expect(addGameToLists).toHaveBeenCalledWith(expectedGameSnapshot, [rpgList.id]);
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+  });
+
   it('toggles want-to-play from either layout and keeps desktop and mobile in sync', async () => {
     const user = userEvent.setup();
-    render(<ReleaseCard generatedAt="2026-08-10T12:00:00.000Z" item={release} />);
+    const authService = createAuthService(authenticatedUser);
+    renderPersistentCard({ authService });
+    await waitForAuthenticated();
 
     const desktop = screen.getByTestId('release-card-desktop-42');
     const mobile = screen.getByTestId('release-card-mobile-42');
@@ -236,7 +475,9 @@ describe('ReleaseCard', () => {
 
   it('opens one modal for the selected game and restores focus to its trigger on close', async () => {
     const user = userEvent.setup();
-    render(<ReleaseCard generatedAt="2026-08-10T12:00:00.000Z" item={release} />);
+    const authService = createAuthService(authenticatedUser);
+    renderPersistentCard({ authService });
+    await waitForAuthenticated();
 
     const trigger = within(screen.getByTestId('release-card-desktop-42')).getByRole('button', {
       name: 'Adicionar Eclipse Protocol à lista',
@@ -255,9 +496,7 @@ describe('ReleaseCard', () => {
   });
 
   it('renders accessible desktop and mobile placeholders with decorative gamepad icons', () => {
-    render(
-      <ReleaseCard generatedAt="2026-08-10T12:00:00.000Z" item={{ ...release, coverUrl: null }} />,
-    );
+    render(visualCard({ ...release, coverUrl: null }));
 
     const desktop = screen.getByTestId('release-card-desktop-42');
     const mobile = screen.getByTestId('release-card-mobile-42');

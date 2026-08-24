@@ -1,9 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useAuth } from '@/features/auth/context/AuthProvider';
+import {
+  clearPendingAuthIntent,
+  peekPendingAuthIntent,
+} from '@/features/auth/model/pending-auth-intent';
+import { isListsOperationCancelled, useLists } from '@/features/lists/context/ListsProvider';
 import { ReleaseCalendarControl } from '@/features/releases/components/ReleaseCalendarControl';
 import { ReleaseDateEmpty } from '@/features/releases/components/ReleaseDateEmpty';
 import { ReleaseFilters } from '@/features/releases/components/ReleaseFilters';
-import { ReleaseList } from '@/features/releases/components/ReleaseList';
+import { ReleaseList, type PendingReleaseAction } from '@/features/releases/components/ReleaseList';
 import { ReleaseLoadMore } from '@/features/releases/components/ReleaseLoadMore';
 import {
   ReleasesEmpty,
@@ -36,12 +42,17 @@ function releaseSubtitle(selectedDate: string | null, state: ReleasesState): str
 }
 
 export function ReleasesPage() {
+  const { state: authState } = useAuth();
+  const { loadWantToPlayIds } = useLists();
   const currentDate = todayInSaoPaulo();
   const [filters, setFilters] = useState<ReleaseFilterSelection>(defaultReleaseFilterSelection);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [visibleMonth, setVisibleMonth] = useState(() => calendarMonthStart(currentDate));
   const [knownReleaseDates, setKnownReleaseDates] = useState<ReadonlySet<string>>(() => new Set());
+  const [pendingAction, setPendingAction] = useState<PendingReleaseAction | null>(null);
+  const [actionAnnouncement, setActionAnnouncement] = useState<string | null>(null);
+  const membershipSignatureRef = useRef<string | null>(null);
   const { loadMore, pagination, retry, retryMore, state } = useReleases({
     ...toReleaseFilterIds(filters),
     ...(selectedDate === null ? {} : { date: selectedDate }),
@@ -59,6 +70,56 @@ export function ReleasesPage() {
       };
     }
   }, [selectedDate, state]);
+
+  useEffect(() => {
+    if (authState.status !== 'authenticated') {
+      membershipSignatureRef.current = null;
+      return;
+    }
+    if (state.status !== 'success') return;
+
+    const ids = [...new Set(state.response.data.map((item) => item.id))];
+    if (ids.length === 0) return;
+    const signature = `${authState.user.id}:${ids.join(',')}`;
+    if (membershipSignatureRef.current === signature) return;
+    membershipSignatureRef.current = signature;
+
+    void loadWantToPlayIds(ids).catch((error: unknown) => {
+      if (membershipSignatureRef.current === signature) {
+        membershipSignatureRef.current = null;
+      }
+      if (isListsOperationCancelled(error)) return;
+    });
+  }, [authState, loadWantToPlayIds, state]);
+
+  useEffect(() => {
+    if (authState.status !== 'authenticated') return;
+    if (state.status !== 'success' && state.status !== 'empty') return;
+
+    const intent = peekPendingAuthIntent(sessionStorage);
+    if (intent?.type !== 'open-add-to-lists' && intent?.type !== 'toggle-want-to-play') {
+      return;
+    }
+
+    clearPendingAuthIntent(sessionStorage);
+    const matchingItem = state.response.data.some((item) => item.id === intent.igdbId);
+    if (matchingItem) {
+      queueMicrotask(() => {
+        setActionAnnouncement(null);
+        setPendingAction({ igdbId: intent.igdbId, type: intent.type });
+      });
+      return;
+    }
+
+    queueMicrotask(() => {
+      setPendingAction(null);
+      setActionAnnouncement('O jogo não está mais nesta lista. Tente novamente.');
+    });
+  }, [authState.status, state]);
+
+  const handlePendingActionConsumed = useCallback(() => {
+    setPendingAction(null);
+  }, []);
 
   const handlePlatformChange = (platform: ReleasePlatformFilterKey) => {
     setFilters((current) => ({ ...current, platform }));
@@ -119,6 +180,11 @@ export function ReleasesPage() {
         onPlatformChange={handlePlatformChange}
         value={filters}
       />
+      {actionAnnouncement === null ? null : (
+        <p aria-live="polite" className="mt-4 text-sm text-text-muted" role="status">
+          {actionAnnouncement}
+        </p>
+      )}
       <section aria-label={'Resultados de lan\u00e7amentos'} id={resultsId}>
         {state.status === 'loading' ? (
           <ReleasesLoading />
@@ -132,7 +198,12 @@ export function ReleasesPage() {
           )
         ) : (
           <>
-            <ReleaseList exactDate={selectedDate !== null} response={state.response} />
+            <ReleaseList
+              exactDate={selectedDate !== null}
+              onPendingActionConsumed={handlePendingActionConsumed}
+              pendingAction={pendingAction}
+              response={state.response}
+            />
             {selectedDate === null ? (
               <ReleaseLoadMore
                 enabled={!calendarOpen}
