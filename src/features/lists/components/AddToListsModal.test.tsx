@@ -164,7 +164,10 @@ describe('AddToListsModal', () => {
     expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Fechar modal' })).toBeDisabled();
     expect(screen.getByTestId('add-to-lists-backdrop')).toBeDisabled();
+    expect(screen.getByRole('dialog')).toHaveFocus();
 
+    await user.keyboard('{Tab}');
+    expect(screen.getByRole('dialog')).toHaveFocus();
     await user.keyboard('{Escape}');
     await user.click(screen.getByRole('button', { name: 'Adicionar' }));
     expect(onClose).not.toHaveBeenCalled();
@@ -174,6 +177,77 @@ describe('AddToListsModal', () => {
     await waitFor(() => {
       expect(onClose).toHaveBeenCalledOnce();
     });
+  });
+
+  it('clamps pagination and removes stale selections when the successful collection shrinks', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    const onClose = vi.fn();
+    const { rerender } = renderModal({ onClose, onConfirm });
+
+    await user.click(screen.getByRole('button', { name: 'RPGs' }));
+    await user.click(screen.getByRole('button', { name: 'Próxima página' }));
+    await user.click(screen.getByRole('button', { name: 'Favoritos' }));
+
+    rerender(
+      <AddToListsModal
+        gameName="Eclipse Protocol"
+        listsState={{ status: 'success', lists: lists.slice(0, 4) }}
+        onClose={onClose}
+        onConfirm={onConfirm}
+        onRetry={vi.fn()}
+        open
+      />,
+    );
+
+    expect(screen.queryByText(/Página 2 de/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'RPGs' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('1 lista selecionada')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Adicionar' }));
+    expect(onConfirm).toHaveBeenCalledWith([7]);
+  });
+
+  it('moves focus to a stable dialog control when focused content is replaced', async () => {
+    const { rerender } = renderModal({
+      listsState: {
+        status: 'error',
+        message: 'Não foi possível carregar suas listas. Tente novamente.',
+      },
+    });
+    screen.getByRole('button', { name: 'Tentar novamente' }).focus();
+
+    rerender(
+      <AddToListsModal
+        gameName="Eclipse Protocol"
+        listsState={successState}
+        onClose={vi.fn()}
+        onConfirm={vi.fn().mockResolvedValue(undefined)}
+        onRetry={vi.fn()}
+        open
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Fechar modal' })).toHaveFocus();
+    });
+  });
+
+  it('uses composite cover keys when a list repeats the same cover URL', () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    try {
+      renderModal({
+        listsState: {
+          status: 'success',
+          lists: [{ ...lists[0], covers: ['/same.png', '/same.png', '/same.png'] }],
+        },
+      });
+
+      expect(consoleError).not.toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   it.each([{ status: 'idle' as const }, { status: 'loading' as const }])(

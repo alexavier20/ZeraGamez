@@ -7,6 +7,7 @@ import type * as React from 'react';
 
 export interface PendingReleaseAction {
   readonly igdbId: number;
+  readonly releaseDate: string;
   readonly type: PendingReleaseActionType;
 }
 

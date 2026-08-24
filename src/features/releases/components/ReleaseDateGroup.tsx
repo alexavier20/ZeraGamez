@@ -23,6 +23,7 @@ export function ReleaseDateGroup({
   onPendingActionConsumed,
   pendingAction,
 }: ReleaseDateGroupProps): React.ReactElement {
+  const pendingItemMatchesGroup = pendingAction?.releaseDate === group.releaseDate;
   const dayKind = getReleaseDayKind(group.releaseDate, generatedAt);
   const date = formatReleaseDate(group.releaseDate, headingMode === 'full');
   const headingId = `release-date-${group.releaseDate}`;
@@ -71,9 +72,15 @@ export function ReleaseDateGroup({
               generatedAt={generatedAt}
               item={item}
               onPendingActionConsumed={
-                pendingAction?.igdbId === item.id ? onPendingActionConsumed : undefined
+                pendingItemMatchesGroup && pendingAction.igdbId === item.id
+                  ? onPendingActionConsumed
+                  : undefined
               }
-              pendingAction={pendingAction?.igdbId === item.id ? pendingAction.type : undefined}
+              pendingAction={
+                pendingItemMatchesGroup && pendingAction.igdbId === item.id
+                  ? pendingAction.type
+                  : undefined
+              }
             />
           </li>
         ))}

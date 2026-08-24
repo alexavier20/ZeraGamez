@@ -22,6 +22,7 @@ export type ListsState =
 
 export interface ListsContextValue {
   readonly listsState: ListsState;
+  readonly scopeVersion: number;
   readonly wantToPlayIds: ReadonlySet<number>;
   readonly addGameToLists: (game: GameSnapshot, listIds: readonly number[]) => Promise<void>;
   readonly createList: (input: CreateListInput) => Promise<UserListSummary>;
@@ -103,6 +104,7 @@ function initialScopedState(
 
 const defaultListsContext: ListsContextValue = {
   listsState: idleListsState,
+  scopeVersion: 0,
   wantToPlayIds: new Set<number>(),
   addGameToLists: unavailableAction,
   createList: unavailableAction,
@@ -391,6 +393,7 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
       listsState: scopedState.listsState,
       loadLists,
       loadWantToPlayIds,
+      scopeVersion: scopedState.scopeVersion,
       toggleWantToPlay,
       wantToPlayIds: scopedState.wantToPlayIds,
     }),
@@ -400,6 +403,7 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
       loadLists,
       loadWantToPlayIds,
       scopedState.listsState,
+      scopedState.scopeVersion,
       scopedState.wantToPlayIds,
       toggleWantToPlay,
     ],

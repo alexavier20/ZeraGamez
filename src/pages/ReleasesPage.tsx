@@ -43,7 +43,7 @@ function releaseSubtitle(selectedDate: string | null, state: ReleasesState): str
 
 export function ReleasesPage() {
   const { state: authState } = useAuth();
-  const { loadWantToPlayIds } = useLists();
+  const { loadWantToPlayIds, scopeVersion } = useLists();
   const currentDate = todayInSaoPaulo();
   const [filters, setFilters] = useState<ReleaseFilterSelection>(defaultReleaseFilterSelection);
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -80,7 +80,7 @@ export function ReleasesPage() {
 
     const ids = [...new Set(state.response.data.map((item) => item.id))];
     if (ids.length === 0) return;
-    const signature = `${authState.user.id}:${ids.join(',')}`;
+    const signature = `${String(scopeVersion)}:${authState.user.id}:${ids.join(',')}`;
     if (membershipSignatureRef.current === signature) return;
     membershipSignatureRef.current = signature;
 
@@ -90,7 +90,7 @@ export function ReleasesPage() {
       }
       if (isListsOperationCancelled(error)) return;
     });
-  }, [authState, loadWantToPlayIds, state]);
+  }, [authState, loadWantToPlayIds, scopeVersion, state]);
 
   useEffect(() => {
     if (authState.status !== 'authenticated') return;
@@ -101,21 +101,39 @@ export function ReleasesPage() {
       return;
     }
 
-    clearPendingAuthIntent(sessionStorage);
-    const matchingItem = state.response.data.some((item) => item.id === intent.igdbId);
+    const matchingItem = state.response.data
+      .filter((item) => item.id === intent.igdbId)
+      .sort(
+        (left, right) =>
+          left.releaseDate.localeCompare(right.releaseDate) ||
+          left.name.localeCompare(right.name, 'pt-BR'),
+      )
+      .at(0);
     if (matchingItem) {
+      clearPendingAuthIntent(sessionStorage);
       queueMicrotask(() => {
         setActionAnnouncement(null);
-        setPendingAction({ igdbId: intent.igdbId, type: intent.type });
+        setPendingAction({
+          igdbId: intent.igdbId,
+          releaseDate: matchingItem.releaseDate,
+          type: intent.type,
+        });
       });
       return;
     }
 
+    if (pagination.status === 'idle') {
+      loadMore();
+      return;
+    }
+    if (pagination.status !== 'complete') return;
+
+    clearPendingAuthIntent(sessionStorage);
     queueMicrotask(() => {
       setPendingAction(null);
       setActionAnnouncement('O jogo não está mais nesta lista. Tente novamente.');
     });
-  }, [authState.status, state]);
+  }, [authState.status, loadMore, pagination.status, state]);
 
   const handlePendingActionConsumed = useCallback(() => {
     setPendingAction(null);

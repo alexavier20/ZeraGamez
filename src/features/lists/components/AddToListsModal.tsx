@@ -61,11 +61,11 @@ function ListOptionCard({ disabled, list, onToggle, selected }: ListOptionCardPr
         <Check size={13} />
       </span>
       <span className="flex h-[72px] w-full shrink-0 gap-0.5 overflow-hidden rounded-lg">
-        {list.covers.slice(0, 3).map((cover) => (
+        {list.covers.slice(0, 3).map((cover, index) => (
           <img
             alt=""
             className="min-w-0 flex-1 object-cover"
-            key={cover}
+            key={`${String(list.id)}:${String(index)}:${cover}`}
             loading="lazy"
             src={cover}
           />
@@ -92,12 +92,32 @@ function AddToListsDialog({
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const submittingRef = useRef(false);
-  const [page, setPage] = useState(0);
-  const [selectedIds, setSelectedIds] = useState<ReadonlySet<number>>(() => new Set());
+  const successfulListIds =
+    listsState.status === 'success' ? listsState.lists.map((list) => list.id) : null;
+  const successfulListIdsSignature = successfulListIds?.join(':') ?? null;
+  const [selection, setSelection] = useState<{
+    readonly listIdsSignature: string | null;
+    readonly page: number;
+    readonly selectedIds: ReadonlySet<number>;
+  }>(() => ({
+    listIdsSignature: successfulListIdsSignature,
+    page: 0,
+    selectedIds: new Set(),
+  }));
   const [submitting, setSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const lists = listsState.status === 'success' ? listsState.lists : [];
   const pageCount = Math.ceil(lists.length / pageSize);
+  if (successfulListIds !== null && selection.listIdsSignature !== successfulListIdsSignature) {
+    const validIds = new Set(successfulListIds);
+    setSelection({
+      listIdsSignature: successfulListIdsSignature,
+      page: Math.min(selection.page, Math.max(pageCount - 1, 0)),
+      selectedIds: new Set([...selection.selectedIds].filter((id) => validIds.has(id))),
+    });
+  }
+  const page = Math.min(selection.page, Math.max(pageCount - 1, 0));
+  const selectedIds = selection.selectedIds;
   const visibleLists = lists.slice(page * pageSize, (page + 1) * pageSize);
 
   useEffect(() => {
@@ -118,9 +138,16 @@ function AddToListsDialog({
       const controls = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector));
       const first = controls.at(0);
       const last = controls.at(-1);
-      if (!first || !last) return;
+      if (!first || !last) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
 
-      if (event.shiftKey && document.activeElement === first) {
+      if (!controls.includes(document.activeElement as HTMLElement)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      } else if (event.shiftKey && document.activeElement === first) {
         event.preventDefault();
         last.focus();
       } else if (!event.shiftKey && document.activeElement === last) {
@@ -136,14 +163,31 @@ function AddToListsDialog({
     };
   }, [onClose]);
 
+  useEffect(() => {
+    queueMicrotask(() => {
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      const activeElement = document.activeElement;
+      if (
+        activeElement instanceof HTMLElement &&
+        dialog.contains(activeElement) &&
+        activeElement.isConnected &&
+        !activeElement.matches(':disabled')
+      ) {
+        return;
+      }
+      (closeButtonRef.current?.disabled === false ? closeButtonRef.current : dialog).focus();
+    });
+  }, [listsState.status, submitting, successfulListIdsSignature]);
+
   const toggleList = (id: number) => {
     if (submittingRef.current) return;
     setSubmissionError(null);
-    setSelectedIds((current) => {
-      const next = new Set(current);
+    setSelection((current) => {
+      const next = new Set(current.selectedIds);
       if (next.has(id)) next.delete(id);
       else next.add(id);
-      return next;
+      return { ...current, selectedIds: next };
     });
   };
 
@@ -156,6 +200,9 @@ function AddToListsDialog({
     submittingRef.current = true;
     setSubmitting(true);
     setSubmissionError(null);
+    queueMicrotask(() => {
+      dialogRef.current?.focus();
+    });
 
     try {
       await onConfirm([...selectedIds]);
@@ -232,7 +279,7 @@ function AddToListsDialog({
               className="flex size-11 items-center justify-center rounded-[11px] border border-border-brand bg-bg-secondary text-text-muted transition-colors enabled:hover:text-content-primary disabled:opacity-55 sm:size-10 sm:rounded-[10px]"
               disabled={submitting || page === 0}
               onClick={() => {
-                setPage((current) => current - 1);
+                setSelection((current) => ({ ...current, page: current.page - 1 }));
               }}
               type="button"
             >
@@ -246,7 +293,7 @@ function AddToListsDialog({
               className="flex size-11 items-center justify-center rounded-[11px] border border-border-brand bg-brand text-white transition-colors enabled:hover:bg-brand-bright disabled:bg-bg-secondary disabled:text-text-muted disabled:opacity-55 sm:size-10 sm:rounded-[10px]"
               disabled={submitting || page === pageCount - 1}
               onClick={() => {
-                setPage((current) => current + 1);
+                setSelection((current) => ({ ...current, page: current.page + 1 }));
               }}
               type="button"
             >
@@ -305,6 +352,7 @@ function AddToListsDialog({
         className="relative z-10 flex w-full max-w-[358px] flex-col gap-[18px] rounded-2xl border border-border-brand bg-surface p-5 shadow-[0_14px_36px_#00000077] sm:max-w-[480px] sm:p-6"
         ref={dialogRef}
         role="dialog"
+        tabIndex={-1}
       >
         <div className="flex h-11 items-center justify-between sm:h-[34px]">
           <h2 className="font-heading text-lg font-semibold text-content-primary">

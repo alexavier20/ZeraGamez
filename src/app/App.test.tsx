@@ -87,6 +87,14 @@ const nextPayload = {
   },
 };
 
+const exhaustedPayload = {
+  ...payload,
+  meta: {
+    ...payload.meta,
+    to: '2028-08-06',
+  },
+};
+
 const authenticatedUser: AuthenticatedUser = {
   avatarUrl: null,
   email: 'alex@example.com',
@@ -342,6 +350,34 @@ describe('Zera GameZ', () => {
     expect(getWantToPlayIds).toHaveBeenLastCalledWith([1, 2, 3]);
   });
 
+  it('reloads memberships across A to B to A repository scopes for the same user and ids', async () => {
+    const getWantToPlayIdsA = vi.fn().mockResolvedValue(new Set([1]));
+    const getWantToPlayIdsB = vi.fn().mockResolvedValue(new Set([2]));
+    const repositoryA = createListsRepository({ getWantToPlayIds: getWantToPlayIdsA });
+    const repositoryB = createListsRepository({ getWantToPlayIds: getWantToPlayIdsB });
+    const authService = createAuthService(authenticatedUser);
+    window.history.replaceState({}, '', '/lancamentos');
+
+    const { rerender } = render(
+      <AppRouter authService={authService} listsRepository={repositoryA} />,
+    );
+    expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
+    await waitFor(() => {
+      expect(getWantToPlayIdsA).toHaveBeenCalledOnce();
+    });
+
+    rerender(<AppRouter authService={authService} listsRepository={repositoryB} />);
+    await waitFor(() => {
+      expect(getWantToPlayIdsB).toHaveBeenCalledOnce();
+    });
+
+    rerender(<AppRouter authService={authService} listsRepository={repositoryA} />);
+    await waitFor(() => {
+      expect(getWantToPlayIdsA).toHaveBeenCalledTimes(2);
+    });
+    expect(getWantToPlayIdsA).toHaveBeenLastCalledWith([1, 2]);
+  });
+
   it('never loads private memberships for an anonymous release response', async () => {
     const authService = createAuthService(null);
     const getWantToPlayIds = vi.fn().mockResolvedValue(new Set<number>());
@@ -419,6 +455,118 @@ describe('Zera GameZ', () => {
     expect(peekPendingAuthIntent(sessionStorage)).toBeNull();
   });
 
+  it('automatically searches later pages before consuming a matching pending action', async () => {
+    savePendingAuthIntent(sessionStorage, {
+      version: 1,
+      type: 'toggle-want-to-play',
+      returnTo: '/lancamentos',
+      igdbId: 3,
+    });
+    const toggleWantToPlay = vi.fn().mockResolvedValue(true);
+    const repository = createListsRepository({ toggleWantToPlay });
+    fetchReleasesMock.mockResolvedValueOnce(payload).mockResolvedValueOnce(nextPayload);
+    window.history.replaceState({}, '', '/lancamentos');
+
+    render(
+      <StrictMode>
+        <AppRouter
+          authService={createAuthService(authenticatedUser)}
+          listsRepository={repository}
+        />
+      </StrictMode>,
+    );
+
+    expect(await screen.findAllByText('Future Game')).toHaveLength(2);
+    await waitFor(() => {
+      expect(toggleWantToPlay).toHaveBeenCalledOnce();
+    });
+    expect(toggleWantToPlay).toHaveBeenCalledWith({
+      coverUrl: null,
+      igdbId: 3,
+      name: 'Future Game',
+      releaseDate: '2026-12-15',
+    });
+    expect(fetchReleasesMock).toHaveBeenCalledTimes(2);
+    expect(peekPendingAuthIntent(sessionStorage)).toBeNull();
+  });
+
+  it('preserves a later-page intent on pagination error and consumes it after retry', async () => {
+    const user = userEvent.setup();
+    savePendingAuthIntent(sessionStorage, {
+      version: 1,
+      type: 'toggle-want-to-play',
+      returnTo: '/lancamentos',
+      igdbId: 3,
+    });
+    const toggleWantToPlay = vi.fn().mockResolvedValue(true);
+    const repository = createListsRepository({ toggleWantToPlay });
+    fetchReleasesMock
+      .mockResolvedValueOnce(payload)
+      .mockRejectedValueOnce(new Error('raw pagination detail'))
+      .mockResolvedValueOnce(nextPayload);
+    window.history.replaceState({}, '', '/lancamentos');
+
+    render(
+      <AppRouter authService={createAuthService(authenticatedUser)} listsRepository={repository} />,
+    );
+
+    expect(await screen.findByText('Não foi possível carregar mais jogos')).toBeInTheDocument();
+    expect(peekPendingAuthIntent(sessionStorage)).toMatchObject({ igdbId: 3 });
+    expect(toggleWantToPlay).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(await screen.findAllByText('Future Game')).toHaveLength(2);
+    await waitFor(() => {
+      expect(toggleWantToPlay).toHaveBeenCalledOnce();
+    });
+    expect(peekPendingAuthIntent(sessionStorage)).toBeNull();
+  });
+
+  it('targets one deterministic release date when an IGDB id occurs more than once', async () => {
+    const duplicatedPayload = {
+      ...exhaustedPayload,
+      data: [
+        payload.data[0],
+        {
+          ...payload.data[0],
+          name: 'Eclipse Protocol Later',
+          releaseDate: '2026-09-10',
+        },
+      ],
+      meta: { ...exhaustedPayload.meta, count: 2 },
+    };
+    savePendingAuthIntent(sessionStorage, {
+      version: 1,
+      type: 'toggle-want-to-play',
+      returnTo: '/lancamentos',
+      igdbId: 1,
+    });
+    const toggleWantToPlay = vi.fn().mockResolvedValue(true);
+    const repository = createListsRepository({ toggleWantToPlay });
+    fetchReleasesMock.mockResolvedValueOnce(duplicatedPayload);
+    window.history.replaceState({}, '', '/lancamentos');
+
+    render(
+      <StrictMode>
+        <AppRouter
+          authService={createAuthService(authenticatedUser)}
+          listsRepository={repository}
+        />
+      </StrictMode>,
+    );
+
+    expect(await screen.findAllByText('Eclipse Protocol Later')).toHaveLength(2);
+    await waitFor(() => {
+      expect(toggleWantToPlay).toHaveBeenCalledOnce();
+    });
+    expect(toggleWantToPlay).toHaveBeenCalledWith({
+      coverUrl: null,
+      igdbId: 1,
+      name: 'Eclipse Protocol',
+      releaseDate: '2026-08-10',
+    });
+  });
+
   it('clears an unmatched pending action after releases settle and announces exact recovery copy', async () => {
     savePendingAuthIntent(sessionStorage, {
       version: 1,
@@ -429,6 +577,7 @@ describe('Zera GameZ', () => {
     const toggleWantToPlay = vi.fn().mockResolvedValue(true);
     const addGameToLists = vi.fn().mockResolvedValue([]);
     const repository = createListsRepository({ addGameToLists, toggleWantToPlay });
+    fetchReleasesMock.mockResolvedValueOnce(exhaustedPayload);
     window.history.replaceState({}, '', '/lancamentos');
 
     render(

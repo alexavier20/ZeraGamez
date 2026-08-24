@@ -91,6 +91,8 @@ function createRepository(overrides: Partial<ListsRepository> = {}): ListsReposi
 
 interface PersistentCardOptions {
   readonly authService?: AuthService | null;
+  readonly onPendingActionConsumed?: () => void;
+  readonly pendingAction?: React.ComponentProps<typeof ReleaseCard>['pendingAction'];
   readonly repository?: ListsRepository;
   readonly strict?: boolean;
 }
@@ -102,6 +104,8 @@ function AuthStatus() {
 
 function renderPersistentCard({
   authService = createAuthService(authenticatedUser),
+  onPendingActionConsumed,
+  pendingAction,
   repository = createRepository(),
   strict = false,
 }: PersistentCardOptions = {}) {
@@ -110,7 +114,12 @@ function renderPersistentCard({
       <ListsProvider repository={repository}>
         <BrowserRouter>
           <AuthStatus />
-          <ReleaseCard generatedAt="2026-08-10T12:00:00.000Z" item={release} />
+          <ReleaseCard
+            generatedAt="2026-08-10T12:00:00.000Z"
+            item={release}
+            onPendingActionConsumed={onPendingActionConsumed}
+            pendingAction={pendingAction}
+          />
         </BrowserRouter>
       </ListsProvider>
     </AuthProvider>
@@ -312,6 +321,42 @@ describe('ReleaseCard', () => {
     expect(toggleWantToPlay).not.toHaveBeenCalled();
   });
 
+  it('disables both responsive list actions while authentication is loading without redirecting or mutating', async () => {
+    const pendingAuth = deferred<AuthenticatedUser | null>();
+    const listSummaries = vi.fn().mockResolvedValue([rpgList]);
+    const addGameToLists = vi.fn().mockResolvedValue([]);
+    const toggleWantToPlay = vi.fn().mockResolvedValue(true);
+    const repository = createRepository({ addGameToLists, listSummaries, toggleWantToPlay });
+    const authService: AuthService = {
+      ...createAuthService(null),
+      getCurrentUser: vi.fn(() => pendingAuth.promise),
+    };
+    renderPersistentCard({ authService, repository });
+
+    expect(screen.getByTestId('auth-status')).toHaveTextContent('loading');
+    for (const layout of [
+      screen.getByTestId('release-card-desktop-42'),
+      screen.getByTestId('release-card-mobile-42'),
+    ]) {
+      expect(
+        within(layout).getByRole('button', { name: 'Adicionar Eclipse Protocol à lista' }),
+      ).toBeDisabled();
+      expect(
+        within(layout).getByRole('button', {
+          name: 'Marcar Eclipse Protocol como quero jogar',
+        }),
+      ).toBeDisabled();
+    }
+    expect(window.location.pathname).toBe('/lancamentos');
+    expect(peekPendingAuthIntent(sessionStorage)).toBeNull();
+    expect(listSummaries).not.toHaveBeenCalled();
+    expect(addGameToLists).not.toHaveBeenCalled();
+    expect(toggleWantToPlay).not.toHaveBeenCalled();
+
+    pendingAuth.resolve(null);
+    expect(await screen.findByTestId('auth-status')).toHaveTextContent('anonymous');
+  });
+
   it('stores a safe list intent when authentication is unavailable without loading lists', async () => {
     const user = userEvent.setup();
     const listSummaries = vi.fn().mockResolvedValue([rpgList]);
@@ -380,6 +425,7 @@ describe('ReleaseCard', () => {
       'Não foi possível atualizar Quero jogar. Tente novamente.',
     );
     expect(screen.getByRole('alert')).not.toHaveTextContent('raw rpc detail');
+    expect(screen.getByRole('alert')).not.toHaveClass('sr-only');
     for (const button of screen.getAllByRole('button', {
       name: 'Marcar Eclipse Protocol como quero jogar',
     })) {
@@ -417,6 +463,44 @@ describe('ReleaseCard', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
+  });
+
+  it('resets an open modal selection and reloads lists when the provider scope changes', async () => {
+    const user = userEvent.setup();
+    const authService = createAuthService(authenticatedUser);
+    const nextList: UserListSummary = { ...rpgList, id: 19, name: 'Nova conta' };
+    const repositoryA = createRepository({
+      listSummaries: vi.fn().mockResolvedValue([rpgList]),
+    });
+    const listSummariesB = vi.fn().mockResolvedValue([nextList]);
+    const repositoryB = createRepository({ listSummaries: listSummariesB });
+    const tree = (repository: ListsRepository) => (
+      <AuthProvider service={authService}>
+        <ListsProvider repository={repository}>
+          <BrowserRouter>
+            <AuthStatus />
+            <ReleaseCard generatedAt="2026-08-10T12:00:00.000Z" item={release} />
+          </BrowserRouter>
+        </ListsProvider>
+      </AuthProvider>
+    );
+    const { rerender } = render(tree(repositoryA));
+    await waitForAuthenticated();
+
+    await user.click(
+      screen.getAllByRole('button', { name: 'Adicionar Eclipse Protocol à lista' })[0],
+    );
+    await user.click(await screen.findByRole('button', { name: 'RPGs' }));
+    expect(screen.getByText('1 lista selecionada')).toBeInTheDocument();
+
+    rerender(tree(repositoryB));
+
+    expect(await screen.findByRole('button', { name: 'Nova conta' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    expect(screen.getByText('Selecione uma ou mais listas')).toBeInTheDocument();
+    expect(listSummariesB).toHaveBeenCalledOnce();
   });
 
   it('toggles want-to-play from either layout and keeps desktop and mobile in sync', async () => {
@@ -493,6 +577,45 @@ describe('ReleaseCard', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
+  });
+
+  it('restores focus to the responsive add button after an automatically resumed modal closes', async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      'matchMedia',
+      (query: string) =>
+        ({
+          addEventListener: vi.fn(),
+          addListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+          matches: false,
+          media: query,
+          onchange: null,
+          removeEventListener: vi.fn(),
+          removeListener: vi.fn(),
+        }) as MediaQueryList,
+    );
+    const onPendingActionConsumed = vi.fn();
+
+    try {
+      renderPersistentCard({
+        onPendingActionConsumed,
+        pendingAction: 'open-add-to-lists',
+      });
+      await waitForAuthenticated();
+      expect(await screen.findByRole('dialog')).toBeInTheDocument();
+      expect(onPendingActionConsumed).toHaveBeenCalledOnce();
+
+      await user.click(screen.getByRole('button', { name: 'Fechar modal' }));
+
+      const mobileAddButton = within(screen.getByTestId('release-card-mobile-42')).getByRole(
+        'button',
+        { name: 'Adicionar Eclipse Protocol à lista' },
+      );
+      expect(mobileAddButton).toHaveFocus();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('renders accessible desktop and mobile placeholders with decorative gamepad icons', () => {
