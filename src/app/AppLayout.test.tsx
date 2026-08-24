@@ -28,5 +28,6 @@ describe('AppLayout', () => {
     expect(main.compareDocumentPosition(mobileNavigation) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
+    expect(screen.getByRole('link', { name: 'Entrar' })).toHaveAttribute('href', '/entrar');
   });
 });

@@ -3,6 +3,10 @@ export interface HeaderUser {
   readonly initials: string;
 }
 
+export type HeaderAccount =
+  | { readonly status: 'anonymous' }
+  | { readonly status: 'authenticated'; readonly user: HeaderUser };
+
 interface IconHeaderContextAction {
   readonly kind: 'share' | 'menu';
   readonly label: string;
@@ -19,7 +23,7 @@ interface TextHeaderContextAction {
 export type HeaderContextAction = Readonly<IconHeaderContextAction | TextHeaderContextAction>;
 
 interface HeaderBaseProps {
-  readonly user: HeaderUser;
+  readonly account: HeaderAccount;
   readonly onSearch?: (query: string) => void;
   readonly onNotificationsClick?: () => void;
   readonly onProfileClick?: () => void;

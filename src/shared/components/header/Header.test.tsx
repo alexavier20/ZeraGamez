@@ -11,7 +11,7 @@ describe('Header', () => {
     const onTabletMenuClick = vi.fn();
     render(
       <MemoryRouter>
-        <Header onTabletMenuClick={onTabletMenuClick} user={user} />
+        <Header onTabletMenuClick={onTabletMenuClick} account={{ status: 'authenticated', user }} />
       </MemoryRouter>,
     );
 
@@ -28,7 +28,12 @@ describe('Header', () => {
     const onBack = vi.fn();
     render(
       <MemoryRouter>
-        <Header onBack={onBack} title="Detalhes do jogo" user={user} variant="detail" />
+        <Header
+          onBack={onBack}
+          title="Detalhes do jogo"
+          account={{ status: 'authenticated', user }}
+          variant="detail"
+        />
       </MemoryRouter>,
     );
 

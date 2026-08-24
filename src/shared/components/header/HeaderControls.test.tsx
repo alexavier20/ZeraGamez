@@ -32,25 +32,40 @@ describe('Header controls', () => {
     expect(onSearch).toHaveBeenCalledWith('Hollow Knight');
   });
 
-  it('expõe as ações do usuário e a rota para criar lista', async () => {
+  it('mostra um link visível para entrar para visitantes anônimos', () => {
+    render(
+      <MemoryRouter>
+        <HeaderActions account={{ status: 'anonymous' }} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('link', { name: 'Entrar' })).toHaveAttribute('href', '/entrar');
+    expect(screen.queryByRole('button', { name: 'Abrir notificações' })).not.toBeInTheDocument();
+  });
+
+  it('expõe as ações do usuário autenticado e as rotas de perfil e criar lista', async () => {
     const user = userEvent.setup();
     const onNotificationsClick = vi.fn();
     const onProfileClick = vi.fn();
     render(
       <MemoryRouter>
         <HeaderActions
+          account={{ status: 'authenticated', user: { name: 'Alex', initials: 'AB' } }}
           onNotificationsClick={onNotificationsClick}
           onProfileClick={onProfileClick}
-          user={{ name: 'Alex', initials: 'AB' }}
         />
       </MemoryRouter>,
     );
 
     await user.click(screen.getByRole('button', { name: 'Abrir notificações' }));
-    await user.click(screen.getByRole('button', { name: 'Abrir perfil de Alex' }));
+    await user.click(screen.getByRole('link', { name: 'Abrir perfil de Alex' }));
 
     expect(onNotificationsClick).toHaveBeenCalledOnce();
     expect(onProfileClick).toHaveBeenCalledOnce();
+    expect(screen.getByRole('link', { name: 'Abrir perfil de Alex' })).toHaveAttribute(
+      'href',
+      '/perfil',
+    );
     expect(screen.getByRole('link', { name: 'Criar lista' })).toHaveAttribute(
       'href',
       '/minhas-listas/nova',

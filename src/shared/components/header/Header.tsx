@@ -49,9 +49,9 @@ export function Header(props: HeaderProps) {
           <DesktopNavigation />
           <GlobalSearch className="min-w-48 flex-1" onSearch={props.onSearch} />
           <HeaderActions
+            account={props.account}
             onNotificationsClick={props.onNotificationsClick}
             onProfileClick={props.onProfileClick}
-            user={props.user}
           />
         </div>
 
