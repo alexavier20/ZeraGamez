@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
@@ -23,17 +23,24 @@ const authenticatedUser: AuthenticatedUser = {
 };
 
 function createFakeAuthService(initialUser: AuthenticatedUser | null) {
+  const listeners = new Set<(user: AuthenticatedUser | null) => void>();
   return {
     getCurrentUser: vi.fn().mockResolvedValue(initialUser),
-    onAuthStateChange: vi.fn(() => vi.fn()),
+    onAuthStateChange: vi.fn((listener: (user: AuthenticatedUser | null) => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    }),
     requestEmailCode: vi.fn().mockResolvedValue(undefined),
     verifyEmailCode: vi.fn().mockResolvedValue(undefined),
     signInWithGoogle: vi.fn().mockResolvedValue(undefined),
     signOut: vi.fn().mockResolvedValue(undefined),
-  } satisfies AuthService;
+    emit(user: AuthenticatedUser | null) {
+      listeners.forEach((listener) => listener(user));
+    },
+  } satisfies AuthService & { emit(user: AuthenticatedUser | null): void };
 }
 
-function renderLogin(service: AuthService) {
+function renderLogin(service: AuthService | null) {
   window.history.replaceState({}, '', '/entrar');
   return render(
     <AuthProvider service={service}>
@@ -79,6 +86,12 @@ describe('LoginPage', () => {
     await user.click(screen.getByRole('button', { name: 'Enviar código' }));
 
     expect(screen.getByRole('alert')).toHaveTextContent('Informe um e-mail válido.');
+    expect(screen.getByRole('textbox', { name: 'E-mail' })).toHaveAttribute(
+      'aria-describedby',
+      'login-email-error',
+    );
+    expect(screen.getByRole('textbox', { name: 'E-mail' })).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('textbox', { name: 'E-mail' })).toHaveFocus();
     expect(service.requestEmailCode).not.toHaveBeenCalled();
   });
 
@@ -93,7 +106,47 @@ describe('LoginPage', () => {
     await user.click(screen.getByRole('button', { name: 'Confirmar código' }));
 
     expect(screen.getByRole('alert')).toHaveTextContent('Informe o código de 6 dígitos.');
+    expect(screen.getByRole('textbox', { name: 'Código de verificação' })).toHaveAttribute(
+      'aria-describedby',
+      'login-code-error',
+    );
+    expect(screen.getByRole('textbox', { name: 'Código de verificação' })).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+    expect(screen.getByRole('textbox', { name: 'Código de verificação' })).toHaveFocus();
     expect(service.verifyEmailCode).not.toHaveBeenCalled();
+  });
+
+  it('does not turn a mixed OTP value into a valid code', async () => {
+    const user = userEvent.setup();
+    const service = createFakeAuthService(null);
+    renderLogin(service);
+
+    await user.type(screen.getByRole('textbox', { name: 'E-mail' }), 'alex@example.com');
+    await user.click(screen.getByRole('button', { name: 'Enviar código' }));
+    const codeInput = screen.getByRole('textbox', { name: 'Código de verificação' });
+    await user.type(codeInput, '123a56');
+
+    expect(codeInput).toHaveValue('123a56');
+    await user.click(screen.getByRole('button', { name: 'Confirmar código' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Informe o código de 6 dígitos.');
+    expect(service.verifyEmailCode).not.toHaveBeenCalled();
+  });
+
+  it('accepts a pasted numeric OTP', async () => {
+    const user = userEvent.setup();
+    const service = createFakeAuthService(null);
+    renderLogin(service);
+
+    await user.type(screen.getByRole('textbox', { name: 'E-mail' }), 'alex@example.com');
+    await user.click(screen.getByRole('button', { name: 'Enviar código' }));
+    await user.click(screen.getByRole('textbox', { name: 'Código de verificação' }));
+    await user.paste('123456');
+    await user.click(screen.getByRole('button', { name: 'Confirmar código' }));
+
+    expect(service.verifyEmailCode).toHaveBeenCalledWith('alex@example.com', '123456');
   });
 
   it('shows a generic error after a failed code request and permits retry without losing email', async () => {
@@ -127,6 +180,81 @@ describe('LoginPage', () => {
 
     expect(service.requestEmailCode).toHaveBeenLastCalledWith('alex@example.com');
     expect(screen.getByRole('status')).toHaveTextContent('Enviamos um novo código para alex@example.com.');
+    expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite');
+  });
+
+  it('returns to the email stage, clears feedback, and focuses the email field', async () => {
+    const user = userEvent.setup();
+    const service = createFakeAuthService(null);
+    renderLogin(service);
+
+    await user.type(screen.getByRole('textbox', { name: 'E-mail' }), 'alex@example.com');
+    await user.click(screen.getByRole('button', { name: 'Enviar código' }));
+    await user.type(screen.getByRole('textbox', { name: 'Código de verificação' }), '12345');
+    await user.click(screen.getByRole('button', { name: 'Confirmar código' }));
+    await user.click(screen.getByRole('button', { name: 'Alterar e-mail' }));
+
+    const emailInput = screen.getByRole('textbox', { name: 'E-mail' });
+    expect(emailInput).toHaveFocus();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Enviar código' }));
+    expect(screen.getByRole('textbox', { name: 'Código de verificação' })).toHaveValue('');
+  });
+
+  it('announces and blocks duplicate pending email requests', async () => {
+    const user = userEvent.setup();
+    const service = createFakeAuthService(null);
+    service.requestEmailCode.mockImplementation(() => new Promise<void>(() => undefined));
+    renderLogin(service);
+
+    await user.type(screen.getByRole('textbox', { name: 'E-mail' }), 'alex@example.com');
+    await user.click(screen.getByRole('button', { name: 'Enviar código' }));
+
+    const submit = screen.getByRole('button', { name: 'Enviando código…' });
+    expect(submit).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent('Enviando código…');
+    expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite');
+    await user.click(submit);
+    expect(service.requestEmailCode).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows generic errors for confirmation, resend, and Google', async () => {
+    const user = userEvent.setup();
+    const service = createFakeAuthService(null);
+    service.verifyEmailCode.mockRejectedValueOnce(new Error('verification provider detail'));
+    service.requestEmailCode.mockResolvedValueOnce(undefined).mockRejectedValueOnce(
+      new Error('resend provider detail'),
+    );
+    service.signInWithGoogle.mockRejectedValueOnce(new Error('oauth provider detail'));
+    renderLogin(service);
+
+    await user.type(screen.getByRole('textbox', { name: 'E-mail' }), 'alex@example.com');
+    await user.click(screen.getByRole('button', { name: 'Enviar código' }));
+    await user.type(screen.getByRole('textbox', { name: 'Código de verificação' }), '123456');
+    await user.click(screen.getByRole('button', { name: 'Confirmar código' }));
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Não foi possível concluir o acesso. Tente novamente.',
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Reenviar código' }));
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Não foi possível concluir o acesso. Tente novamente.',
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Continuar com Google' }));
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Não foi possível concluir o acesso. Tente novamente.',
+    );
+  });
+
+  it('shows unavailable configuration and disables authentication actions', async () => {
+    renderLogin(null);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'A autenticação ainda não está configurada.',
+    );
+    expect(screen.getByRole('button', { name: 'Enviar código' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Continuar com Google' })).toBeDisabled();
   });
 
   it('resumes a protected route after authentication', async () => {
@@ -138,6 +266,29 @@ describe('LoginPage', () => {
     });
     const service = createFakeAuthService(authenticatedUser);
     renderLogin(service);
+
+    await waitFor(() => expect(window.location.pathname).toBe('/minhas-listas'));
+    expect(peekPendingAuthIntent(sessionStorage)).toBeNull();
+  });
+
+  it('resumes a protected route after an auth state change following code verification', async () => {
+    const user = userEvent.setup();
+    sessionStorage.clear();
+    savePendingAuthIntent(sessionStorage, {
+      version: 1,
+      type: 'navigate',
+      returnTo: '/minhas-listas',
+    });
+    const service = createFakeAuthService(null);
+    renderLogin(service);
+
+    await user.type(screen.getByRole('textbox', { name: 'E-mail' }), 'alex@example.com');
+    await user.click(screen.getByRole('button', { name: 'Enviar código' }));
+    await user.type(screen.getByRole('textbox', { name: 'Código de verificação' }), '123456');
+    await user.click(screen.getByRole('button', { name: 'Confirmar código' }));
+    expect(window.location.pathname).toBe('/entrar');
+
+    act(() => service.emit(authenticatedUser));
 
     await waitFor(() => expect(window.location.pathname).toBe('/minhas-listas'));
     expect(peekPendingAuthIntent(sessionStorage)).toBeNull();

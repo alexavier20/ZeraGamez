@@ -1,18 +1,28 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 
 import { useAuth } from '@/features/auth/context/AuthProvider';
+import { normalizeOtp } from '@/features/auth/model/auth';
 import {
   consumePendingAuthIntent,
   peekPendingAuthIntent,
 } from '@/features/auth/model/pending-auth-intent';
 
 type LoginStage = 'email' | 'code';
-type Submission = 'idle' | 'submitting';
-type Message = { readonly text: string; readonly type: 'error' | 'success' } | null;
+type Submission = 'idle' | 'request' | 'verify' | 'resend' | 'google';
+type LoginField = 'email' | 'code';
+type Message =
+  | { readonly field?: LoginField; readonly text: string; readonly type: 'error' | 'success' }
+  | null;
 
 const genericAuthError = 'Não foi possível concluir o acesso. Tente novamente.';
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const pendingMessages: Record<Exclude<Submission, 'idle'>, string> = {
+  request: 'Enviando código…',
+  verify: 'Confirmando código…',
+  resend: 'Reenviando código…',
+  google: 'Conectando ao Google…',
+};
 
 function normalizeEmail(value: string): string {
   return value.trim().toLowerCase();
@@ -22,11 +32,29 @@ export function LoginPage() {
   const { requestEmailCode, signInWithGoogle, state, verifyEmailCode } = useAuth();
   const navigate = useNavigate();
   const resumedAuthentication = useRef(false);
+  const emailInput = useRef<HTMLInputElement | null>(null);
+  const codeInput = useRef<HTMLInputElement | null>(null);
+  const focusEmailOnMount = useRef(false);
   const [stage, setStage] = useState<LoginStage>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [submission, setSubmission] = useState<Submission>('idle');
   const [message, setMessage] = useState<Message>(null);
+  const unavailable = state.status === 'unavailable';
+  const submitting = submission !== 'idle';
+  const liveMessage = submitting
+    ? pendingMessages[submission]
+    : message?.type === 'success'
+      ? message.text
+      : null;
+
+  const setEmailInput = useCallback((node: HTMLInputElement | null) => {
+    emailInput.current = node;
+    if (node !== null && focusEmailOnMount.current) {
+      node.focus();
+      focusEmailOnMount.current = false;
+    }
+  }, []);
 
   useEffect(() => {
     if (state.status !== 'authenticated' || resumedAuthentication.current) return;
@@ -38,57 +66,70 @@ export function LoginPage() {
   }, [navigate, state.status]);
 
   const requestCode = async () => {
+    if (submitting || unavailable) return;
+
     const normalizedEmail = normalizeEmail(email);
     if (!emailPattern.test(normalizedEmail)) {
-      setMessage({ type: 'error', text: 'Informe um e-mail válido.' });
+      setMessage({ field: 'email', type: 'error', text: 'Informe um e-mail válido.' });
+      emailInput.current?.focus();
       return;
     }
 
-    setSubmission('submitting');
+    setSubmission('request');
     setMessage(null);
     try {
       await requestEmailCode(normalizedEmail);
       setEmail(normalizedEmail);
       setStage('code');
     } catch {
-      setMessage({ type: 'error', text: genericAuthError });
+      setMessage({ field: 'email', type: 'error', text: genericAuthError });
     } finally {
       setSubmission('idle');
     }
   };
 
   const verifyCode = async () => {
-    if (!/^\d{6}$/.test(code)) {
-      setMessage({ type: 'error', text: 'Informe o código de 6 dígitos.' });
+    if (submitting || unavailable) return;
+
+    let normalizedCode: string;
+    try {
+      normalizedCode = normalizeOtp(code);
+    } catch {
+      setMessage({ field: 'code', type: 'error', text: 'Informe o código de 6 dígitos.' });
+      codeInput.current?.focus();
       return;
     }
 
-    setSubmission('submitting');
+    setSubmission('verify');
     setMessage(null);
     try {
-      await verifyEmailCode(email, code);
+      await verifyEmailCode(email, normalizedCode);
     } catch {
-      setMessage({ type: 'error', text: genericAuthError });
+      setMessage({ field: 'code', type: 'error', text: genericAuthError });
     } finally {
       setSubmission('idle');
     }
   };
 
   const resendCode = async () => {
-    setSubmission('submitting');
+    if (submitting || unavailable) return;
+
+    setSubmission('resend');
     setMessage(null);
     try {
       await requestEmailCode(email);
       setMessage({ type: 'success', text: `Enviamos um novo código para ${email}.` });
     } catch {
-      setMessage({ type: 'error', text: genericAuthError });
+      setMessage({ field: 'code', type: 'error', text: genericAuthError });
     } finally {
       setSubmission('idle');
     }
   };
 
   const startGoogleLogin = async () => {
-    setSubmission('submitting');
+    if (submitting || unavailable) return;
+
+    setSubmission('google');
     setMessage(null);
     try {
       await signInWithGoogle(`${window.location.origin}/entrar`);
@@ -97,6 +138,13 @@ export function LoginPage() {
     } finally {
       setSubmission('idle');
     }
+  };
+
+  const changeEmail = () => {
+    focusEmailOnMount.current = true;
+    setCode('');
+    setMessage(null);
+    setStage('email');
   };
 
   return (
@@ -112,13 +160,22 @@ export function LoginPage() {
             : `Digite o código enviado para ${email}.`}
         </p>
 
-        {message === null ? null : message.type === 'error' ? (
+        {unavailable ? (
           <p className="mt-5 rounded-lg border border-brand/50 bg-filter-active px-3 py-2 text-sm" role="alert">
+            {state.message}
+          </p>
+        ) : message?.type === 'error' ? (
+          <p
+            className="mt-5 rounded-lg border border-brand/50 bg-filter-active px-3 py-2 text-sm"
+            id={message.field === undefined ? undefined : `login-${message.field}-error`}
+            role="alert"
+          >
             {message.text}
           </p>
-        ) : (
-          <p className="mt-5 rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-sm" role="status">
-            {message.text}
+        ) : null}
+        {liveMessage === null ? null : (
+          <p aria-live="polite" className="mt-5 text-sm text-text-muted" role="status">
+            {liveMessage}
           </p>
         )}
 
@@ -136,20 +193,24 @@ export function LoginPage() {
                 E-mail
               </label>
               <input
+                aria-describedby={message?.field === 'email' && message.type === 'error' ? 'login-email-error' : undefined}
+                aria-invalid={message?.field === 'email' && message.type === 'error'}
                 autoComplete="email"
                 className="h-12 w-full rounded-xl border border-white/20 bg-app px-3 outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/30"
+                disabled={unavailable}
                 id="login-email"
                 onChange={(event) => setEmail(event.target.value)}
+                ref={setEmailInput}
                 type="email"
                 value={email}
               />
             </div>
             <button
               className="h-12 w-full rounded-xl bg-brand font-semibold transition-colors hover:bg-brand-bright disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={submission === 'submitting'}
+              disabled={submitting || unavailable}
               type="submit"
             >
-              Enviar código
+              {submission === 'request' ? 'Enviando código…' : 'Enviar código'}
             </button>
           </form>
         ) : (
@@ -165,29 +226,41 @@ export function LoginPage() {
                 Código de verificação
               </label>
               <input
+                aria-describedby={message?.field === 'code' && message.type === 'error' ? 'login-code-error' : undefined}
+                aria-invalid={message?.field === 'code' && message.type === 'error'}
                 autoComplete="one-time-code"
                 className="h-12 w-full rounded-xl border border-white/20 bg-app px-3 text-center font-heading text-xl tracking-[0.45em] outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/30"
+                disabled={unavailable}
                 id="login-code"
                 inputMode="numeric"
                 maxLength={6}
-                onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                onChange={(event) => setCode(event.target.value)}
+                ref={codeInput}
                 value={code}
               />
             </div>
             <button
               className="h-12 w-full rounded-xl bg-brand font-semibold transition-colors hover:bg-brand-bright disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={submission === 'submitting'}
+              disabled={submitting || unavailable}
               type="submit"
             >
-              Confirmar código
+              {submission === 'verify' ? 'Confirmando código…' : 'Confirmar código'}
             </button>
             <button
               className="w-full text-sm font-semibold text-text-muted underline decoration-white/30 underline-offset-4 hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={submission === 'submitting'}
+              disabled={submitting || unavailable}
               onClick={() => void resendCode()}
               type="button"
             >
-              Reenviar código
+              {submission === 'resend' ? 'Reenviando código…' : 'Reenviar código'}
+            </button>
+            <button
+              className="w-full text-sm font-semibold text-text-muted underline decoration-white/30 underline-offset-4 hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={submitting || unavailable}
+              onClick={changeEmail}
+              type="button"
+            >
+              Alterar e-mail
             </button>
           </form>
         )}
@@ -199,11 +272,11 @@ export function LoginPage() {
         </div>
         <button
           className="h-12 w-full rounded-xl border border-white/25 bg-app font-semibold transition-colors hover:bg-bg-secondary disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={submission === 'submitting'}
+          disabled={submitting || unavailable}
           onClick={() => void startGoogleLogin()}
           type="button"
         >
-          Continuar com Google
+          {submission === 'google' ? 'Conectando ao Google…' : 'Continuar com Google'}
         </button>
       </section>
     </main>

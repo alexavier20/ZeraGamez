@@ -16,9 +16,14 @@ interface AppRouterProps {
   readonly authService?: AuthService | null;
 }
 
+let defaultAuthService: AuthService | null | undefined;
+
 function getDefaultAuthService(): AuthService | null {
+  if (defaultAuthService !== undefined) return defaultAuthService;
+
   const client = getSupabaseClient();
-  return client === null ? null : createSupabaseAuthService(client);
+  defaultAuthService = client === null ? null : createSupabaseAuthService(client);
+  return defaultAuthService;
 }
 
 export function AppRouter({ authService }: AppRouterProps) {
