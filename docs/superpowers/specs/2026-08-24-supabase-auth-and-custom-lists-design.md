@@ -248,7 +248,7 @@ O modelo demonstrativo será substituído por um repositório assíncrono. O mod
 Ao abrir:
 
 1. a sessão é verificada;
-2. as listas e associações atuais do jogo são carregadas em paralelo quando possível;
+2. as listas do usuário são carregadas; associações já existentes podem ser reinseridas sem duplicação;
 3. o usuário altera a seleção local;
 4. confirmar chama a operação atômica;
 5. o modal fecha somente após sucesso;
@@ -356,6 +356,7 @@ A documentação do projeto explicará:
 - Senhas locais.
 - Magic Link como interface principal.
 - Exclusão e renomeação de listas.
+- Remoção de jogos pelo modal de inclusão.
 - Listas públicas ou compartilhadas.
 - Ordenação manual de jogos.
 - Avaliações, notas e status adicionais por item.
