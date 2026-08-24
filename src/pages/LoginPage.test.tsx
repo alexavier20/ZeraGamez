@@ -162,6 +162,7 @@ describe('LoginPage', () => {
       'Não foi possível concluir o acesso. Tente novamente.',
     );
     expect(screen.getByRole('textbox', { name: 'E-mail' })).toHaveValue('alex@example.com');
+    expect(screen.getByRole('textbox', { name: 'E-mail' })).toHaveFocus();
 
     await user.click(screen.getByRole('button', { name: 'Enviar código' }));
 
@@ -235,16 +236,36 @@ describe('LoginPage', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(
       'Não foi possível concluir o acesso. Tente novamente.',
     );
+    expect(screen.getByRole('textbox', { name: 'Código de verificação' })).toHaveFocus();
 
     await user.click(screen.getByRole('button', { name: 'Reenviar código' }));
     expect(screen.getByRole('alert')).toHaveTextContent(
       'Não foi possível concluir o acesso. Tente novamente.',
     );
+    expect(screen.getByRole('textbox', { name: 'Código de verificação' })).toHaveFocus();
 
     await user.click(screen.getByRole('button', { name: 'Continuar com Google' }));
     expect(screen.getByRole('alert')).toHaveTextContent(
       'Não foi possível concluir o acesso. Tente novamente.',
     );
+  });
+
+  it('returns focus to the code field after an async resend error', async () => {
+    const user = userEvent.setup();
+    const service = createFakeAuthService(null);
+    service.requestEmailCode.mockResolvedValueOnce(undefined).mockRejectedValueOnce(
+      new Error('resend provider detail'),
+    );
+    renderLogin(service);
+
+    await user.type(screen.getByRole('textbox', { name: 'E-mail' }), 'alex@example.com');
+    await user.click(screen.getByRole('button', { name: 'Enviar código' }));
+    await user.click(screen.getByRole('button', { name: 'Reenviar código' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Não foi possível concluir o acesso. Tente novamente.',
+    );
+    expect(screen.getByRole('textbox', { name: 'Código de verificação' })).toHaveFocus();
   });
 
   it('shows unavailable configuration and disables authentication actions', async () => {

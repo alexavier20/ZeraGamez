@@ -83,6 +83,7 @@ export function LoginPage() {
       setStage('code');
     } catch {
       setMessage({ field: 'email', type: 'error', text: genericAuthError });
+      emailInput.current?.focus();
     } finally {
       setSubmission('idle');
     }
@@ -106,6 +107,7 @@ export function LoginPage() {
       await verifyEmailCode(email, normalizedCode);
     } catch {
       setMessage({ field: 'code', type: 'error', text: genericAuthError });
+      codeInput.current?.focus();
     } finally {
       setSubmission('idle');
     }
@@ -121,6 +123,7 @@ export function LoginPage() {
       setMessage({ type: 'success', text: `Enviamos um novo código para ${email}.` });
     } catch {
       setMessage({ field: 'code', type: 'error', text: genericAuthError });
+      codeInput.current?.focus();
     } finally {
       setSubmission('idle');
     }
