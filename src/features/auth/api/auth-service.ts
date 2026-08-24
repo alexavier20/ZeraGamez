@@ -52,7 +52,7 @@ export interface AuthService {
 export function createSupabaseAuthService(client: SupabaseClientPort): AuthService {
   return {
     async getCurrentUser(): Promise<AuthenticatedUser | null> {
-      const response = await client.auth.getUser();
+      const response = await callAuth(() => client.auth.getUser());
       throwIfAuthError(response.error);
 
       return response.data.user === null ? null : toAuthenticatedUser(response.data.user);
@@ -67,28 +67,32 @@ export function createSupabaseAuthService(client: SupabaseClientPort): AuthServi
     },
 
     async requestEmailCode(email: string): Promise<void> {
-      const response = await client.auth.signInWithOtp({
-        email,
-        options: { shouldCreateUser: true },
-      });
+      const response = await callAuth(() =>
+        client.auth.signInWithOtp({
+          email,
+          options: { shouldCreateUser: true },
+        }),
+      );
       throwIfAuthError(response.error);
     },
 
     async verifyEmailCode(email: string, token: string): Promise<void> {
-      const response = await client.auth.verifyOtp({ email, token, type: 'email' });
+      const response = await callAuth(() => client.auth.verifyOtp({ email, token, type: 'email' }));
       throwIfAuthError(response.error);
     },
 
     async signInWithGoogle(redirectTo: string): Promise<void> {
-      const response = await client.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo },
-      });
+      const response = await callAuth(() =>
+        client.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo },
+        }),
+      );
       throwIfAuthError(response.error);
     },
 
     async signOut(): Promise<void> {
-      const response = await client.auth.signOut();
+      const response = await callAuth(() => client.auth.signOut());
       throwIfAuthError(response.error);
     },
   };
@@ -96,4 +100,12 @@ export function createSupabaseAuthService(client: SupabaseClientPort): AuthServi
 
 function throwIfAuthError(error: unknown | null): void {
   if (error !== null) throw toDataError(error);
+}
+
+async function callAuth<Result>(operation: () => Promise<Result>): Promise<Result> {
+  try {
+    return await operation();
+  } catch (error) {
+    throw toDataError(error);
+  }
 }

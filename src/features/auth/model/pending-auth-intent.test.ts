@@ -74,7 +74,30 @@ describe('pending auth intents', () => {
     expect(peekPendingAuthIntent(storage)).toBeNull();
   });
 
-  it('removes malformed payloads immediately and clears stored payloads', () => {
+  it.each(['/', '/lancamentos', '/minhas-listas', '/minhas-listas/nova', '/perfil'] as const)(
+    'accepts the allowlisted navigation return path %s',
+    (returnTo) => {
+      const storage = new MemoryStorage();
+      const intent = { version: 1 as const, type: 'navigate' as const, returnTo };
+
+      savePendingAuthIntent(storage, intent);
+
+      expect(peekPendingAuthIntent(storage)).toEqual(intent);
+    },
+  );
+
+  it('rejects an unallowlisted internal navigation path and removes it', () => {
+    const storage = new MemoryStorage();
+    storage.setItem(
+      PENDING_AUTH_INTENT_KEY,
+      JSON.stringify({ version: 1, type: 'navigate', returnTo: '/admin' }),
+    );
+
+    expect(peekPendingAuthIntent(storage)).toBeNull();
+    expect(storage.getItem(PENDING_AUTH_INTENT_KEY)).toBeNull();
+  });
+
+  it('removes malformed and unsupported-version payloads immediately', () => {
     const storage = new MemoryStorage();
     storage.setItem(PENDING_AUTH_INTENT_KEY, '{invalid json');
 
@@ -86,7 +109,16 @@ describe('pending auth intents', () => {
       JSON.stringify({ version: 2, type: 'toggle-want-to-play', returnTo: '/lancamentos', igdbId: 7346 }),
     );
 
-    clearPendingAuthIntent(storage);
+    expect(consumePendingAuthIntent(storage)).toBeNull();
     expect(storage.getItem(PENDING_AUTH_INTENT_KEY)).toBeNull();
+  });
+
+  it('clears a stored intent explicitly', () => {
+    const storage = new MemoryStorage();
+    savePendingAuthIntent(storage, { version: 1, type: 'navigate', returnTo: '/' });
+
+    clearPendingAuthIntent(storage);
+
+    expect(peekPendingAuthIntent(storage)).toBeNull();
   });
 });

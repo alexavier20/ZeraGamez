@@ -137,4 +137,64 @@ describe('createSupabaseAuthService', () => {
     );
     await expect(service.requestEmailCode('alex@example.com')).rejects.toBeInstanceOf(DataError);
   });
+
+  it('sanitizes a rejected current-user provider promise', async () => {
+    const fake = createAuthPort();
+    fake.port.getUser.mockRejectedValue(new Error('Provider rejection: current user.'));
+    const service = createSupabaseAuthService({ auth: fake.port });
+
+    await expect(service.getCurrentUser()).rejects.toMatchObject({
+      name: 'DataError',
+      code: 'unexpected',
+      message: 'Algo deu errado. Tente novamente.',
+    });
+  });
+
+  it('sanitizes a rejected email-code request provider promise', async () => {
+    const fake = createAuthPort();
+    fake.port.signInWithOtp.mockRejectedValue(new Error('Provider rejection: email code.'));
+    const service = createSupabaseAuthService({ auth: fake.port });
+
+    await expect(service.requestEmailCode('alex@example.com')).rejects.toMatchObject({
+      name: 'DataError',
+      code: 'unexpected',
+      message: 'Algo deu errado. Tente novamente.',
+    });
+  });
+
+  it('sanitizes a rejected email-code verification provider promise', async () => {
+    const fake = createAuthPort();
+    fake.port.verifyOtp.mockRejectedValue(new Error('Provider rejection: verify code.'));
+    const service = createSupabaseAuthService({ auth: fake.port });
+
+    await expect(service.verifyEmailCode('alex@example.com', '123456')).rejects.toMatchObject({
+      name: 'DataError',
+      code: 'unexpected',
+      message: 'Algo deu errado. Tente novamente.',
+    });
+  });
+
+  it('sanitizes a rejected Google OAuth provider promise', async () => {
+    const fake = createAuthPort();
+    fake.port.signInWithOAuth.mockRejectedValue(new Error('Provider rejection: Google OAuth.'));
+    const service = createSupabaseAuthService({ auth: fake.port });
+
+    await expect(service.signInWithGoogle('https://zera.example/entrar')).rejects.toMatchObject({
+      name: 'DataError',
+      code: 'unexpected',
+      message: 'Algo deu errado. Tente novamente.',
+    });
+  });
+
+  it('sanitizes a rejected sign-out provider promise', async () => {
+    const fake = createAuthPort();
+    fake.port.signOut.mockRejectedValue(new Error('Provider rejection: sign out.'));
+    const service = createSupabaseAuthService({ auth: fake.port });
+
+    await expect(service.signOut()).rejects.toMatchObject({
+      name: 'DataError',
+      code: 'unexpected',
+      message: 'Algo deu errado. Tente novamente.',
+    });
+  });
 });
