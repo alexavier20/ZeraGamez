@@ -233,6 +233,19 @@ describe('AddToListsModal', () => {
     });
   });
 
+  it('repairs focus after page navigation disables the clicked endpoint control', async () => {
+    const user = userEvent.setup();
+    renderModal();
+
+    const nextButton = screen.getByRole('button', { name: 'Próxima página' });
+    await user.click(nextButton);
+
+    expect(nextButton).toBeDisabled();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Fechar modal' })).toHaveFocus();
+    });
+  });
+
   it('uses composite cover keys when a list repeats the same cover URL', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 

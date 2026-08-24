@@ -178,7 +178,7 @@ function AddToListsDialog({
       }
       (closeButtonRef.current?.disabled === false ? closeButtonRef.current : dialog).focus();
     });
-  }, [listsState.status, submitting, successfulListIdsSignature]);
+  }, [listsState.status, page, submitting, successfulListIdsSignature]);
 
   const toggleList = (id: number) => {
     if (submittingRef.current) return;
