@@ -1,11 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Navigate, useLocation } from 'react-router';
+import { Navigate, Outlet, useLocation } from 'react-router';
 
 import { useAuth } from '@/features/auth/context/AuthProvider';
 import { savePendingAuthIntent } from '@/features/auth/model/pending-auth-intent';
 
 interface ProtectedRouteProps {
-  readonly children: ReactNode;
+  readonly children?: ReactNode;
 }
 
 const protectedReturnPaths = [
@@ -30,23 +30,23 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const needsAuthentication = state.status === 'anonymous' || state.status === 'unavailable';
 
   useEffect(() => {
-    if (!needsAuthentication) {
-      setCanRedirect(false);
-      return;
-    }
-
-    if (isProtectedReturnPath(pathname)) {
+    let active = true;
+    if (needsAuthentication && isProtectedReturnPath(pathname)) {
       savePendingAuthIntent(sessionStorage, {
         version: 1,
         type: 'navigate',
         returnTo: pathname,
       });
     }
-
-    setCanRedirect(true);
+    queueMicrotask(() => {
+      if (active) setCanRedirect(needsAuthentication);
+    });
+    return () => {
+      active = false;
+    };
   }, [needsAuthentication, pathname]);
 
-  if (state.status === 'authenticated') return children;
+  if (state.status === 'authenticated') return children ?? <Outlet />;
 
   if (needsAuthentication && canRedirect) {
     return <Navigate replace to="/entrar" />;
