@@ -161,7 +161,7 @@ describe('Zera GameZ', () => {
   });
 
   it('renderiza a página inicial', () => {
-    render(<AppRouter />);
+    render(<AppRouter authService={null} />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'Zera GameZ' })).toBeInTheDocument();
     expect(screen.getByText('Em construção')).toBeInTheDocument();
@@ -176,7 +176,7 @@ describe('Zera GameZ', () => {
   it('abre Lançamentos com o título responsivo selecionado no Pencil', async () => {
     const user = userEvent.setup();
     const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
-    render(<AppRouter />);
+    render(<AppRouter authService={null} />);
 
     const releasesLink = screen.getByRole('link', { name: 'Lançamentos' });
     await user.click(releasesLink);
