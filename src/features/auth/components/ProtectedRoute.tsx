@@ -35,13 +35,14 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       return;
     }
 
-    if (!isProtectedReturnPath(pathname)) return;
+    if (isProtectedReturnPath(pathname)) {
+      savePendingAuthIntent(sessionStorage, {
+        version: 1,
+        type: 'navigate',
+        returnTo: pathname,
+      });
+    }
 
-    savePendingAuthIntent(sessionStorage, {
-      version: 1,
-      type: 'navigate',
-      returnTo: pathname,
-    });
     setCanRedirect(true);
   }, [needsAuthentication, pathname]);
 

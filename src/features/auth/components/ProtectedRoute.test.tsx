@@ -45,7 +45,7 @@ function renderGuard(service: AuthService | null, initialEntry = '/minhas-listas
               </ProtectedRoute>
             </AuthProvider>
           }
-          path="/minhas-listas/nova"
+          path="/minhas-listas/*"
         />
         <Route element={<h1>Entrar</h1>} path="/entrar" />
       </Routes>
@@ -70,6 +70,14 @@ describe('ProtectedRoute', () => {
       type: 'navigate',
       returnTo: '/minhas-listas/nova',
     });
+  });
+
+  it('sends non-allowlisted protected routes to login without saving an intent', async () => {
+    sessionStorage.removeItem(PENDING_AUTH_INTENT_KEY);
+    renderGuard(createFakeAuthService(null), '/minhas-listas/42');
+
+    expect(await screen.findByRole('heading', { name: 'Entrar' })).toBeInTheDocument();
+    expect(peekPendingAuthIntent(sessionStorage)).toBeNull();
   });
 
   it('renders protected children for an authenticated user', async () => {
