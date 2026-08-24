@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router';
 
 import { useAuth } from '@/features/auth/context/AuthProvider';
+import { isLogoutNavigationPending } from '@/features/auth/model/logout-navigation';
 import { savePendingAuthIntent } from '@/features/auth/model/pending-auth-intent';
 
 interface ProtectedRouteProps {
@@ -31,7 +32,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   useEffect(() => {
     let active = true;
-    if (needsAuthentication && isProtectedReturnPath(pathname)) {
+    const canRedirectAfterAuthCheck = needsAuthentication && !isLogoutNavigationPending();
+    if (canRedirectAfterAuthCheck && isProtectedReturnPath(pathname)) {
       savePendingAuthIntent(sessionStorage, {
         version: 1,
         type: 'navigate',
@@ -39,7 +41,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       });
     }
     queueMicrotask(() => {
-      if (active) setCanRedirect(needsAuthentication);
+      if (active) setCanRedirect(canRedirectAfterAuthCheck);
     });
     return () => {
       active = false;
@@ -48,7 +50,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (state.status === 'authenticated') return children ?? <Outlet />;
 
-  if (needsAuthentication && canRedirect) {
+  if (needsAuthentication && canRedirect && !isLogoutNavigationPending()) {
     return <Navigate replace to="/entrar" />;
   }
 

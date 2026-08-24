@@ -1,9 +1,10 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AuthProvider, useAuth } from '@/features/auth/context/AuthProvider';
 
-import { ListsProvider, useLists } from './ListsProvider';
+import { ListsProvider, isListsOperationCancelled, useLists } from './ListsProvider';
 
 import type { AuthService } from '@/features/auth/api/auth-service';
 import type { AuthenticatedUser } from '@/features/auth/model/auth';
@@ -97,14 +98,29 @@ function createRepository(overrides: Partial<ListsRepository> = {}): ListsReposi
 
 function renderListsProvider(repository: ListsRepository | null) {
   const auth = createAuthService(authenticatedUser);
-  const wrapper = ({ children }: { readonly children: ReactNode }) => (
-    <AuthProvider service={auth.service}>
-      <ListsProvider repository={repository}>{children}</ListsProvider>
-    </AuthProvider>
-  );
-  const view = renderHook(() => ({ auth: useAuth(), lists: useLists() }), { wrapper });
+  let updateRepository!: (nextRepository: ListsRepository | null) => void;
+  const Wrapper = ({ children }: { readonly children: ReactNode }) => {
+    const [currentRepository, setCurrentRepository] = useState(repository);
+    updateRepository = setCurrentRepository;
+    return (
+      <AuthProvider service={auth.service}>
+        <ListsProvider repository={currentRepository}>{children}</ListsProvider>
+      </AuthProvider>
+    );
+  };
+  const view = renderHook(() => ({ auth: useAuth(), lists: useLists() }), {
+    wrapper: Wrapper,
+  });
 
-  return { auth, ...view };
+  return {
+    auth,
+    changeRepository(nextRepository: ListsRepository | null) {
+      act(() => {
+        updateRepository(nextRepository);
+      });
+    },
+    ...view,
+  };
 }
 
 async function waitForAuthenticated(view: ReturnType<typeof renderListsProvider>): Promise<void> {
@@ -167,6 +183,67 @@ describe('ListsProvider', () => {
 
     expect(view.result.current.lists.listsState).toEqual({ status: 'idle' });
     expect(view.result.current.lists.wantToPlayIds.size).toBe(0);
+  });
+
+  it('does not accept an old A response after the scope changes A to B to A', async () => {
+    const oldA = deferred<readonly UserListSummary[]>();
+    const listSummaries = vi
+      .fn()
+      .mockImplementationOnce(() => oldA.promise)
+      .mockResolvedValueOnce([wantToPlayList]);
+    const view = renderListsProvider(createRepository({ listSummaries }));
+    await waitForAuthenticated(view);
+
+    act(() => {
+      void view.result.current.lists.loadLists();
+    });
+    act(() => {
+      view.auth.emit(otherAuthenticatedUser);
+    });
+    act(() => {
+      view.auth.emit(authenticatedUser);
+    });
+    await act(() => view.result.current.lists.loadLists());
+    expect(view.result.current.lists.listsState).toEqual({
+      status: 'success',
+      lists: [wantToPlayList],
+    });
+
+    oldA.resolve([rpgList]);
+    await act(async () => oldA.promise);
+
+    expect(view.result.current.lists.listsState).toEqual({
+      status: 'success',
+      lists: [wantToPlayList],
+    });
+  });
+
+  it('shows an empty idle scope immediately on repository change and ignores old work', async () => {
+    const pending = deferred<readonly UserListSummary[]>();
+    const firstRepository = createRepository({ listSummaries: vi.fn(() => pending.promise) });
+    const secondRepository = createRepository({
+      listSummaries: vi.fn().mockResolvedValue([wantToPlayList]),
+    });
+    const view = renderListsProvider(firstRepository);
+    await waitForAuthenticated(view);
+    act(() => void view.result.current.lists.loadLists());
+
+    view.changeRepository(secondRepository);
+
+    expect(view.result.current.lists.listsState).toEqual({ status: 'idle' });
+    expect(view.result.current.lists.wantToPlayIds.size).toBe(0);
+    await act(() => view.result.current.lists.loadLists());
+    expect(view.result.current.lists.listsState).toEqual({
+      status: 'success',
+      lists: [wantToPlayList],
+    });
+
+    pending.resolve([rpgList]);
+    await act(async () => pending.promise);
+    expect(view.result.current.lists.listsState).toEqual({
+      status: 'success',
+      lists: [wantToPlayList],
+    });
   });
 
   it('clears caches when authentication becomes anonymous', async () => {
@@ -298,6 +375,81 @@ describe('ListsProvider', () => {
     expect([...view.result.current.lists.wantToPlayIds]).toEqual([10, game.igdbId]);
   });
 
+  it('ignores a membership load that started before a confirmed toggle', async () => {
+    const pendingLoad = deferred<ReadonlySet<number>>();
+    const pendingToggle = deferred<boolean>();
+    const getWantToPlayIds = vi.fn(() => pendingLoad.promise);
+    const toggleWantToPlay = vi.fn(() => pendingToggle.promise);
+    const repository = createRepository({
+      getWantToPlayIds,
+      toggleWantToPlay,
+    });
+    const view = renderListsProvider(repository);
+    await waitForAuthenticated(view);
+
+    let load!: Promise<void>;
+    let toggle!: Promise<boolean>;
+    act(() => {
+      load = view.result.current.lists.loadWantToPlayIds([game.igdbId]);
+      toggle = view.result.current.lists.toggleWantToPlay(game);
+    });
+    pendingToggle.resolve(true);
+    await act(async () => expect(toggle).resolves.toBe(true));
+    pendingLoad.resolve(new Set<number>());
+    await act(async () => load);
+
+    expect(view.result.current.lists.wantToPlayIds.has(game.igdbId)).toBe(true);
+    expect(getWantToPlayIds).toHaveBeenCalledOnce();
+    expect(toggleWantToPlay).toHaveBeenCalledOnce();
+  });
+
+  it('ignores a membership load that started during a confirmed toggle', async () => {
+    const pendingLoad = deferred<ReadonlySet<number>>();
+    const pendingToggle = deferred<boolean>();
+    const getWantToPlayIds = vi.fn(() => pendingLoad.promise);
+    const toggleWantToPlay = vi.fn(() => pendingToggle.promise);
+    const repository = createRepository({
+      getWantToPlayIds,
+      toggleWantToPlay,
+    });
+    const view = renderListsProvider(repository);
+    await waitForAuthenticated(view);
+
+    let load!: Promise<void>;
+    let toggle!: Promise<boolean>;
+    act(() => {
+      toggle = view.result.current.lists.toggleWantToPlay(game);
+      load = view.result.current.lists.loadWantToPlayIds([game.igdbId]);
+    });
+    pendingToggle.resolve(true);
+    await act(async () => expect(toggle).resolves.toBe(true));
+    pendingLoad.resolve(new Set<number>());
+    await act(async () => load);
+
+    expect(view.result.current.lists.wantToPlayIds.has(game.igdbId)).toBe(true);
+    expect(getWantToPlayIds).toHaveBeenCalledOnce();
+    expect(toggleWantToPlay).toHaveBeenCalledOnce();
+  });
+
+  it('shares one confirmed result across concurrent toggles of the same game', async () => {
+    const pendingToggle = deferred<boolean>();
+    const toggleWantToPlay = vi.fn(() => pendingToggle.promise);
+    const view = renderListsProvider(createRepository({ toggleWantToPlay }));
+    await waitForAuthenticated(view);
+
+    let first!: Promise<boolean>;
+    let second!: Promise<boolean>;
+    act(() => {
+      first = view.result.current.lists.toggleWantToPlay(game);
+      second = view.result.current.lists.toggleWantToPlay(game);
+    });
+    expect(toggleWantToPlay).toHaveBeenCalledOnce();
+
+    pendingToggle.resolve(true);
+    await act(async () => expect(Promise.all([first, second])).resolves.toEqual([true, true]));
+    expect(view.result.current.lists.wantToPlayIds.has(game.igdbId)).toBe(true);
+  });
+
   it('waits for add confirmation before refreshing list summaries', async () => {
     const pendingAdd = deferred<readonly number[]>();
     const addGameToLists = vi.fn(() => pendingAdd.promise);
@@ -317,6 +469,84 @@ describe('ListsProvider', () => {
 
     expect(addGameToLists).toHaveBeenCalledWith(game, [rpgList.id]);
     expect(listSummaries).toHaveBeenCalledOnce();
+  });
+
+  it('resolves a confirmed mutation even when its summary refresh fails', async () => {
+    const repository = createRepository({
+      createList: vi.fn().mockResolvedValue(rpgList),
+      listSummaries: vi.fn().mockRejectedValue(new Error('refresh detail')),
+    });
+    const view = renderListsProvider(repository);
+    await waitForAuthenticated(view);
+
+    await expect(
+      view.result.current.lists.createList({ name: 'RPGs', description: '' }),
+    ).resolves.toEqual(rpgList);
+    await waitFor(() => {
+      expect(view.result.current.lists.listsState).toEqual({
+        status: 'error',
+        message: 'Não foi possível carregar suas listas. Tente novamente.',
+      });
+    });
+  });
+
+  it('cancels create when the user changes during the post-confirmation refresh', async () => {
+    const pendingRefresh = deferred<readonly UserListSummary[]>();
+    const listSummaries = vi.fn(() => pendingRefresh.promise);
+    const repository = createRepository({
+      createList: vi.fn().mockResolvedValue(rpgList),
+      listSummaries,
+    });
+    const view = renderListsProvider(repository);
+    await waitForAuthenticated(view);
+
+    const creation = view.result.current.lists.createList({ name: 'RPGs', description: '' });
+    await waitFor(() => {
+      expect(listSummaries).toHaveBeenCalledOnce();
+    });
+    act(() => {
+      view.auth.emit(otherAuthenticatedUser);
+    });
+    pendingRefresh.resolve([rpgList]);
+    const error = await creation.catch((reason: unknown) => reason);
+
+    expect(isListsOperationCancelled(error)).toBe(true);
+  });
+
+  it('cancels add when the repository changes during the post-confirmation refresh', async () => {
+    const pendingRefresh = deferred<readonly UserListSummary[]>();
+    const listSummaries = vi.fn(() => pendingRefresh.promise);
+    const firstRepository = createRepository({
+      addGameToLists: vi.fn().mockResolvedValue([rpgList.id]),
+      listSummaries,
+    });
+    const view = renderListsProvider(firstRepository);
+    await waitForAuthenticated(view);
+
+    const addition = view.result.current.lists.addGameToLists(game, [rpgList.id]);
+    await waitFor(() => {
+      expect(listSummaries).toHaveBeenCalledOnce();
+    });
+    view.changeRepository(createRepository());
+    pendingRefresh.resolve([rpgList]);
+    const error = await addition.catch((reason: unknown) => reason);
+
+    expect(isListsOperationCancelled(error)).toBe(true);
+  });
+
+  it('cancels a pending toggle when the provider unmounts', async () => {
+    const pendingToggle = deferred<boolean>();
+    const view = renderListsProvider(
+      createRepository({ toggleWantToPlay: vi.fn(() => pendingToggle.promise) }),
+    );
+    await waitForAuthenticated(view);
+
+    const toggle = view.result.current.lists.toggleWantToPlay(game);
+    view.unmount();
+    pendingToggle.resolve(true);
+    const error = await toggle.catch((reason: unknown) => reason);
+
+    expect(isListsOperationCancelled(error)).toBe(true);
   });
 
   it('keeps descendants renderable and rejects private operations when unconfigured', async () => {
@@ -349,6 +579,22 @@ describe('ListsProvider', () => {
     const initial = view.result.current.lists;
 
     await act(() => view.result.current.lists.loadLists());
+
+    expect(view.result.current.lists.addGameToLists).toBe(initial.addGameToLists);
+    expect(view.result.current.lists.createList).toBe(initial.createList);
+    expect(view.result.current.lists.loadLists).toBe(initial.loadLists);
+    expect(view.result.current.lists.loadWantToPlayIds).toBe(initial.loadWantToPlayIds);
+    expect(view.result.current.lists.toggleWantToPlay).toBe(initial.toggleWantToPlay);
+  });
+
+  it('keeps operation callback identities stable across auth scope changes', async () => {
+    const view = renderListsProvider(createRepository());
+    await waitForAuthenticated(view);
+    const initial = view.result.current.lists;
+
+    act(() => {
+      view.auth.emit(otherAuthenticatedUser);
+    });
 
     expect(view.result.current.lists.addGameToLists).toBe(initial.addGameToLists);
     expect(view.result.current.lists.createList).toBe(initial.createList);

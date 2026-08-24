@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppRouter } from './router';
@@ -7,10 +8,22 @@ import type { AuthService } from '@/features/auth/api/auth-service';
 import type { AuthenticatedUser } from '@/features/auth/model/auth';
 import type { ListsRepository } from '@/features/lists/api/lists-repository';
 
-const getSupabaseClientMock = vi.hoisted(() => vi.fn());
+const dependencyMocks = vi.hoisted(() => ({
+  createAuthService: vi.fn(),
+  createListsRepository: vi.fn(),
+  getSupabaseClient: vi.fn(),
+}));
 
 vi.mock('@/shared/supabase/client', () => ({
-  getSupabaseClient: getSupabaseClientMock,
+  getSupabaseClient: dependencyMocks.getSupabaseClient,
+}));
+
+vi.mock('@/features/auth/api/auth-service', () => ({
+  createSupabaseAuthService: dependencyMocks.createAuthService,
+}));
+
+vi.mock('@/features/lists/api/lists-repository', () => ({
+  createSupabaseListsRepository: dependencyMocks.createListsRepository,
 }));
 
 const authenticatedUser: AuthenticatedUser = {
@@ -32,6 +45,28 @@ function createAuthService(user: AuthenticatedUser | null): AuthService {
   };
 }
 
+function createControllableAuthService(user: AuthenticatedUser | null) {
+  let listener: (nextUser: AuthenticatedUser | null) => void = () => undefined;
+  let onSignOut: (() => Promise<void>) | undefined;
+  const service = {
+    ...createAuthService(user),
+    onAuthStateChange: vi.fn((nextListener: (nextUser: AuthenticatedUser | null) => void) => {
+      listener = nextListener;
+      return vi.fn();
+    }),
+    signOut: vi.fn(() => onSignOut?.() ?? Promise.resolve()),
+  } satisfies AuthService;
+  return {
+    emit(nextUser: AuthenticatedUser | null) {
+      listener(nextUser);
+    },
+    service,
+    setSignOut(nextSignOut: () => Promise<void>) {
+      onSignOut = nextSignOut;
+    },
+  };
+}
+
 function createListsRepository(): ListsRepository {
   return {
     addGameToLists: vi.fn().mockResolvedValue([]),
@@ -46,16 +81,25 @@ describe('AppRouter', () => {
   beforeEach(() => {
     window.history.replaceState({}, '', '/');
     sessionStorage.clear();
-    getSupabaseClientMock.mockClear();
+    dependencyMocks.getSupabaseClient.mockClear();
   });
 
-  it('keeps the default auth service resolution stable across rerenders', () => {
-    getSupabaseClientMock.mockReturnValue(null);
+  it('creates stable default adapters from the exact same client instance', () => {
+    const client = {};
+    const authService = createAuthService(null);
+    const listsRepository = createListsRepository();
+    dependencyMocks.getSupabaseClient.mockReturnValue(client);
+    dependencyMocks.createAuthService.mockReturnValue(authService);
+    dependencyMocks.createListsRepository.mockReturnValue(listsRepository);
 
     const view = render(<AppRouter />);
     view.rerender(<AppRouter />);
 
-    expect(getSupabaseClientMock).toHaveBeenCalledTimes(1);
+    expect(dependencyMocks.getSupabaseClient).toHaveBeenCalledTimes(1);
+    expect(dependencyMocks.createAuthService).toHaveBeenCalledOnce();
+    expect(dependencyMocks.createListsRepository).toHaveBeenCalledOnce();
+    expect(dependencyMocks.createAuthService).toHaveBeenCalledWith(client);
+    expect(dependencyMocks.createListsRepository).toHaveBeenCalledWith(client);
   });
 
   it('keeps public pages renderable when auth and lists are unconfigured', () => {
@@ -96,5 +140,48 @@ describe('AppRouter', () => {
     );
 
     expect(await screen.findByRole('heading', { name: heading })).toBeInTheDocument();
+  });
+
+  it('preserves the public route subtree when auth changes from loading to authenticated', async () => {
+    const auth = createControllableAuthService(null);
+    auth.service.getCurrentUser = vi.fn(
+      () => new Promise<AuthenticatedUser | null>(() => undefined),
+    );
+    render(<AppRouter authService={auth.service} listsRepository={createListsRepository()} />);
+    const initialHeading = screen.getByRole('heading', { name: 'Zera GameZ' });
+
+    act(() => {
+      auth.emit(authenticatedUser);
+    });
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Zera GameZ' })).toBe(initialHeading);
+    });
+  });
+
+  it('finishes logout at home when auth emits null during sign out', async () => {
+    const user = userEvent.setup();
+    const auth = createControllableAuthService(authenticatedUser);
+    auth.setSignOut(() => {
+      auth.emit(null);
+      return Promise.resolve();
+    });
+    window.history.replaceState({}, '', '/perfil');
+    render(<AppRouter authService={auth.service} listsRepository={createListsRepository()} />);
+
+    await user.click(await screen.findByRole('button', { name: 'Sair' }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/');
+    });
+    expect(screen.getByRole('heading', { name: 'Zera GameZ' })).toBeInTheDocument();
+  });
+
+  it('shows the fixed configuration copy on a private route with a null repository', async () => {
+    window.history.replaceState({}, '', '/minhas-listas');
+    render(<AppRouter authService={createAuthService(authenticatedUser)} listsRepository={null} />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'As listas ainda não estão configuradas.',
+    );
   });
 });

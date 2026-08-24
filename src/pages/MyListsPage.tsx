@@ -25,7 +25,7 @@ function ListSummary({ list }: { readonly list: UserListSummary }) {
             <img
               alt={`Capa de ${list.name} ${String(index + 1)}`}
               className="h-full w-full object-cover"
-              key={cover}
+              key={`${String(list.id)}:${String(index)}:${cover}`}
               src={cover}
             />
           ))}
@@ -74,8 +74,8 @@ export function MyListsPage() {
   const { listsState, loadLists } = useLists();
 
   useEffect(() => {
-    void loadLists();
-  }, [loadLists]);
+    if (listsState.status === 'idle') void loadLists();
+  }, [listsState.status, loadLists]);
 
   return (
     <main className="mx-auto min-h-[calc(100dvh-4.5rem)] max-w-[1440px] px-4 pt-7 pb-28 sm:px-5 sm:pb-12 lg:px-8 lg:pt-9">

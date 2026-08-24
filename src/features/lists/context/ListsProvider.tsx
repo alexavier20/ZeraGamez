@@ -2,7 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -34,8 +34,31 @@ interface ListsProviderProps {
   readonly children: ReactNode;
   readonly repository: ListsRepository | null;
 }
-interface ScopedListsProviderProps extends ListsProviderProps {
+
+interface ScopedState {
+  readonly listsState: ListsState;
+  readonly repository: ListsRepository | null;
+  readonly scopeVersion: number;
   readonly userId: string | null;
+  readonly wantToPlayIds: ReadonlySet<number>;
+}
+
+interface ActiveScope {
+  active: boolean;
+  listsState: ListsState;
+  readonly repository: ListsRepository | null;
+  readonly scopeVersion: number;
+  readonly userId: string | null;
+}
+
+interface ScopedPromise {
+  readonly promise: Promise<void>;
+  readonly scope: ActiveScope;
+}
+
+interface TogglePromise {
+  readonly promise: Promise<boolean>;
+  readonly scope: ActiveScope;
 }
 
 export const LISTS_CONFIGURATION_ERROR_MESSAGE = 'As listas ainda não estão configuradas.';
@@ -43,17 +66,17 @@ export const LISTS_CONFIGURATION_ERROR_MESSAGE = 'As listas ainda não estão co
 const listsLoadErrorMessage = 'Não foi possível carregar suas listas. Tente novamente.';
 const authenticationErrorMessage = 'Entre para acessar suas listas.';
 const idleListsState: ListsState = { status: 'idle' };
-const repositoryKeys = new WeakMap<ListsRepository, number>();
-let nextRepositoryKey = 1;
 
-function getRepositoryKey(repository: ListsRepository | null): string {
-  if (repository === null) return 'unconfigured';
-  const existingKey = repositoryKeys.get(repository);
-  if (existingKey !== undefined) return String(existingKey);
-  const key = nextRepositoryKey;
-  nextRepositoryKey += 1;
-  repositoryKeys.set(repository, key);
-  return String(key);
+class ListsOperationCancelledError extends Error {
+  constructor() {
+    super('List operation cancelled.');
+    this.name = 'ListsOperationCancelledError';
+  }
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function isListsOperationCancelled(error: unknown): boolean {
+  return error instanceof ListsOperationCancelledError;
 }
 
 function configurationError(): Error {
@@ -62,6 +85,20 @@ function configurationError(): Error {
 
 function unavailableAction(): Promise<never> {
   return Promise.reject(configurationError());
+}
+
+function initialScopedState(
+  repository: ListsRepository | null,
+  userId: string | null,
+  scopeVersion: number,
+): ScopedState {
+  return {
+    listsState: idleListsState,
+    repository,
+    scopeVersion,
+    userId,
+    wantToPlayIds: new Set<number>(),
+  };
 }
 
 const defaultListsContext: ListsContextValue = {
@@ -79,204 +116,270 @@ const ListsContext = createContext<ListsContextValue>(defaultListsContext);
 export function ListsProvider({ children, repository }: ListsProviderProps) {
   const { state: authState } = useAuth();
   const userId = authState.status === 'authenticated' ? authState.user.id : null;
+  const [scopedState, setScopedState] = useState(() => initialScopedState(repository, userId, 0));
 
-  return (
-    <ScopedListsProvider
-      key={`${userId ?? 'anonymous'}:${getRepositoryKey(repository)}`}
-      repository={repository}
-      userId={userId}
-    >
-      {children}
-    </ScopedListsProvider>
-  );
-}
+  if (scopedState.repository !== repository || scopedState.userId !== userId) {
+    setScopedState(initialScopedState(repository, userId, scopedState.scopeVersion + 1));
+  }
 
-function ScopedListsProvider({ children, repository, userId }: ScopedListsProviderProps) {
-  const [listsState, setListsState] = useState<ListsState>(idleListsState);
-  const [wantToPlayIds, setWantToPlayIds] = useState<ReadonlySet<number>>(() => new Set<number>());
-  const listsStateRef = useRef<ListsState>(idleListsState);
-  const repositoryRef = useRef<ListsRepository | null>(repository);
-  const userIdRef = useRef<string | null>(userId);
-  const generationRef = useRef(0);
+  const activeScopeRef = useRef<ActiveScope | null>(null);
   const listRequestRef = useRef(0);
-  const membershipRequestRef = useRef(0);
+  const listInFlightRef = useRef<ScopedPromise | null>(null);
   const membershipVersionsRef = useRef(new Map<number, number>());
-  const listInFlightRef = useRef<Promise<void> | null>(null);
+  const toggleInFlightRef = useRef(new Map<number, TogglePromise>());
 
-  const publishListsState = useCallback((nextState: ListsState) => {
-    listsStateRef.current = nextState;
-    setListsState(nextState);
-  }, []);
-
-  useEffect(() => {
+  useLayoutEffect(() => {
     const membershipVersions = membershipVersionsRef.current;
-    return () => {
-      generationRef.current += 1;
-      listRequestRef.current += 1;
-      membershipRequestRef.current += 1;
-      membershipVersions.clear();
-      listInFlightRef.current = null;
-      userIdRef.current = null;
+    const toggleInFlight = toggleInFlightRef.current;
+    const scope: ActiveScope = {
+      active: true,
+      listsState: idleListsState,
+      repository,
+      scopeVersion: scopedState.scopeVersion,
+      userId,
     };
+    activeScopeRef.current = scope;
+    listRequestRef.current = 0;
+    listInFlightRef.current = null;
+    membershipVersions.clear();
+    toggleInFlight.clear();
+
+    return () => {
+      scope.active = false;
+      if (activeScopeRef.current === scope) activeScopeRef.current = null;
+      listInFlightRef.current = null;
+      membershipVersions.clear();
+      toggleInFlight.clear();
+    };
+  }, [repository, scopedState.scopeVersion, userId]);
+
+  const isCurrentScope = useCallback(
+    (scope: ActiveScope) => scope.active && activeScopeRef.current === scope,
+    [],
+  );
+
+  const requireScope = useCallback((): ActiveScope => {
+    const scope = activeScopeRef.current;
+    if (!scope?.active) throw new ListsOperationCancelledError();
+    if (scope.repository === null) throw configurationError();
+    if (scope.userId === null) throw new Error(authenticationErrorMessage);
+    return scope;
   }, []);
 
-  const loadLists = useCallback<ListsContextValue['loadLists']>(
-    async (options) => {
-      const force = options?.force === true;
-      if (!force && listsStateRef.current.status === 'success') return;
-      if (!force && listInFlightRef.current !== null) return listInFlightRef.current;
+  const assertCurrentScope = useCallback(
+    (scope: ActiveScope): void => {
+      if (!isCurrentScope(scope)) throw new ListsOperationCancelledError();
+    },
+    [isCurrentScope],
+  );
 
-      const currentRepository = repositoryRef.current;
-      const currentUserId = userIdRef.current;
-      if (currentRepository === null) {
-        publishListsState({ status: 'error', message: LISTS_CONFIGURATION_ERROR_MESSAGE });
+  const publishListsState = useCallback(
+    (scope: ActiveScope, nextState: ListsState) => {
+      if (!isCurrentScope(scope)) return;
+      scope.listsState = nextState;
+      setScopedState((current) =>
+        current.scopeVersion === scope.scopeVersion
+          ? { ...current, listsState: nextState }
+          : current,
+      );
+    },
+    [isCurrentScope],
+  );
+
+  const publishWantToPlayIds = useCallback(
+    (scope: ActiveScope, update: (current: ReadonlySet<number>) => ReadonlySet<number>) => {
+      if (!isCurrentScope(scope)) return;
+      setScopedState((current) =>
+        current.scopeVersion === scope.scopeVersion
+          ? { ...current, wantToPlayIds: update(current.wantToPlayIds) }
+          : current,
+      );
+    },
+    [isCurrentScope],
+  );
+
+  const loadListsForScope = useCallback(
+    async (scope: ActiveScope, force: boolean): Promise<void> => {
+      if (scope.repository === null) {
+        publishListsState(scope, {
+          status: 'error',
+          message: LISTS_CONFIGURATION_ERROR_MESSAGE,
+        });
         return;
       }
-      if (currentUserId === null) {
-        publishListsState({ status: 'error', message: authenticationErrorMessage });
+      if (scope.userId === null) {
+        publishListsState(scope, { status: 'error', message: authenticationErrorMessage });
         return;
       }
+      if (!force && scope.listsState.status === 'success') return;
+      const inFlight = listInFlightRef.current;
+      if (!force && inFlight?.scope === scope) return inFlight.promise;
 
-      const generation = generationRef.current;
       const request = listRequestRef.current + 1;
       listRequestRef.current = request;
-      if (listsStateRef.current.status !== 'success') publishListsState({ status: 'loading' });
+      if (scope.listsState.status !== 'success') publishListsState(scope, { status: 'loading' });
 
-      const operation = currentRepository
+      const operation = scope.repository
         .listSummaries()
         .then((lists) => {
-          if (generation === generationRef.current && request === listRequestRef.current) {
-            publishListsState({ status: 'success', lists });
+          if (isCurrentScope(scope) && request === listRequestRef.current) {
+            publishListsState(scope, { status: 'success', lists });
           }
         })
         .catch(() => {
-          if (generation === generationRef.current && request === listRequestRef.current) {
-            publishListsState({ status: 'error', message: listsLoadErrorMessage });
+          if (isCurrentScope(scope) && request === listRequestRef.current) {
+            publishListsState(scope, { status: 'error', message: listsLoadErrorMessage });
           }
         })
         .finally(() => {
-          if (listInFlightRef.current === operation) listInFlightRef.current = null;
+          if (listInFlightRef.current?.promise === operation) listInFlightRef.current = null;
         });
 
-      listInFlightRef.current = operation;
+      listInFlightRef.current = { promise: operation, scope };
       return operation;
     },
-    [publishListsState],
+    [isCurrentScope, publishListsState],
+  );
+
+  const loadLists = useCallback<ListsContextValue['loadLists']>(
+    async (options) => {
+      const scope = activeScopeRef.current;
+      if (!scope?.active) return;
+      await loadListsForScope(scope, options?.force === true);
+    },
+    [loadListsForScope],
   );
 
   const createList = useCallback<ListsContextValue['createList']>(
     async (input) => {
-      const currentRepository = repositoryRef.current;
-      const currentUserId = userIdRef.current;
-      if (currentRepository === null) throw configurationError();
-      if (currentUserId === null) throw new Error(authenticationErrorMessage);
+      const scope = requireScope();
+      const repositoryForScope = scope.repository;
+      const userIdForScope = scope.userId;
+      if (repositoryForScope === null) throw configurationError();
+      if (userIdForScope === null) throw new Error(authenticationErrorMessage);
 
-      const generation = generationRef.current;
-      const createdList = await currentRepository.createList(currentUserId, input);
-      if (generation !== generationRef.current || currentUserId !== userIdRef.current) {
-        return createdList;
-      }
+      const createdList = await repositoryForScope.createList(userIdForScope, input);
+      assertCurrentScope(scope);
 
-      const currentState = listsStateRef.current;
-      const currentLists = currentState.status === 'success' ? currentState.lists : [];
+      const currentLists = scope.listsState.status === 'success' ? scope.listsState.lists : [];
       const nextLists = currentLists.some((list) => list.id === createdList.id)
         ? currentLists.map((list) => (list.id === createdList.id ? createdList : list))
         : [...currentLists, createdList];
-      publishListsState({ status: 'success', lists: nextLists });
-      await loadLists({ force: true });
+      publishListsState(scope, { status: 'success', lists: nextLists });
+      await loadListsForScope(scope, true);
+      assertCurrentScope(scope);
       return createdList;
     },
-    [loadLists, publishListsState],
+    [assertCurrentScope, loadListsForScope, publishListsState, requireScope],
   );
 
   const addGameToLists = useCallback<ListsContextValue['addGameToLists']>(
     async (game, listIds) => {
-      const currentRepository = repositoryRef.current;
-      const currentUserId = userIdRef.current;
-      if (currentRepository === null) throw configurationError();
-      if (currentUserId === null) throw new Error(authenticationErrorMessage);
+      const scope = requireScope();
+      const repositoryForScope = scope.repository;
+      if (repositoryForScope === null) throw configurationError();
 
-      const generation = generationRef.current;
-      await currentRepository.addGameToLists(game, listIds);
-      if (generation === generationRef.current && currentUserId === userIdRef.current) {
-        await loadLists({ force: true });
-      }
+      await repositoryForScope.addGameToLists(game, listIds);
+      assertCurrentScope(scope);
+      await loadListsForScope(scope, true);
+      assertCurrentScope(scope);
     },
-    [loadLists],
+    [assertCurrentScope, loadListsForScope, requireScope],
   );
 
-  const loadWantToPlayIds = useCallback<ListsContextValue['loadWantToPlayIds']>(async (igdbIds) => {
-    const currentRepository = repositoryRef.current;
-    const currentUserId = userIdRef.current;
-    if (currentRepository === null) throw configurationError();
-    if (currentUserId === null) throw new Error(authenticationErrorMessage);
+  const loadWantToPlayIds = useCallback<ListsContextValue['loadWantToPlayIds']>(
+    async (igdbIds) => {
+      const scope = requireScope();
+      const repositoryForScope = scope.repository;
+      if (repositoryForScope === null) throw configurationError();
 
-    const uniqueIds = [...new Set(igdbIds)];
-    if (uniqueIds.length === 0) return;
+      const uniqueIds = [...new Set(igdbIds)];
+      if (uniqueIds.length === 0) return;
+      const versionsAtStart = new Map(
+        uniqueIds.map((igdbId) => [igdbId, membershipVersionsRef.current.get(igdbId) ?? 0]),
+      );
 
-    const generation = generationRef.current;
-    const request = membershipRequestRef.current + 1;
-    membershipRequestRef.current = request;
-    for (const igdbId of uniqueIds) membershipVersionsRef.current.set(igdbId, request);
+      const loadedIds = await repositoryForScope.getWantToPlayIds(uniqueIds);
+      if (!isCurrentScope(scope)) return;
 
-    const loadedIds = await currentRepository.getWantToPlayIds(uniqueIds);
-    if (generation !== generationRef.current || currentUserId !== userIdRef.current) return;
-
-    setWantToPlayIds((current) => {
-      const next = new Set(current);
-      for (const igdbId of uniqueIds) {
-        if (membershipVersionsRef.current.get(igdbId) !== request) continue;
-        next.delete(igdbId);
-        if (loadedIds.has(igdbId)) next.add(igdbId);
-      }
-      return next;
-    });
-  }, []);
-
-  const toggleWantToPlay = useCallback<ListsContextValue['toggleWantToPlay']>(async (game) => {
-    const currentRepository = repositoryRef.current;
-    const currentUserId = userIdRef.current;
-    if (currentRepository === null) throw configurationError();
-    if (currentUserId === null) throw new Error(authenticationErrorMessage);
-
-    const generation = generationRef.current;
-    const request = membershipRequestRef.current + 1;
-    membershipRequestRef.current = request;
-    membershipVersionsRef.current.set(game.igdbId, request);
-    const isWantToPlay = await currentRepository.toggleWantToPlay(game);
-    if (
-      generation === generationRef.current &&
-      currentUserId === userIdRef.current &&
-      membershipVersionsRef.current.get(game.igdbId) === request
-    ) {
-      setWantToPlayIds((current) => {
+      publishWantToPlayIds(scope, (current) => {
         const next = new Set(current);
-        if (isWantToPlay) next.add(game.igdbId);
-        else next.delete(game.igdbId);
+        for (const igdbId of uniqueIds) {
+          if ((membershipVersionsRef.current.get(igdbId) ?? 0) !== versionsAtStart.get(igdbId)) {
+            continue;
+          }
+          next.delete(igdbId);
+          if (loadedIds.has(igdbId)) next.add(igdbId);
+        }
         return next;
       });
-    }
-    return isWantToPlay;
-  }, []);
+    },
+    [isCurrentScope, publishWantToPlayIds, requireScope],
+  );
+
+  const toggleWantToPlay = useCallback<ListsContextValue['toggleWantToPlay']>(
+    async (game) => {
+      const scope = requireScope();
+      const repositoryForScope = scope.repository;
+      if (repositoryForScope === null) throw configurationError();
+
+      const existing = toggleInFlightRef.current.get(game.igdbId);
+      if (existing?.scope === scope) return existing.promise;
+
+      const bumpMembershipVersion = () => {
+        const currentVersion = membershipVersionsRef.current.get(game.igdbId) ?? 0;
+        membershipVersionsRef.current.set(game.igdbId, currentVersion + 1);
+      };
+      bumpMembershipVersion();
+
+      const operation = repositoryForScope
+        .toggleWantToPlay(game)
+        .then((isWantToPlay) => {
+          assertCurrentScope(scope);
+          bumpMembershipVersion();
+          publishWantToPlayIds(scope, (current) => {
+            const next = new Set(current);
+            if (isWantToPlay) next.add(game.igdbId);
+            else next.delete(game.igdbId);
+            return next;
+          });
+          return isWantToPlay;
+        })
+        .catch((error: unknown) => {
+          if (!isCurrentScope(scope)) throw new ListsOperationCancelledError();
+          bumpMembershipVersion();
+          throw error;
+        })
+        .finally(() => {
+          if (toggleInFlightRef.current.get(game.igdbId)?.promise === operation) {
+            toggleInFlightRef.current.delete(game.igdbId);
+          }
+        });
+
+      toggleInFlightRef.current.set(game.igdbId, { promise: operation, scope });
+      return operation;
+    },
+    [assertCurrentScope, isCurrentScope, publishWantToPlayIds, requireScope],
+  );
 
   const value = useMemo<ListsContextValue>(
     () => ({
       addGameToLists,
       createList,
-      listsState,
+      listsState: scopedState.listsState,
       loadLists,
       loadWantToPlayIds,
       toggleWantToPlay,
-      wantToPlayIds,
+      wantToPlayIds: scopedState.wantToPlayIds,
     }),
     [
       addGameToLists,
       createList,
-      listsState,
       loadLists,
       loadWantToPlayIds,
+      scopedState.listsState,
+      scopedState.wantToPlayIds,
       toggleWantToPlay,
-      wantToPlayIds,
     ],
   );
 

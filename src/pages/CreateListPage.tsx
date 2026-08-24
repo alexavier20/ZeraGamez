@@ -2,7 +2,7 @@ import { useRef, useState, type SyntheticEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ZodError } from 'zod';
 
-import { useLists } from '@/features/lists/context/ListsProvider';
+import { isListsOperationCancelled, useLists } from '@/features/lists/context/ListsProvider';
 import { normalizeCreateListInput } from '@/features/lists/model/lists';
 import { headerRoutes } from '@/shared/components/header/header.config';
 import { PageHeading } from '@/shared/components/page-heading/PageHeading';
@@ -53,7 +53,8 @@ export function CreateListPage() {
     try {
       await lists.createList(normalized);
       await navigate(headerRoutes.lists, { replace: true });
-    } catch {
+    } catch (error) {
+      if (isListsOperationCancelled(error)) return;
       setMessage({ text: creationErrorMessage });
       queueMicrotask(() => nameInput.current?.focus());
     } finally {

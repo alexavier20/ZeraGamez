@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
@@ -22,6 +22,14 @@ const authenticatedUser: AuthenticatedUser = {
   name: 'Alex Xavier',
 };
 
+const otherAuthenticatedUser: AuthenticatedUser = {
+  avatarUrl: null,
+  email: 'bia@example.com',
+  id: '22222222-2222-4222-8222-222222222222',
+  initials: 'BS',
+  name: 'Bia Souza',
+};
+
 const rpgList: UserListSummary = {
   covers: [],
   description: 'Para jogar',
@@ -31,14 +39,32 @@ const rpgList: UserListSummary = {
   systemKey: null,
 };
 
-function createAuthService(): AuthService {
-  return {
+function deferred<Value>() {
+  let resolve!: (value: Value | PromiseLike<Value>) => void;
+  const promise = new Promise<Value>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+  return { promise, resolve };
+}
+
+function createAuthService() {
+  let listener: (user: AuthenticatedUser | null) => void = () => undefined;
+  const service = {
     getCurrentUser: vi.fn().mockResolvedValue(authenticatedUser),
-    onAuthStateChange: vi.fn(() => vi.fn()),
+    onAuthStateChange: vi.fn((nextListener: (user: AuthenticatedUser | null) => void) => {
+      listener = nextListener;
+      return vi.fn();
+    }),
     requestEmailCode: vi.fn().mockResolvedValue(undefined),
     verifyEmailCode: vi.fn().mockResolvedValue(undefined),
     signInWithGoogle: vi.fn().mockResolvedValue(undefined),
     signOut: vi.fn().mockResolvedValue(undefined),
+  } satisfies AuthService;
+  return {
+    emit(user: AuthenticatedUser | null) {
+      listener(user);
+    },
+    service,
   };
 }
 
@@ -53,8 +79,9 @@ function createRepository(createList: ListsRepository['createList']): ListsRepos
 }
 
 function renderCreateList(repository: ListsRepository) {
+  const auth = createAuthService();
   render(
-    <AuthProvider service={createAuthService()}>
+    <AuthProvider service={auth.service}>
       <ListsProvider repository={repository}>
         <MemoryRouter initialEntries={['/minhas-listas/nova']}>
           <Routes>
@@ -67,6 +94,7 @@ function renderCreateList(repository: ListsRepository) {
       </ListsProvider>
     </AuthProvider>,
   );
+  return auth;
 }
 
 describe('CreateListPage', () => {
@@ -142,5 +170,25 @@ describe('CreateListPage', () => {
     expect(name).toHaveFocus();
     expect(screen.getByRole('heading', { name: 'Criar lista' })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('button', { name: 'Criar lista' })).toBeEnabled());
+  });
+
+  it('stays on the form without a false error when creation is cancelled by a scope change', async () => {
+    const user = userEvent.setup();
+    const pendingCreate = deferred<UserListSummary>();
+    const auth = renderCreateList(createRepository(vi.fn(() => pendingCreate.promise)));
+
+    await user.type(await screen.findByRole('textbox', { name: 'Nome da lista' }), 'RPGs');
+    await user.click(screen.getByRole('button', { name: 'Criar lista' }));
+    act(() => {
+      auth.emit(otherAuthenticatedUser);
+    });
+    pendingCreate.resolve(rpgList);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Criar lista' })).toBeEnabled());
+    expect(screen.getByRole('heading', { name: 'Criar lista' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Coleção de listas' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Não foi possível criar a lista. Tente novamente.'),
+    ).not.toBeInTheDocument();
   });
 });

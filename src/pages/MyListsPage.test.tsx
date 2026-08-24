@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
@@ -22,6 +22,14 @@ const authenticatedUser: AuthenticatedUser = {
   name: 'Alex Xavier',
 };
 
+const otherAuthenticatedUser: AuthenticatedUser = {
+  avatarUrl: null,
+  email: 'bia@example.com',
+  id: '22222222-2222-4222-8222-222222222222',
+  initials: 'BS',
+  name: 'Bia Souza',
+};
+
 const rpgList: UserListSummary = {
   covers: ['https://images.example/one.jpg', 'https://images.example/two.jpg'],
   description: 'Campanhas longas',
@@ -31,14 +39,24 @@ const rpgList: UserListSummary = {
   systemKey: null,
 };
 
-function createAuthService(): AuthService {
-  return {
+function createAuthService() {
+  let listener: (user: AuthenticatedUser | null) => void = () => undefined;
+  const service = {
     getCurrentUser: vi.fn().mockResolvedValue(authenticatedUser),
-    onAuthStateChange: vi.fn(() => vi.fn()),
+    onAuthStateChange: vi.fn((nextListener: (user: AuthenticatedUser | null) => void) => {
+      listener = nextListener;
+      return vi.fn();
+    }),
     requestEmailCode: vi.fn().mockResolvedValue(undefined),
     verifyEmailCode: vi.fn().mockResolvedValue(undefined),
     signInWithGoogle: vi.fn().mockResolvedValue(undefined),
     signOut: vi.fn().mockResolvedValue(undefined),
+  } satisfies AuthService;
+  return {
+    emit(user: AuthenticatedUser | null) {
+      listener(user);
+    },
+    service,
   };
 }
 
@@ -53,8 +71,9 @@ function createRepository(listSummaries: ListsRepository['listSummaries']): List
 }
 
 function renderMyLists(repository: ListsRepository) {
+  const auth = createAuthService();
   render(
-    <AuthProvider service={createAuthService()}>
+    <AuthProvider service={auth.service}>
       <ListsProvider repository={repository}>
         <MemoryRouter initialEntries={['/minhas-listas']}>
           <Routes>
@@ -66,6 +85,7 @@ function renderMyLists(repository: ListsRepository) {
       </ListsProvider>
     </AuthProvider>,
   );
+  return auth;
 }
 
 describe('MyListsPage', () => {
@@ -119,6 +139,24 @@ describe('MyListsPage', () => {
     expect(listSummaries).toHaveBeenCalledTimes(2);
   });
 
+  it('loads the next user scope without remounting the page', async () => {
+    const nextUserList = { ...rpgList, id: 8, name: 'Favoritos' };
+    const listSummaries = vi
+      .fn()
+      .mockResolvedValueOnce([rpgList])
+      .mockResolvedValueOnce([nextUserList]);
+    const auth = renderMyLists(createRepository(listSummaries));
+    await screen.findByRole('heading', { name: 'RPGs' });
+
+    act(() => {
+      auth.emit(otherAuthenticatedUser);
+    });
+
+    expect(await screen.findByRole('heading', { name: 'Favoritos' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'RPGs' })).not.toBeInTheDocument();
+    expect(listSummaries).toHaveBeenCalledTimes(2);
+  });
+
   it('renders at most three non-null covers for each list', async () => {
     const listWithSparseCovers = {
       ...rpgList,
@@ -143,5 +181,23 @@ describe('MyListsPage', () => {
     await waitFor(() =>
       expect(screen.queryByText('Carregando suas listas')).not.toBeInTheDocument(),
     );
+  });
+
+  it('renders repeated cover URLs without duplicate React keys', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const listWithRepeatedCover = {
+      ...rpgList,
+      covers: ['https://images.example/repeated.jpg', 'https://images.example/repeated.jpg'],
+    };
+
+    try {
+      renderMyLists(createRepository(vi.fn().mockResolvedValue([listWithRepeatedCover])));
+      await screen.findByRole('heading', { name: 'RPGs' });
+
+      expect(screen.getAllByRole('img', { name: /Capa de RPGs/ })).toHaveLength(2);
+      expect(consoleError).not.toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 });
