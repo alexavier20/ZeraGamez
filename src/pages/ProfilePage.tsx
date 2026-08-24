@@ -3,10 +3,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
 import { useAuth } from '@/features/auth/context/AuthProvider';
-import {
-  beginLogoutNavigation,
-  endLogoutNavigation,
-} from '@/features/auth/model/logout-navigation';
 import { clearPendingAuthIntent } from '@/features/auth/model/pending-auth-intent';
 import { headerRoutes } from '@/shared/components/header/header.config';
 import { PageHeading } from '@/shared/components/page-heading/PageHeading';
@@ -31,7 +27,7 @@ export function ProfilePage() {
     setError(null);
     setPending(true);
     clearPendingAuthIntent(sessionStorage);
-    beginLogoutNavigation();
+    const finishLogoutNavigation = auth.beginLogoutNavigation();
     try {
       await auth.signOut();
       clearPendingAuthIntent(sessionStorage);
@@ -40,7 +36,7 @@ export function ProfilePage() {
       setError(signOutErrorMessage);
       setPending(false);
     } finally {
-      endLogoutNavigation();
+      finishLogoutNavigation();
     }
   };
 

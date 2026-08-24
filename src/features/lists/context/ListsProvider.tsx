@@ -125,11 +125,13 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
   const activeScopeRef = useRef<ActiveScope | null>(null);
   const listRequestRef = useRef(0);
   const listInFlightRef = useRef<ScopedPromise | null>(null);
-  const membershipVersionsRef = useRef(new Map<number, number>());
+  const membershipLoadTokensRef = useRef(new Map<number, number>());
+  const confirmedMutationVersionsRef = useRef(new Map<number, number>());
   const toggleInFlightRef = useRef(new Map<number, TogglePromise>());
 
   useLayoutEffect(() => {
-    const membershipVersions = membershipVersionsRef.current;
+    const membershipLoadTokens = membershipLoadTokensRef.current;
+    const confirmedMutationVersions = confirmedMutationVersionsRef.current;
     const toggleInFlight = toggleInFlightRef.current;
     const scope: ActiveScope = {
       active: true,
@@ -141,14 +143,16 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
     activeScopeRef.current = scope;
     listRequestRef.current = 0;
     listInFlightRef.current = null;
-    membershipVersions.clear();
+    membershipLoadTokens.clear();
+    confirmedMutationVersions.clear();
     toggleInFlight.clear();
 
     return () => {
       scope.active = false;
       if (activeScopeRef.current === scope) activeScopeRef.current = null;
       listInFlightRef.current = null;
-      membershipVersions.clear();
+      membershipLoadTokens.clear();
+      confirmedMutationVersions.clear();
       toggleInFlight.clear();
     };
   }, [repository, scopedState.scopeVersion, userId]);
@@ -258,7 +262,13 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
       if (repositoryForScope === null) throw configurationError();
       if (userIdForScope === null) throw new Error(authenticationErrorMessage);
 
-      const createdList = await repositoryForScope.createList(userIdForScope, input);
+      let createdList: UserListSummary;
+      try {
+        createdList = await repositoryForScope.createList(userIdForScope, input);
+      } catch (error) {
+        if (!isCurrentScope(scope)) throw new ListsOperationCancelledError();
+        throw error;
+      }
       assertCurrentScope(scope);
 
       const currentLists = scope.listsState.status === 'success' ? scope.listsState.lists : [];
@@ -270,7 +280,7 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
       assertCurrentScope(scope);
       return createdList;
     },
-    [assertCurrentScope, loadListsForScope, publishListsState, requireScope],
+    [assertCurrentScope, isCurrentScope, loadListsForScope, publishListsState, requireScope],
   );
 
   const addGameToLists = useCallback<ListsContextValue['addGameToLists']>(
@@ -279,12 +289,17 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
       const repositoryForScope = scope.repository;
       if (repositoryForScope === null) throw configurationError();
 
-      await repositoryForScope.addGameToLists(game, listIds);
+      try {
+        await repositoryForScope.addGameToLists(game, listIds);
+      } catch (error) {
+        if (!isCurrentScope(scope)) throw new ListsOperationCancelledError();
+        throw error;
+      }
       assertCurrentScope(scope);
       await loadListsForScope(scope, true);
       assertCurrentScope(scope);
     },
-    [assertCurrentScope, loadListsForScope, requireScope],
+    [assertCurrentScope, isCurrentScope, loadListsForScope, requireScope],
   );
 
   const loadWantToPlayIds = useCallback<ListsContextValue['loadWantToPlayIds']>(
@@ -295,9 +310,17 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
 
       const uniqueIds = [...new Set(igdbIds)];
       if (uniqueIds.length === 0) return;
-      const versionsAtStart = new Map(
-        uniqueIds.map((igdbId) => [igdbId, membershipVersionsRef.current.get(igdbId) ?? 0]),
-      );
+      const loadTokens = new Map<number, number>();
+      const confirmedMutationVersions = new Map<number, number>();
+      for (const igdbId of uniqueIds) {
+        const loadToken = (membershipLoadTokensRef.current.get(igdbId) ?? 0) + 1;
+        membershipLoadTokensRef.current.set(igdbId, loadToken);
+        loadTokens.set(igdbId, loadToken);
+        confirmedMutationVersions.set(
+          igdbId,
+          confirmedMutationVersionsRef.current.get(igdbId) ?? 0,
+        );
+      }
 
       const loadedIds = await repositoryForScope.getWantToPlayIds(uniqueIds);
       if (!isCurrentScope(scope)) return;
@@ -305,7 +328,12 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
       publishWantToPlayIds(scope, (current) => {
         const next = new Set(current);
         for (const igdbId of uniqueIds) {
-          if ((membershipVersionsRef.current.get(igdbId) ?? 0) !== versionsAtStart.get(igdbId)) {
+          const isNewestLoad =
+            membershipLoadTokensRef.current.get(igdbId) === loadTokens.get(igdbId);
+          const hasNoNewConfirmation =
+            (confirmedMutationVersionsRef.current.get(igdbId) ?? 0) ===
+            confirmedMutationVersions.get(igdbId);
+          if (!isNewestLoad || !hasNoNewConfirmation) {
             continue;
           }
           next.delete(igdbId);
@@ -326,17 +354,12 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
       const existing = toggleInFlightRef.current.get(game.igdbId);
       if (existing?.scope === scope) return existing.promise;
 
-      const bumpMembershipVersion = () => {
-        const currentVersion = membershipVersionsRef.current.get(game.igdbId) ?? 0;
-        membershipVersionsRef.current.set(game.igdbId, currentVersion + 1);
-      };
-      bumpMembershipVersion();
-
       const operation = repositoryForScope
         .toggleWantToPlay(game)
         .then((isWantToPlay) => {
           assertCurrentScope(scope);
-          bumpMembershipVersion();
+          const confirmedVersion = (confirmedMutationVersionsRef.current.get(game.igdbId) ?? 0) + 1;
+          confirmedMutationVersionsRef.current.set(game.igdbId, confirmedVersion);
           publishWantToPlayIds(scope, (current) => {
             const next = new Set(current);
             if (isWantToPlay) next.add(game.igdbId);
@@ -347,7 +370,6 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
         })
         .catch((error: unknown) => {
           if (!isCurrentScope(scope)) throw new ListsOperationCancelledError();
-          bumpMembershipVersion();
           throw error;
         })
         .finally(() => {

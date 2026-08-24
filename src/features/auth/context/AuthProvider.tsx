@@ -19,6 +19,8 @@ export type AuthState =
 
 export interface AuthContextValue {
   readonly state: AuthState;
+  readonly logoutNavigationPending: boolean;
+  readonly beginLogoutNavigation: () => () => void;
   readonly requestEmailCode: AuthService['requestEmailCode'];
   readonly verifyEmailCode: AuthService['verifyEmailCode'];
   readonly signInWithGoogle: AuthService['signInWithGoogle'];
@@ -47,6 +49,8 @@ function unavailableAction(): Promise<never> {
 
 const defaultAuthContext: AuthContextValue = {
   state: unavailableState,
+  logoutNavigationPending: false,
+  beginLogoutNavigation: () => () => undefined,
   requestEmailCode: unavailableAction,
   verifyEmailCode: unavailableAction,
   signInWithGoogle: unavailableAction,
@@ -57,11 +61,24 @@ const AuthContext = createContext<AuthContextValue>(defaultAuthContext);
 
 export function AuthProvider({ children, service }: AuthProviderProps) {
   const [state, setState] = useState<AuthState>({ status: 'loading' });
+  const [logoutNavigationPending, setLogoutNavigationPending] = useState(false);
   const serviceRef = useRef(service);
+  const logoutNavigationRef = useRef({ active: true, tokens: new Set<symbol>() });
+  // eslint-disable-next-line react-hooks/refs -- stable callbacks must follow the latest injected service.
   serviceRef.current = service;
 
   useEffect(() => {
+    const logoutNavigation = logoutNavigationRef.current;
+    logoutNavigation.active = true;
+    return () => {
+      logoutNavigation.active = false;
+      logoutNavigation.tokens.clear();
+    };
+  }, []);
+
+  useEffect(() => {
     if (service === null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- auth state mirrors the external service.
       setState(unavailableState);
       return;
     }
@@ -113,14 +130,45 @@ export function AuthProvider({ children, service }: AuthProviderProps) {
     return currentService === null ? unavailableAction() : currentService.signOut();
   }, []);
 
+  const beginLogoutNavigation = useCallback(() => {
+    const logoutNavigation = logoutNavigationRef.current;
+    if (!logoutNavigation.active) return () => undefined;
+
+    const token = Symbol('logout-navigation');
+    logoutNavigation.tokens.add(token);
+    setLogoutNavigationPending(true);
+
+    return () => {
+      if (!logoutNavigation.active || !logoutNavigation.tokens.delete(token)) return;
+      if (logoutNavigation.tokens.size === 0) setLogoutNavigationPending(false);
+    };
+  }, []);
+
   const value = useMemo<AuthContextValue>(
-    () => ({ state, requestEmailCode, verifyEmailCode, signInWithGoogle, signOut }),
-    [state, requestEmailCode, verifyEmailCode, signInWithGoogle, signOut],
+    () => ({
+      beginLogoutNavigation,
+      logoutNavigationPending,
+      requestEmailCode,
+      signInWithGoogle,
+      signOut,
+      state,
+      verifyEmailCode,
+    }),
+    [
+      beginLogoutNavigation,
+      logoutNavigationPending,
+      requestEmailCode,
+      signInWithGoogle,
+      signOut,
+      state,
+      verifyEmailCode,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth(): AuthContextValue {
   return useContext(AuthContext);
 }

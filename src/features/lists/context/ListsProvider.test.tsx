@@ -345,6 +345,31 @@ describe('ListsProvider', () => {
     expect([...view.result.current.lists.wantToPlayIds]).toEqual([game.igdbId, 11]);
   });
 
+  it('keeps the newest membership load when two loads for the same ID finish out of order', async () => {
+    const firstLoad = deferred<ReadonlySet<number>>();
+    const secondLoad = deferred<ReadonlySet<number>>();
+    const getWantToPlayIds = vi
+      .fn()
+      .mockImplementationOnce(() => firstLoad.promise)
+      .mockImplementationOnce(() => secondLoad.promise);
+    const view = renderListsProvider(createRepository({ getWantToPlayIds }));
+    await waitForAuthenticated(view);
+
+    let first!: Promise<void>;
+    let second!: Promise<void>;
+    act(() => {
+      first = view.result.current.lists.loadWantToPlayIds([game.igdbId]);
+      second = view.result.current.lists.loadWantToPlayIds([game.igdbId]);
+    });
+    secondLoad.resolve(new Set([game.igdbId]));
+    await act(async () => second);
+    firstLoad.resolve(new Set<number>());
+    await act(async () => first);
+
+    expect(view.result.current.lists.wantToPlayIds.has(game.igdbId)).toBe(true);
+    expect(getWantToPlayIds).toHaveBeenCalledTimes(2);
+  });
+
   it('does not optimistically change memberships and preserves them when toggling fails', async () => {
     const pendingToggle = deferred<boolean>();
     const toggleWantToPlay = vi
@@ -373,6 +398,30 @@ describe('ListsProvider', () => {
 
     await expect(view.result.current.lists.toggleWantToPlay(game)).rejects.toThrow('rpc detail');
     expect([...view.result.current.lists.wantToPlayIds]).toEqual([10, game.igdbId]);
+  });
+
+  it('allows the newest overlapping load to reconcile membership after a toggle fails', async () => {
+    const pendingLoad = deferred<ReadonlySet<number>>();
+    const pendingToggle = deferred<boolean>();
+    const getWantToPlayIds = vi.fn(() => pendingLoad.promise);
+    const toggleWantToPlay = vi.fn(() => pendingToggle.promise);
+    const view = renderListsProvider(createRepository({ getWantToPlayIds, toggleWantToPlay }));
+    await waitForAuthenticated(view);
+
+    let load!: Promise<void>;
+    let toggle!: Promise<boolean>;
+    act(() => {
+      toggle = view.result.current.lists.toggleWantToPlay(game);
+      load = view.result.current.lists.loadWantToPlayIds([game.igdbId]);
+    });
+    pendingToggle.reject(new Error('rpc detail'));
+    await expect(toggle).rejects.toThrow('rpc detail');
+    pendingLoad.resolve(new Set([game.igdbId]));
+    await act(async () => load);
+
+    expect(view.result.current.lists.wantToPlayIds.has(game.igdbId)).toBe(true);
+    expect(getWantToPlayIds).toHaveBeenCalledOnce();
+    expect(toggleWantToPlay).toHaveBeenCalledOnce();
   });
 
   it('ignores a membership load that started before a confirmed toggle', async () => {
@@ -532,6 +581,36 @@ describe('ListsProvider', () => {
     const error = await addition.catch((reason: unknown) => reason);
 
     expect(isListsOperationCancelled(error)).toBe(true);
+  });
+
+  it('cancels a rejected create when the provider unmounts before repository completion', async () => {
+    const pendingCreate = deferred<UserListSummary>();
+    const view = renderListsProvider(
+      createRepository({ createList: vi.fn(() => pendingCreate.promise) }),
+    );
+    await waitForAuthenticated(view);
+
+    const creation = view.result.current.lists.createList({ name: 'RPGs', description: '' });
+    const outcome = creation.catch((reason: unknown) => reason);
+    view.unmount();
+    pendingCreate.reject(new Error('stale database detail'));
+
+    expect(isListsOperationCancelled(await outcome)).toBe(true);
+  });
+
+  it('cancels a rejected add when the repository changes before completion', async () => {
+    const pendingAdd = deferred<readonly number[]>();
+    const view = renderListsProvider(
+      createRepository({ addGameToLists: vi.fn(() => pendingAdd.promise) }),
+    );
+    await waitForAuthenticated(view);
+
+    const addition = view.result.current.lists.addGameToLists(game, [rpgList.id]);
+    const outcome = addition.catch((reason: unknown) => reason);
+    view.changeRepository(createRepository());
+    pendingAdd.reject(new Error('stale database detail'));
+
+    expect(isListsOperationCancelled(await outcome)).toBe(true);
   });
 
   it('cancels a pending toggle when the provider unmounts', async () => {

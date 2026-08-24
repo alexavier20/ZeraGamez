@@ -41,10 +41,12 @@ const rpgList: UserListSummary = {
 
 function deferred<Value>() {
   let resolve!: (value: Value | PromiseLike<Value>) => void;
-  const promise = new Promise<Value>((promiseResolve) => {
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<Value>((promiseResolve, promiseReject) => {
     resolve = promiseResolve;
+    reject = promiseReject;
   });
-  return { promise, resolve };
+  return { promise, reject, resolve };
 }
 
 function createAuthService() {
@@ -190,5 +192,23 @@ describe('CreateListPage', () => {
     expect(
       screen.queryByText('Não foi possível criar a lista. Tente novamente.'),
     ).not.toBeInTheDocument();
+  });
+
+  it('does not navigate or show a false alert when a stale creation rejects', async () => {
+    const user = userEvent.setup();
+    const pendingCreate = deferred<UserListSummary>();
+    const auth = renderCreateList(createRepository(vi.fn(() => pendingCreate.promise)));
+
+    await user.type(await screen.findByRole('textbox', { name: 'Nome da lista' }), 'RPGs');
+    await user.click(screen.getByRole('button', { name: 'Criar lista' }));
+    act(() => {
+      auth.emit(otherAuthenticatedUser);
+    });
+    pendingCreate.reject(new Error('stale database detail'));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Criar lista' })).toBeEnabled());
+    expect(screen.getByRole('heading', { name: 'Criar lista' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Coleção de listas' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

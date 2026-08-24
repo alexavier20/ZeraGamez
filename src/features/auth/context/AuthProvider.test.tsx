@@ -1,11 +1,11 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, renderHook, screen } from '@testing-library/react';
 import { type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { AuthProvider, useAuth } from './AuthProvider';
+
 import type { AuthService } from '@/features/auth/api/auth-service';
 import type { AuthenticatedUser } from '@/features/auth/model/auth';
-
-import { AuthProvider, useAuth } from './AuthProvider';
 
 const authenticatedUser: AuthenticatedUser = {
   id: 'user-1',
@@ -46,7 +46,9 @@ function createFakeAuthService(
     service,
     unsubscribe,
     emit(user: AuthenticatedUser | null): void {
-      listeners.forEach((listener) => listener(user));
+      listeners.forEach((listener) => {
+        listener(user);
+      });
     },
   };
 }
@@ -63,7 +65,9 @@ describe('AuthProvider', () => {
     expect(screen.getByText('loading')).toBeInTheDocument();
     expect(await screen.findByText('anonymous')).toBeInTheDocument();
 
-    act(() => fake.emit(authenticatedUser));
+    act(() => {
+      fake.emit(authenticatedUser);
+    });
 
     expect(screen.getByText('alex@example.com')).toBeInTheDocument();
   });
@@ -90,8 +94,50 @@ describe('AuthProvider', () => {
     const { unmount } = renderProvider(fake.service);
 
     unmount();
-    await act(async () => resolveInitialUser(authenticatedUser));
+    await act(async () => {
+      resolveInitialUser(authenticatedUser);
+      await initialUser;
+    });
 
     expect(fake.unsubscribe).toHaveBeenCalledOnce();
+  });
+
+  it('keeps logout navigation tokens isolated by provider and finalizes them idempotently', () => {
+    const pendingUser = new Promise<AuthenticatedUser | null>(() => undefined);
+    const firstService = createFakeAuthService(pendingUser);
+    const secondService = createFakeAuthService(pendingUser);
+    const FirstWrapper = ({ children }: { readonly children: ReactNode }) => (
+      <AuthProvider service={firstService.service}>{children}</AuthProvider>
+    );
+    const SecondWrapper = ({ children }: { readonly children: ReactNode }) => (
+      <AuthProvider service={secondService.service}>{children}</AuthProvider>
+    );
+    const first = renderHook(() => useAuth(), { wrapper: FirstWrapper });
+    const second = renderHook(() => useAuth(), { wrapper: SecondWrapper });
+
+    let finishFirst!: () => void;
+    let finishSecond!: () => void;
+    act(() => {
+      finishFirst = first.result.current.beginLogoutNavigation();
+      finishSecond = first.result.current.beginLogoutNavigation();
+    });
+
+    expect(first.result.current.logoutNavigationPending).toBe(true);
+    expect(second.result.current.logoutNavigationPending).toBe(false);
+
+    act(() => {
+      finishFirst();
+      finishFirst();
+    });
+
+    expect(first.result.current.logoutNavigationPending).toBe(true);
+    expect(second.result.current.logoutNavigationPending).toBe(false);
+
+    act(() => {
+      finishSecond();
+    });
+
+    expect(first.result.current.logoutNavigationPending).toBe(false);
+    expect(second.result.current.logoutNavigationPending).toBe(false);
   });
 });

@@ -176,6 +176,24 @@ describe('AppRouter', () => {
     expect(screen.getByRole('heading', { name: 'Zera GameZ' })).toBeInTheDocument();
   });
 
+  it('releases a failed logout guard and redirects to login after auth emitted null', async () => {
+    const user = userEvent.setup();
+    const auth = createControllableAuthService(authenticatedUser);
+    auth.setSignOut(() => {
+      auth.emit(null);
+      return Promise.reject(new Error('provider detail'));
+    });
+    window.history.replaceState({}, '', '/perfil');
+    render(<AppRouter authService={auth.service} listsRepository={createListsRepository()} />);
+
+    await user.click(await screen.findByRole('button', { name: 'Sair' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Entre para continuar' }),
+    ).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/entrar');
+  });
+
   it('shows the fixed configuration copy on a private route with a null repository', async () => {
     window.history.replaceState({}, '', '/minhas-listas');
     render(<AppRouter authService={createAuthService(authenticatedUser)} listsRepository={null} />);

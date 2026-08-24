@@ -2,7 +2,6 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router';
 
 import { useAuth } from '@/features/auth/context/AuthProvider';
-import { isLogoutNavigationPending } from '@/features/auth/model/logout-navigation';
 import { savePendingAuthIntent } from '@/features/auth/model/pending-auth-intent';
 
 interface ProtectedRouteProps {
@@ -24,7 +23,7 @@ function isProtectedReturnPath(pathname: string): pathname is ProtectedReturnPat
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { state } = useAuth();
+  const { logoutNavigationPending, state } = useAuth();
   const { pathname } = useLocation();
   const [canRedirect, setCanRedirect] = useState(false);
 
@@ -32,7 +31,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   useEffect(() => {
     let active = true;
-    const canRedirectAfterAuthCheck = needsAuthentication && !isLogoutNavigationPending();
+    const canRedirectAfterAuthCheck = needsAuthentication && !logoutNavigationPending;
     if (canRedirectAfterAuthCheck && isProtectedReturnPath(pathname)) {
       savePendingAuthIntent(sessionStorage, {
         version: 1,
@@ -46,11 +45,11 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return () => {
       active = false;
     };
-  }, [needsAuthentication, pathname]);
+  }, [logoutNavigationPending, needsAuthentication, pathname]);
 
   if (state.status === 'authenticated') return children ?? <Outlet />;
 
-  if (needsAuthentication && canRedirect && !isLogoutNavigationPending()) {
+  if (needsAuthentication && canRedirect && !logoutNavigationPending) {
     return <Navigate replace to="/entrar" />;
   }
 
