@@ -405,8 +405,9 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
       if (repositoryForScope === null) throw configurationError();
 
       const previous = mutationQueueRef.current.get(game.igdbId);
-      const execute = () =>
-        repositoryForScope.setWantToPlay(game, desired).then((isWantToPlay) => {
+      const execute = () => {
+        assertCurrentScope(scope);
+        return repositoryForScope.setWantToPlay(game, desired).then((isWantToPlay) => {
           assertCurrentScope(scope);
           const confirmedVersion = (confirmedMutationVersionsRef.current.get(game.igdbId) ?? 0) + 1;
           confirmedMutationVersionsRef.current.set(game.igdbId, confirmedVersion);
@@ -420,6 +421,7 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
           });
           return isWantToPlay;
         });
+      };
       const operation = (
         previous?.scope === scope ? previous.promise.then(execute, execute) : execute()
       )

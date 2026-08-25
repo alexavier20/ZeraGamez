@@ -547,6 +547,31 @@ describe('ListsProvider', () => {
     expect(view.result.current.lists.wantToPlayIds.has(game.igdbId)).toBe(false);
   });
 
+  it('cancels a queued old-scope mutation before its repository transport starts', async () => {
+    const firstMutation = deferred<boolean>();
+    const oldSetWantToPlay = vi
+      .fn()
+      .mockImplementationOnce(() => firstMutation.promise)
+      .mockResolvedValueOnce(false);
+    const newSetWantToPlay = vi.fn().mockResolvedValue(true);
+    const view = renderListsProvider(createRepository({ setWantToPlay: oldSetWantToPlay }));
+    await waitForAuthenticated(view);
+
+    const first = view.result.current.lists.setWantToPlay(game, true);
+    const second = view.result.current.lists.setWantToPlay(game, false);
+    const firstOutcome = first.catch((reason: unknown) => reason);
+    const secondOutcome = second.catch((reason: unknown) => reason);
+    expect(oldSetWantToPlay).toHaveBeenCalledOnce();
+
+    view.changeRepository(createRepository({ setWantToPlay: newSetWantToPlay }));
+    firstMutation.resolve(true);
+
+    expect(isListsOperationCancelled(await firstOutcome)).toBe(true);
+    expect(isListsOperationCancelled(await secondOutcome)).toBe(true);
+    expect(oldSetWantToPlay).toHaveBeenCalledOnce();
+    expect(newSetWantToPlay).not.toHaveBeenCalled();
+  });
+
   it('continues the serialized queue after an earlier desired-state mutation fails', async () => {
     const firstMutation = deferred<boolean>();
     const setWantToPlay = vi
