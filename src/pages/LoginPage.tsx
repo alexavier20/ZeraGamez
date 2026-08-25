@@ -98,7 +98,11 @@ export function LoginPage() {
     try {
       normalizedCode = normalizeOtp(code);
     } catch {
-      setMessage({ field: 'code', type: 'error', text: 'Informe o código de 6 dígitos.' });
+      setMessage({
+        field: 'code',
+        type: 'error',
+        text: 'Informe um código numérico de 6 a 10 dígitos.',
+      });
       codeInput.current?.focus();
       return;
     }
@@ -251,7 +255,7 @@ export function LoginPage() {
                 disabled={unavailable}
                 id="login-code"
                 inputMode="numeric"
-                maxLength={6}
+                maxLength={10}
                 onChange={(event) => {
                   setCode(event.target.value);
                 }}

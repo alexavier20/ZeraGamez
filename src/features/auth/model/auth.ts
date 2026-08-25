@@ -12,7 +12,7 @@ interface AuthUserRecord {
   readonly user_metadata?: Record<string, unknown>;
 }
 
-const OTP_ERROR_MESSAGE = 'Digite o código de seis dígitos.';
+const OTP_ERROR_MESSAGE = 'Digite um código numérico de 6 a 10 dígitos.';
 
 export function toAuthenticatedUser(user: AuthUserRecord): AuthenticatedUser {
   const email = user.email ?? '';
@@ -31,7 +31,7 @@ export function toAuthenticatedUser(user: AuthUserRecord): AuthenticatedUser {
 export function normalizeOtp(value: string): string {
   const otp = value.trim();
 
-  if (!/^\d{6}$/.test(otp)) {
+  if (!/^\d{6,10}$/.test(otp)) {
     throw new Error(OTP_ERROR_MESSAGE);
   }
 

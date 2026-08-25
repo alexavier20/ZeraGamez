@@ -70,6 +70,25 @@ describe('LoginPage', () => {
     expect(service.verifyEmailCode).toHaveBeenCalledWith('alex@example.com', '123456');
   });
 
+  it('does not truncate an eight-digit email OTP', async () => {
+    const user = userEvent.setup();
+    const service = createFakeAuthService(null);
+    renderLogin(service);
+
+    const emailInput = document.getElementById('login-email');
+    expect(emailInput).toBeInstanceOf(HTMLInputElement);
+    await user.type(emailInput as HTMLInputElement, 'alex@example.com');
+    await user.click(screen.getByRole('button', { name: /Enviar/ }));
+
+    const codeInput = document.getElementById('login-code');
+    expect(codeInput).toBeInstanceOf(HTMLInputElement);
+    await user.type(codeInput as HTMLInputElement, '12345678');
+    await user.click(screen.getByRole('button', { name: /Confirmar/ }));
+
+    expect(codeInput).toHaveValue('12345678');
+    expect(service.verifyEmailCode).toHaveBeenCalledWith('alex@example.com', '12345678');
+  });
+
   it('starts Google with the dedicated callback', async () => {
     const user = userEvent.setup();
     const service = createFakeAuthService(null);
@@ -98,7 +117,7 @@ describe('LoginPage', () => {
     expect(service.requestEmailCode).not.toHaveBeenCalled();
   });
 
-  it('rejects a code that does not contain six digits', async () => {
+  it('rejects a code outside the supported digit range', async () => {
     const user = userEvent.setup();
     const service = createFakeAuthService(null);
     renderLogin(service);
@@ -108,7 +127,9 @@ describe('LoginPage', () => {
     await user.type(screen.getByRole('textbox', { name: 'Código de verificação' }), '12345');
     await user.click(screen.getByRole('button', { name: 'Confirmar código' }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Informe o código de 6 dígitos.');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Informe um código numérico de 6 a 10 dígitos.',
+    );
     expect(screen.getByRole('textbox', { name: 'Código de verificação' })).toHaveAttribute(
       'aria-describedby',
       'login-code-error',
@@ -134,7 +155,9 @@ describe('LoginPage', () => {
     expect(codeInput).toHaveValue('123a56');
     await user.click(screen.getByRole('button', { name: 'Confirmar código' }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Informe o código de 6 dígitos.');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Informe um código numérico de 6 a 10 dígitos.',
+    );
     expect(service.verifyEmailCode).not.toHaveBeenCalled();
   });
 
