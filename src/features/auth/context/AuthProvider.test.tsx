@@ -102,6 +102,28 @@ describe('AuthProvider', () => {
     expect(fake.unsubscribe).toHaveBeenCalledOnce();
   });
 
+  it('keeps an auth event that arrives before the initial user resolves', async () => {
+    let resolveInitialUser: (user: AuthenticatedUser | null) => void = () => undefined;
+    const initialUser = new Promise<AuthenticatedUser | null>((resolve) => {
+      resolveInitialUser = resolve;
+    });
+    const fake = createFakeAuthService(initialUser);
+    renderProvider(fake.service);
+
+    act(() => {
+      fake.emit(authenticatedUser);
+    });
+    expect(screen.getByText('alex@example.com')).toBeInTheDocument();
+
+    await act(async () => {
+      resolveInitialUser(null);
+      await initialUser;
+    });
+
+    expect(screen.getByText('alex@example.com')).toBeInTheDocument();
+    expect(screen.queryByText('anonymous')).not.toBeInTheDocument();
+  });
+
   it('keeps logout navigation tokens isolated by provider and finalizes them idempotently', () => {
     const pendingUser = new Promise<AuthenticatedUser | null>(() => undefined);
     const firstService = createFakeAuthService(pendingUser);

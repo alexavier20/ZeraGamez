@@ -131,10 +131,10 @@ Se já houver sessão, a rota executa a intenção pendente ou retorna para a or
 Nas páginas públicas, clicar em “Quero jogar!” ou “Adicionar à lista” sem sessão registra a intenção e abre `/entrar`. Após o login:
 
 - `open-add-to-lists` reabre o modal do jogo correspondente;
-- `toggle-want-to-play` executa a inclusão do jogo na lista especial;
+- `toggle-want-to-play` retoma a intenção como estado desejado `true`, sem nunca remover uma associação existente;
 - navegação protegida abre a rota solicitada.
 
-Se o jogo não estiver mais disponível na resposta corrente, a aplicação retorna a Lançamentos e informa que a ação precisa ser repetida.
+A intenção de ação permanece em `sessionStorage` durante a descoberta do card e a leitura da associação. Ela é removida imediatamente antes de abrir o modal ou executar `set_want_to_play`; isso impede execução duplicada em Strict Mode sem perder a intenção quando a leitura precisa ser repetida. Se o jogo não estiver mais disponível depois de a resposta corrente terminar, a aplicação retorna a Lançamentos e informa que a ação precisa ser repetida.
 
 ### `/minhas-listas`
 
@@ -168,14 +168,16 @@ Um trigger `after insert` em `auth.users` cria o perfil usando metadata do prove
 
 ```text
 id bigint generated always as identity primary key
-igdb_id bigint not null unique
+user_id uuid not null references auth.users(id) on delete cascade
+igdb_id bigint not null
 name text not null
 cover_url text
-release_date date
+release_date date not null
 created_at timestamptz not null
+unique (user_id, igdb_id)
 ```
 
-Esta tabela guarda somente o snapshot necessário às listas. O catálogo e os filtros continuam vindo da IGDB. Usuários autenticados podem ler snapshots, mas não recebem grants diretos de escrita.
+Esta tabela guarda somente o snapshot necessário às listas, isolado por proprietário. O catálogo e os filtros continuam vindo da IGDB. Cada usuário possui no máximo um snapshot por `igdb_id`, pode ler somente seus próprios snapshots e não recebe grants diretos de escrita. O ID da IGDB deve ser inteiro positivo seguro para JavaScript; o nome é canônico e limitado a 200 caracteres; `cover_url` é nulo ou a URL HTTPS canônica construída para uma capa IGDB `t_cover_big_2x`, limitada a 2048 caracteres.
 
 ### `lists`
 
@@ -207,7 +209,7 @@ added_at timestamptz not null
 primary key (list_id, game_id)
 ```
 
-A chave composta impede duplicação na mesma lista. O jogo pode aparecer em listas diferentes. `game_id` terá um índice separado para joins e cascades, pois a chave primária composta começa por `list_id`.
+A chave composta impede duplicação na mesma lista. O jogo pode aparecer em listas diferentes. `game_id` terá um índice separado para joins e cascades, pois a chave primária composta começa por `list_id`. A consulta das capas recentes usa ainda `(list_id, added_at desc, game_id desc)`.
 
 ## Operações atômicas
 
@@ -216,17 +218,19 @@ A chave composta impede duplicação na mesma lista. O jogo pode aparecer em lis
 Uma função `security definer`, com `search_path` vazio e execução concedida apenas a `authenticated`, receberá o snapshot mínimo do jogo e os IDs das listas. Ela:
 
 1. exige `auth.uid()` válido;
-2. normaliza e valida os IDs recebidos;
+2. limita a entrada bruta a 1000 IDs de lista e valida todos como inteiros positivos seguros antes de deduplicar;
 3. confirma que todas as listas pertencem ao usuário;
-4. insere o snapshot do jogo com `on conflict` atômico;
+4. valida o snapshot canônico e o insere/atualiza por `(user_id, igdb_id)` com `on conflict` atômico;
 5. insere cada associação com `on conflict do nothing`;
 6. retorna os IDs efetivamente associados.
 
 Nenhuma associação parcial será confirmada se a validação falhar.
 
-### Alternar “Quero jogar”
+### Definir “Quero jogar”
 
-Outra função atômica localizará ou criará a lista com `system_key = 'want_to_play'`, salvará o snapshot do jogo e alternará a associação. A restrição única elimina corrida na criação da lista especial.
+`set_want_to_play(..., p_desired boolean)` recebe o estado final desejado. Para `true`, localiza ou cria a lista com `system_key = 'want_to_play'`, bloqueia a linha da lista, salva o snapshot do usuário e inclui a associação de modo idempotente. Para `false`, não cria uma lista ausente; se a lista existir, bloqueia a linha antes de remover a associação. A restrição única elimina corrida na criação e o bloqueio serializa mutações concorrentes do usuário.
+
+`get_want_to_play_igdb_ids` aceita no máximo 100 IDs canônicos por chamada. O repositório divide consultas maiores em blocos de 100 e une os resultados sem expor mutabilidade.
 
 ## RLS e privilégios
 
@@ -235,7 +239,7 @@ RLS será habilitado em todas as tabelas expostas.
 - `profiles`: o usuário pode selecionar e atualizar apenas `id = (select auth.uid())`.
 - `lists`: o usuário pode selecionar suas linhas; inserts customizados exigem `user_id = (select auth.uid())` e `system_key is null`; updates ficam limitados às colunas editáveis.
 - `list_items`: acesso exige uma lista relacionada cujo `user_id = (select auth.uid())`.
-- `games`: leitura para `authenticated`; escrita somente pelas funções aprovadas.
+- `games`: leitura apenas das linhas com `user_id = (select auth.uid())`; escrita somente pelas funções aprovadas.
 
 Colunas usadas em filtros, joins, chaves estrangeiras e políticas serão indexadas. Grants serão explícitos e mínimos. Funções `security definer` revogarão execução de `public` e `anon`, validarão propriedade antes de gravar e qualificarão todos os objetos com o schema.
 
@@ -256,7 +260,7 @@ Ao abrir:
 
 Capas do card de lista virão dos três itens mais recentes. Ausência de capa não criará URL fictícia.
 
-“Quero jogar!” será derivado da associação persistida. O botão ficará desabilitado durante a mutação e mudará de aparência somente depois da confirmação. Uma falha mantém o estado anterior e exibe mensagem sanitizada.
+“Quero jogar!” será derivado da associação persistida. Para uma sessão autenticada, o botão fica desabilitado até a associação daquele `igdb_id` estar conhecida e também durante a mutação; IDs não relacionados permanecem independentes. Uma leitura que falha mantém o botão desabilitado, exibe mensagem sanitizada e oferece nova tentativa para o jogo correspondente. A aparência muda somente depois da confirmação.
 
 ## Erros e concorrência
 
@@ -264,6 +268,7 @@ Capas do card de lista virão dos três itens mais recentes. Ausência de capa n
 - Mensagens internas, queries, tokens e respostas externas não serão exibidos nem registrados no navegador.
 - Submissões duplicadas serão bloqueadas enquanto houver requisição em andamento.
 - Constraints e `on conflict` tornam criação da lista especial e inclusão de itens idempotentes.
+- Mutações de “Quero jogar” expressam estado desejado e são serializadas por jogo no cliente e pela linha da lista no banco, preservando a ordem e tornando repetições idempotentes.
 - Mudança ou encerramento de sessão limpará dados pessoais mantidos em memória.
 - Efeitos assíncronos ignorarão respostas depois do unmount ou da troca de usuário.
 - Logout removerá a intenção pendente e redirecionará para a página pública inicial.

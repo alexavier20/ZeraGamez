@@ -146,9 +146,21 @@ function createListsRepository(overrides: Partial<ListsRepository> = {}): ListsR
     createList: vi.fn().mockResolvedValue(rpgList),
     getWantToPlayIds: vi.fn().mockResolvedValue(new Set<number>()),
     listSummaries: vi.fn().mockResolvedValue([rpgList]),
-    toggleWantToPlay: vi.fn().mockResolvedValue(true),
+    setWantToPlay: vi
+      .fn()
+      .mockImplementation((_game, desired: boolean) => Promise.resolve(desired)),
     ...overrides,
   };
+}
+
+function deferred<Value>() {
+  let resolve!: (value: Value | PromiseLike<Value>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<Value>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+  return { promise, reject, resolve };
 }
 
 function exactPayload(releaseDate: string, count = 1) {
@@ -439,15 +451,17 @@ describe('Zera GameZ', () => {
     expect(getWantToPlayIds).toHaveBeenLastCalledWith([1, 2, 3]);
   });
 
-  it('clears a matching pending action before consuming it once in Strict Mode', async () => {
+  it('keeps a matching pending action until membership is known then sets desired true once', async () => {
     savePendingAuthIntent(sessionStorage, {
       version: 1,
       type: 'toggle-want-to-play',
       returnTo: '/lancamentos',
       igdbId: 1,
     });
-    const toggleWantToPlay = vi.fn().mockResolvedValue(true);
-    const repository = createListsRepository({ toggleWantToPlay });
+    const membership = deferred<ReadonlySet<number>>();
+    const getWantToPlayIds = vi.fn(() => membership.promise);
+    const setWantToPlay = vi.fn().mockResolvedValue(true);
+    const repository = createListsRepository({ getWantToPlayIds, setWantToPlay });
     window.history.replaceState({}, '', '/lancamentos');
 
     render(
@@ -460,15 +474,22 @@ describe('Zera GameZ', () => {
     );
 
     expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
+    expect(peekPendingAuthIntent(sessionStorage)).toMatchObject({ igdbId: 1 });
+    expect(setWantToPlay).not.toHaveBeenCalled();
+
+    membership.resolve(new Set([1]));
     await waitFor(() => {
-      expect(toggleWantToPlay).toHaveBeenCalledOnce();
+      expect(setWantToPlay).toHaveBeenCalledOnce();
     });
-    expect(toggleWantToPlay).toHaveBeenCalledWith({
-      coverUrl: null,
-      igdbId: 1,
-      name: 'Eclipse Protocol',
-      releaseDate: '2026-08-10',
-    });
+    expect(setWantToPlay).toHaveBeenCalledWith(
+      {
+        coverUrl: null,
+        igdbId: 1,
+        name: 'Eclipse Protocol',
+        releaseDate: '2026-08-10',
+      },
+      true,
+    );
     expect(peekPendingAuthIntent(sessionStorage)).toBeNull();
   });
 
@@ -547,8 +568,8 @@ describe('Zera GameZ', () => {
       returnTo: '/lancamentos',
       igdbId: 3,
     });
-    const toggleWantToPlay = vi.fn().mockResolvedValue(true);
-    const repository = createListsRepository({ toggleWantToPlay });
+    const setWantToPlay = vi.fn().mockResolvedValue(true);
+    const repository = createListsRepository({ setWantToPlay });
     fetchReleasesMock.mockResolvedValueOnce(payload).mockResolvedValueOnce(nextPayload);
     window.history.replaceState({}, '', '/lancamentos');
 
@@ -563,14 +584,17 @@ describe('Zera GameZ', () => {
 
     expect(await screen.findAllByText('Future Game')).toHaveLength(2);
     await waitFor(() => {
-      expect(toggleWantToPlay).toHaveBeenCalledOnce();
+      expect(setWantToPlay).toHaveBeenCalledOnce();
     });
-    expect(toggleWantToPlay).toHaveBeenCalledWith({
-      coverUrl: null,
-      igdbId: 3,
-      name: 'Future Game',
-      releaseDate: '2026-12-15',
-    });
+    expect(setWantToPlay).toHaveBeenCalledWith(
+      {
+        coverUrl: null,
+        igdbId: 3,
+        name: 'Future Game',
+        releaseDate: '2026-12-15',
+      },
+      true,
+    );
     expect(fetchReleasesMock).toHaveBeenCalledTimes(2);
     expect(peekPendingAuthIntent(sessionStorage)).toBeNull();
   });
@@ -583,8 +607,8 @@ describe('Zera GameZ', () => {
       returnTo: '/lancamentos',
       igdbId: 3,
     });
-    const toggleWantToPlay = vi.fn().mockResolvedValue(true);
-    const repository = createListsRepository({ toggleWantToPlay });
+    const setWantToPlay = vi.fn().mockResolvedValue(true);
+    const repository = createListsRepository({ setWantToPlay });
     fetchReleasesMock
       .mockResolvedValueOnce(payload)
       .mockRejectedValueOnce(new Error('raw pagination detail'))
@@ -597,12 +621,12 @@ describe('Zera GameZ', () => {
 
     expect(await screen.findByText('Não foi possível carregar mais jogos')).toBeInTheDocument();
     expect(peekPendingAuthIntent(sessionStorage)).toMatchObject({ igdbId: 3 });
-    expect(toggleWantToPlay).not.toHaveBeenCalled();
+    expect(setWantToPlay).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
     expect(await screen.findAllByText('Future Game')).toHaveLength(2);
     await waitFor(() => {
-      expect(toggleWantToPlay).toHaveBeenCalledOnce();
+      expect(setWantToPlay).toHaveBeenCalledOnce();
     });
     expect(peekPendingAuthIntent(sessionStorage)).toBeNull();
   });
@@ -626,8 +650,8 @@ describe('Zera GameZ', () => {
       returnTo: '/lancamentos',
       igdbId: 1,
     });
-    const toggleWantToPlay = vi.fn().mockResolvedValue(true);
-    const repository = createListsRepository({ toggleWantToPlay });
+    const setWantToPlay = vi.fn().mockResolvedValue(true);
+    const repository = createListsRepository({ setWantToPlay });
     fetchReleasesMock.mockResolvedValueOnce(duplicatedPayload);
     window.history.replaceState({}, '', '/lancamentos');
 
@@ -642,14 +666,17 @@ describe('Zera GameZ', () => {
 
     expect(await screen.findAllByText('Eclipse Protocol Later')).toHaveLength(2);
     await waitFor(() => {
-      expect(toggleWantToPlay).toHaveBeenCalledOnce();
+      expect(setWantToPlay).toHaveBeenCalledOnce();
     });
-    expect(toggleWantToPlay).toHaveBeenCalledWith({
-      coverUrl: null,
-      igdbId: 1,
-      name: 'Eclipse Protocol',
-      releaseDate: '2026-08-10',
-    });
+    expect(setWantToPlay).toHaveBeenCalledWith(
+      {
+        coverUrl: null,
+        igdbId: 1,
+        name: 'Eclipse Protocol',
+        releaseDate: '2026-08-10',
+      },
+      true,
+    );
   });
 
   it('clears an unmatched pending action after releases settle and announces exact recovery copy', async () => {
@@ -659,9 +686,9 @@ describe('Zera GameZ', () => {
       returnTo: '/lancamentos',
       igdbId: 999,
     });
-    const toggleWantToPlay = vi.fn().mockResolvedValue(true);
+    const setWantToPlay = vi.fn().mockResolvedValue(true);
     const addGameToLists = vi.fn().mockResolvedValue([]);
-    const repository = createListsRepository({ addGameToLists, toggleWantToPlay });
+    const repository = createListsRepository({ addGameToLists, setWantToPlay });
     fetchReleasesMock.mockResolvedValueOnce(exhaustedPayload);
     window.history.replaceState({}, '', '/lancamentos');
 
@@ -673,7 +700,7 @@ describe('Zera GameZ', () => {
       await screen.findByText('O jogo não está mais nesta lista. Tente novamente.'),
     ).toHaveAttribute('role', 'status');
     expect(peekPendingAuthIntent(sessionStorage)).toBeNull();
-    expect(toggleWantToPlay).not.toHaveBeenCalled();
+    expect(setWantToPlay).not.toHaveBeenCalled();
     expect(addGameToLists).not.toHaveBeenCalled();
   });
 

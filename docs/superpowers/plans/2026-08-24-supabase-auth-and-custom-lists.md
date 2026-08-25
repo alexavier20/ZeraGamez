@@ -6,7 +6,7 @@
 
 **Architecture:** The React app uses a singleton Supabase browser client behind small auth and list service interfaces. `AuthProvider` owns session state, `ListsProvider` owns user-scoped list caches, PostgreSQL RLS is the authorization boundary, and SQL functions perform multi-row list mutations atomically. Existing Vercel functions remain the only IGDB integration.
 
-**Tech Stack:** Node.js 22.13+, React 19, TypeScript 6, Vite 8, React Router 8, Vitest, Testing Library, Zod, `@supabase/supabase-js`, Supabase Auth, PostgreSQL, Vercel.
+**Tech Stack:** Node.js 22.22.0+, React 19, TypeScript 6, Vite 8, React Router 8, Vitest, Testing Library, Zod, `@supabase/supabase-js`, Supabase Auth, PostgreSQL, Vercel.
 
 **Spec:** `docs/superpowers/specs/2026-08-24-supabase-auth-and-custom-lists-design.md`
 
@@ -20,6 +20,9 @@
 - PostgreSQL identifiers use lowercase `snake_case`; timestamps use `timestamptz`; auth user IDs use `uuid`; list and game IDs use `bigint identity`.
 - User-created lists have trimmed names from 1 through 80 characters. Description length is limited to 500 characters in SQL and TypeScript.
 - `want_to_play` is the only system list key and is unique per user.
+- Game snapshots are per-user, unique on `(user_id, igdb_id)`, canonical and bounded; users can select only their own rows.
+- Membership RPC inputs are capped at 100 IDs and chunked by the repository; add-to-lists inputs are capped at 1000 raw IDs.
+- “Quero jogar” mutations use serialized desired-state writes, never blind toggles.
 - Adding the same game to the same list is idempotent. The inclusion modal does not remove existing memberships in this increment.
 - Async failures remain sanitized. Components never display Supabase messages, SQL text, tokens, or provider payloads.
 - Every production behavior follows RED → confirm expected failure → GREEN → full relevant test run.
@@ -198,46 +201,15 @@ git commit -m "feat: add Supabase browser foundation"
 **Files:**
 
 - Create: `supabase/migrations/20260824000000_auth_and_lists.sql`
-- Create: `server/database/auth-and-lists-migration.test.ts`
 
 **Interfaces:**
 
-- Produces RPCs: `get_my_lists()`, `get_want_to_play_igdb_ids(bigint[])`, `add_game_to_lists(bigint,text,text,date,bigint[])`, and `toggle_want_to_play(bigint,text,text,date)`.
+- Produces RPCs: `get_my_lists()`, `get_want_to_play_igdb_ids(bigint[])`, `add_game_to_lists(bigint,text,text,date,bigint[])`, and `set_want_to_play(bigint,text,text,date,boolean)`.
 - Produces tables: `profiles`, `games`, `lists`, and `list_items`.
 
-- [ ] **Step 1: Write the failing migration contract test**
+- [ ] **Step 1: Define the security contract before implementation**
 
-```ts
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
-
-const migrationUrl = new URL(
-  '../../supabase/migrations/20260824000000_auth_and_lists.sql',
-  import.meta.url,
-);
-
-describe('auth and lists migration', () => {
-  it('contains ownership policies, indexed foreign keys, and locked-down definer functions', async () => {
-    const sql = (await readFile(fileURLToPath(migrationUrl), 'utf8')).toLowerCase();
-    for (const table of ['profiles', 'games', 'lists', 'list_items']) {
-      expect(sql).toContain(`alter table public.${table} enable row level security`);
-    }
-    expect(sql).toContain('lists_user_id_created_at_idx');
-    expect(sql).toContain('list_items_game_id_idx');
-    expect(sql).toContain('(select auth.uid())');
-    expect(sql).toContain("set search_path = ''");
-    expect(sql).toContain('revoke all on function');
-    expect(sql).toContain('grant execute on function');
-  });
-});
-```
-
-- [ ] **Step 2: Verify RED**
-
-Run: `npm run test:run -- server/database/auth-and-lists-migration.test.ts`
-
-Expected: FAIL with `ENOENT` for the absent migration.
+Review schema ownership, constraints, RLS, grants, function signatures, validation bounds, and mutation locking manually. Source-grep tests are not evidence that PostgreSQL accepts or enforces a migration; when Supabase CLI/Docker are unavailable, record that execution limitation explicitly instead of adding such a test.
 
 - [ ] **Step 3: Create tables, constraints, trigger, and indexes**
 
@@ -254,11 +226,23 @@ create table public.profiles (
 
 create table public.games (
   id bigint generated always as identity primary key,
-  igdb_id bigint not null unique,
-  name text not null check (char_length(btrim(name)) between 1 and 200),
-  cover_url text,
-  release_date date,
-  created_at timestamptz not null default now()
+  user_id uuid not null references auth.users(id) on delete cascade,
+  igdb_id bigint not null check (igdb_id between 1 and 9007199254740991),
+  name text not null check (
+    name = btrim(name)
+    and char_length(name) between 1 and 200
+  ),
+  cover_url text check (
+    cover_url is null
+    or (
+      cover_url = btrim(cover_url)
+      and char_length(cover_url) <= 2048
+      and cover_url ~ '^https://images[.]igdb[.]com/igdb/image/upload/t_cover_big_2x/[A-Za-z0-9_-]+[.]jpg$'
+    )
+  ),
+  release_date date not null,
+  created_at timestamptz not null default now(),
+  unique (user_id, igdb_id)
 );
 
 create table public.lists (
@@ -282,15 +266,17 @@ create index lists_user_id_created_at_idx on public.lists (user_id, created_at d
 create unique index lists_user_system_key_idx on public.lists (user_id, system_key)
   where system_key is not null;
 create index list_items_game_id_idx on public.list_items (game_id);
+create index list_items_list_id_added_at_game_id_idx
+  on public.list_items (list_id, added_at desc, game_id desc);
 ```
 
 Add `public.handle_new_user()` plus an `after insert` trigger on `auth.users`, then backfill missing profiles using verified metadata fields with email-local-part fallback.
 
 - [ ] **Step 4: Add RLS, minimum grants, and atomic functions**
 
-Policies use `(select auth.uid())`; authenticated users select/update their profile, select their lists/items, and insert custom lists only with `system_key is null`. Revoke table writes to `games`; grant its select to authenticated.
+Policies use `(select auth.uid())`; authenticated users select/update their profile, select their lists/items and per-user game snapshots, and insert custom lists only with `system_key is null`. Revoke table writes to `games`; grant its own-row select to authenticated. The trigger-only `handle_new_user` function is not executable by `authenticated`.
 
-Each `security definer` function uses `set search_path = ''`, rejects a null user, schema-qualifies every table, validates list ownership before writes, and is executable only by `authenticated`. `add_game_to_lists` uses `on conflict (igdb_id) do nothing` and `on conflict (list_id, game_id) do nothing`. `toggle_want_to_play` catches the unique-list race by selecting the existing row after conflict and returns the final membership boolean.
+Each client RPC marked `security definer` uses `set search_path = ''`, rejects a null user, schema-qualifies every table, validates list ownership before writes, and is executable only by `authenticated`. Snapshot inputs must use positive safe-integer IGDB IDs, trimmed names of 1–200 characters, required dates, and null or canonical bounded IGDB cover URLs. `get_want_to_play_igdb_ids` rejects more than 100 raw IDs; `add_game_to_lists` rejects more than 1000 raw list IDs before deduplication and upserts on `(user_id, igdb_id)`. `set_want_to_play` locks the special list row and applies `p_desired` idempotently; `false` does not create an absent list.
 
 Use these exact result contracts:
 
@@ -309,21 +295,20 @@ add_game_to_lists(
   p_list_ids bigint[]
 ) returns bigint[]
 
-toggle_want_to_play(
+set_want_to_play(
   p_igdb_id bigint,
   p_name text,
   p_cover_url text,
-  p_release_date date
+  p_release_date date,
+  p_desired boolean
 ) returns boolean
 ```
 
-`get_my_lists` orders lists by `created_at desc`, counts items, and uses a lateral subquery limited to the three newest non-null covers. `get_want_to_play_igdb_ids` intersects the supplied IDs with the current user's special list, so release membership is one batched request.
+`get_my_lists` orders lists by `created_at desc`, counts items, and uses a lateral subquery limited to the three newest non-null covers. `get_want_to_play_igdb_ids` intersects each bounded chunk with the current user's snapshots and special list.
 
-- [ ] **Step 5: Verify GREEN and optionally execute locally**
+- [ ] **Step 5: Inspect the final migration contract and execute when infrastructure is available**
 
-Run: `npm run test:run -- server/database/auth-and-lists-migration.test.ts`
-
-Expected: PASS.
+Manually inspect the complete transaction against the contract above. If Supabase CLI or Docker is available, reset a disposable local database and exercise cross-user RLS, hostile input bounds, and concurrent desired-state writes. Otherwise record the missing execution environment as a verification limitation.
 
 If `supabase --version` succeeds, also run `supabase db reset` and expect the migration to complete. If the CLI is absent, record that database execution remains an environment verification, not a unit-test failure.
 
@@ -826,7 +811,7 @@ it('passes the exact game snapshot and selected list ids to the atomic RPC', asy
 });
 ```
 
-Also cover create-list insert with the authenticated `userId`, empty RPC data, duplicate list IDs normalized once, batched want-to-play IDs, toggle return value, invalid response, and sanitized SDK errors.
+Also cover create-list insert with the authenticated `userId`, empty RPC data, duplicate list IDs normalized once, chunked want-to-play IDs, desired-state return values, invalid responses, and sanitized SDK errors.
 
 - [ ] **Step 4: Verify repository RED**
 
@@ -842,11 +827,11 @@ export interface ListsRepository {
   createList(userId: string, input: CreateListInput): Promise<UserListSummary>;
   getWantToPlayIds(igdbIds: readonly number[]): Promise<ReadonlySet<number>>;
   listSummaries(): Promise<readonly UserListSummary[]>;
-  toggleWantToPlay(game: GameSnapshot): Promise<boolean>;
+  setWantToPlay(game: GameSnapshot, desired: boolean): Promise<boolean>;
 }
 ```
 
-Deduplicate numeric IDs with `Set`, reject an empty add selection before transport, validate every unknown payload with Zod, and convert all transport failures to `DataError`.
+Deduplicate numeric IDs with `Set`, reject an empty add selection and more than 1000 raw list IDs before transport, split membership reads into chunks of at most 100, validate every unknown payload with Zod, and convert all transport failures to `DataError`.
 
 - [ ] **Step 6: Verify GREEN**
 
@@ -913,7 +898,7 @@ it('clears personal caches when the authenticated user changes', async () => {
 });
 ```
 
-Also cover retry after error, `createList` refresh, batched membership load, optimistic work being avoided, and toggle failure preserving the previous set.
+Also cover retry after error, `createList` refresh, per-ID membership readiness/errors, batched membership load, optimistic work being avoided, desired-state failure preserving the previous set, and serialized mutations for the same game.
 
 - [ ] **Step 2: Verify provider RED**
 
@@ -932,16 +917,17 @@ export type ListsState =
 
 export interface ListsContextValue {
   readonly listsState: ListsState;
+  readonly wantToPlayMemberships: ReadonlyMap<number, 'loading' | 'ready' | 'error'>;
   readonly wantToPlayIds: ReadonlySet<number>;
   addGameToLists(game: GameSnapshot, listIds: readonly number[]): Promise<void>;
   createList(input: CreateListInput): Promise<UserListSummary>;
   loadLists(options?: { readonly force?: boolean }): Promise<void>;
   loadWantToPlayIds(igdbIds: readonly number[]): Promise<void>;
-  toggleWantToPlay(game: GameSnapshot): Promise<boolean>;
+  setWantToPlay(game: GameSnapshot, desired: boolean): Promise<boolean>;
 }
 ```
 
-Cache one in-flight list promise in a ref, use functional state updates, clear all personal state on user-ID change or anonymous state, and update `wantToPlayIds` only after a successful RPC response.
+Cache one in-flight list promise in a ref, use functional state updates, clear all personal state on user-ID change or anonymous state, and publish membership readiness/error by IGDB ID. Update `wantToPlayIds` only after a successful RPC response and serialize desired-state writes per game without allowing one rejection to poison the queue.
 
 `ListsProvider` accepts `repository: ListsRepository | null`. A null repository keeps descendants renderable and changes attempted private loads to the fixed configuration error. In `AppRouter`, add optional `authService` and `listsRepository` props for tests. Defaults are built from the same lazy Supabase client, and the provider order is `AuthProvider` → `ListsProvider` → `Routes`.
 
@@ -1116,13 +1102,13 @@ it('asks for authentication instead of mutating an anonymous card', async () => 
     type: 'toggle-want-to-play',
     igdbId: 42,
   });
-  expect(repository.toggleWantToPlay).not.toHaveBeenCalled();
+  expect(repository.setWantToPlay).not.toHaveBeenCalled();
 });
 
 it('changes want-to-play only after the RPC confirms', async () => {
   const user = userEvent.setup();
   const pending = deferred<boolean>();
-  repository.toggleWantToPlay.mockReturnValue(pending.promise);
+  repository.setWantToPlay.mockReturnValue(pending.promise);
   renderReleaseCard({ authState: authenticatedState, repository });
   const button = screen.getAllByRole('button', {
     name: 'Marcar Eclipse Protocol como quero jogar',
@@ -1147,7 +1133,7 @@ it('loads real lists on modal open and saves the selected ids', async () => {
 });
 ```
 
-Also test RPC failure preserving the old want state, one batched `getWantToPlayIds` call per successful release response, and consumption of matching pending intents exactly once.
+Also test RPC failure preserving the old want state, per-ID disabled/read-failure/retry behavior, repository chunking of large membership reads, and consumption of matching pending intents exactly once immediately before execution.
 
 - [ ] **Step 4: Verify release RED**
 
@@ -1170,9 +1156,9 @@ function toGameSnapshot(item: ReleaseItem): GameSnapshot {
 }
 ```
 
-After a successful release response and only for an authenticated user, `ReleasesPage` sends all current release IDs to `loadWantToPlayIds` once. Do not request membership from each card. `ReleaseCard` reads the shared `wantToPlayIds` set, disables both responsive copies of a mutating action together, and calls `loadLists` lazily when its one modal opens.
+After a successful release response and only for an authenticated user, `ReleasesPage` sends all current release IDs to `loadWantToPlayIds` once. Do not request membership from each card. `ReleaseCard` reads the shared set and per-ID readiness map, keeps both authenticated button copies disabled until that ID is known, exposes a sanitized per-game retry on failure, and calls `loadLists` lazily when its one modal opens.
 
-For anonymous actions, save the versioned intent before navigating to `/entrar`. After login, the card whose `item.id` matches the pending intent clears it before opening the modal or starting the toggle; clearing first prevents duplicate Strict Mode execution. If no matching card appears after the release request settles, clear the intent and announce “O jogo não está mais nesta lista. Tente novamente.”
+For anonymous actions, save the versioned intent before navigating to `/entrar`. After login, card discovery alone does not clear the action intent. The matching card waits for known membership, then clears the intent immediately before opening the modal or calling `setWantToPlay(snapshot, true)`; clearing at execution prevents duplicate Strict Mode work while retries remain possible. If no matching card appears after the release request settles, clear the intent and announce “O jogo não está mais nesta lista. Tente novamente.”
 
 Delete `demoAddToListsOptions` and its source file once no import remains.
 

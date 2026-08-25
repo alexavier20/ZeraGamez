@@ -21,7 +21,7 @@ As versões exatas instaladas estão registradas no `package-lock.json`.
 
 ## Pré-requisitos
 
-- Node.js 22.13 ou superior. O workflow de integração contínua usa Node.js 24 LTS.
+- Node.js 22.22.0 ou superior. O workflow de integração contínua usa Node.js 24 LTS.
 - npm 10 ou superior.
 
 ## Instalação

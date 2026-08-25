@@ -12,7 +12,7 @@ interface TransportResponse {
 }
 
 const game: GameSnapshot = {
-  coverUrl: '/covers/chrono-veil.png',
+  coverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/chrono-veil.jpg',
   igdbId: 42,
   name: 'Chrono Veil',
   releaseDate: '2027-03-14',
@@ -54,7 +54,9 @@ function createListsPort(
   const select = vi.fn(() => ({ single }));
   const insert = vi.fn(() => ({ select }));
   const from = vi.fn(() => ({ insert }));
-  const rpc = vi.fn((name: string): Promise<TransportResponse> =>
+  const rpc = vi.fn<
+    (name: string, args?: Readonly<Record<string, unknown>>) => Promise<TransportResponse>
+  >((name: string): Promise<TransportResponse> =>
     Promise.resolve({
       data: rpcData[name] ?? null,
       error: null,
@@ -137,11 +139,11 @@ describe('createSupabaseListsRepository', () => {
   it.each(invalidIds)(
     'rejects a %s snapshot IGDB id before transport',
     async (_label, invalidId) => {
-      const port = createListsPort({ toggle_want_to_play: true });
+      const port = createListsPort({ set_want_to_play: true });
       const repository = createSupabaseListsRepository(port);
 
       await expect(
-        repository.toggleWantToPlay({ ...game, igdbId: invalidId }),
+        repository.setWantToPlay({ ...game, igdbId: invalidId }, true),
       ).rejects.toMatchObject(sanitizedDataError);
       expect(port.rpc).not.toHaveBeenCalled();
     },
@@ -153,11 +155,31 @@ describe('createSupabaseListsRepository', () => {
     ['impossible civil date', { ...game, releaseDate: '2027-02-29' }],
     ['non-ISO civil date', { ...game, releaseDate: '2027-2-14' }],
     ['non-string cover URL', { ...game, coverUrl: 123 } as unknown as GameSnapshot],
+    ['an HTTP cover URL', { ...game, coverUrl: 'http://images.igdb.com/cover.jpg' }],
+    ['a non-IGDB cover host', { ...game, coverUrl: 'https://images.example.com/cover.jpg' }],
+    [
+      'credentials in the cover URL',
+      {
+        ...game,
+        coverUrl: 'https://user:secret@images.igdb.com/igdb/image/upload/t_cover_big_2x/cover.jpg',
+      },
+    ],
+    [
+      'a noncanonical IGDB cover path',
+      { ...game, coverUrl: 'https://images.igdb.com/igdb/image/upload/cover.jpg?size=big' },
+    ],
+    [
+      'a cover URL over 2048 characters',
+      {
+        ...game,
+        coverUrl: `https://images.igdb.com/igdb/image/upload/t_cover_big_2x/${'x'.repeat(2000)}.jpg`,
+      },
+    ],
   ])('rejects a snapshot with %s before transport', async (_label, invalidGame) => {
-    const port = createListsPort({ toggle_want_to_play: true });
+    const port = createListsPort({ set_want_to_play: true });
     const repository = createSupabaseListsRepository(port);
 
-    await expect(repository.toggleWantToPlay(invalidGame)).rejects.toMatchObject(
+    await expect(repository.setWantToPlay(invalidGame, true)).rejects.toMatchObject(
       sanitizedDataError,
     );
     expect(port.rpc).not.toHaveBeenCalled();
@@ -181,6 +203,40 @@ describe('createSupabaseListsRepository', () => {
 
     await expect(repository.addGameToLists(game, [])).rejects.toBeInstanceOf(DataError);
     expect(port.rpc).not.toHaveBeenCalled();
+  });
+
+  it('rejects more than 1,000 distinct add-list ids before transport', async () => {
+    const port = createListsPort({ add_game_to_lists: [] });
+    const repository = createSupabaseListsRepository(port);
+    const listIds = Array.from({ length: 1_001 }, (_value, index) => index + 1);
+
+    await expect(repository.addGameToLists(game, listIds)).rejects.toMatchObject(
+      sanitizedDataError,
+    );
+    expect(port.rpc).not.toHaveBeenCalled();
+  });
+
+  it('rejects more than 1,000 raw add-list ids before deduplication', async () => {
+    const port = createListsPort({ add_game_to_lists: [] });
+    const repository = createSupabaseListsRepository(port);
+
+    await expect(repository.addGameToLists(game, Array(1_001).fill(9))).rejects.toMatchObject(
+      sanitizedDataError,
+    );
+    expect(port.rpc).not.toHaveBeenCalled();
+  });
+
+  it('accepts exactly 1,000 distinct add-list ids', async () => {
+    const port = createListsPort({ add_game_to_lists: [] });
+    const repository = createSupabaseListsRepository(port);
+    const listIds = Array.from({ length: 1_000 }, (_value, index) => index + 1);
+
+    await repository.addGameToLists(game, listIds);
+
+    expect(port.rpc).toHaveBeenCalledWith(
+      'add_game_to_lists',
+      expect.objectContaining({ p_list_ids: listIds }),
+    );
   });
 
   it('normalizes a create-list insert and uses the authenticated user id', async () => {
@@ -265,6 +321,30 @@ describe('createSupabaseListsRepository', () => {
     });
   });
 
+  it('chunks membership RPCs at 100 ids and unions immutable results', async () => {
+    const port = createListsPort();
+    port.rpc.mockImplementation((_name: string, args?: Readonly<Record<string, unknown>>) => {
+      const requestedIds = args?.p_igdb_ids as readonly number[];
+      return Promise.resolve({
+        data: requestedIds
+          .filter((igdbId) => igdbId % 2 === 0)
+          .map((igdbId) => ({ igdb_id: igdbId })),
+        error: null,
+      });
+    });
+    const repository = createSupabaseListsRepository(port);
+    const requestedIds = Array.from({ length: 205 }, (_value, index) => index + 1);
+
+    const ids = await repository.getWantToPlayIds(requestedIds);
+
+    expect(port.rpc).toHaveBeenCalledTimes(3);
+    expect(port.rpc.mock.calls.map((call) => (call[1]?.p_igdb_ids as number[]).length)).toEqual([
+      100, 100, 5,
+    ]);
+    expect([...ids]).toEqual(requestedIds.filter((igdbId) => igdbId % 2 === 0));
+    expect((ids as unknown as { add?: unknown }).add).toBeUndefined();
+  });
+
   it('returns an empty readonly set without transport work for an empty id batch', async () => {
     const port = createListsPort();
     const repository = createSupabaseListsRepository(port);
@@ -299,19 +379,33 @@ describe('createSupabaseListsRepository', () => {
     },
   );
 
-  it('passes the exact snapshot to toggle and validates the boolean result', async () => {
-    const port = createListsPort({ toggle_want_to_play: true });
+  it.each([true, false])(
+    'passes the exact snapshot and desired state %s to the idempotent setter',
+    async (desired) => {
+      const port = createListsPort({ set_want_to_play: desired });
+      const repository = createSupabaseListsRepository(port);
+
+      await expect(
+        repository.setWantToPlay({ ...game, name: '  Chrono Veil  ' }, desired),
+      ).resolves.toBe(desired);
+      expect(port.rpc).toHaveBeenCalledWith('set_want_to_play', {
+        p_igdb_id: game.igdbId,
+        p_name: game.name,
+        p_cover_url: game.coverUrl,
+        p_release_date: game.releaseDate,
+        p_desired: desired,
+      });
+    },
+  );
+
+  it('rejects a non-boolean desired state before transport', async () => {
+    const port = createListsPort({ set_want_to_play: true });
     const repository = createSupabaseListsRepository(port);
 
-    await expect(repository.toggleWantToPlay({ ...game, name: '  Chrono Veil  ' })).resolves.toBe(
-      true,
+    await expect(repository.setWantToPlay(game, 'yes' as unknown as boolean)).rejects.toMatchObject(
+      sanitizedDataError,
     );
-    expect(port.rpc).toHaveBeenCalledWith('toggle_want_to_play', {
-      p_igdb_id: game.igdbId,
-      p_name: game.name,
-      p_cover_url: game.coverUrl,
-      p_release_date: game.releaseDate,
-    });
+    expect(port.rpc).not.toHaveBeenCalled();
   });
 
   it('rejects malformed database payloads with a sanitized DataError', async () => {
@@ -337,10 +431,10 @@ describe('createSupabaseListsRepository', () => {
   });
 
   it('rejects null data for a non-null SQL RPC result', async () => {
-    const port = createListsPort({ toggle_want_to_play: null });
+    const port = createListsPort({ set_want_to_play: null });
     const repository = createSupabaseListsRepository(port);
 
-    await expect(repository.toggleWantToPlay(game)).rejects.toBeInstanceOf(DataError);
+    await expect(repository.setWantToPlay(game, true)).rejects.toBeInstanceOf(DataError);
   });
 
   it('sanitizes SDK errors returned by the transport', async () => {

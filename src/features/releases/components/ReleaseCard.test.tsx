@@ -1,12 +1,16 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { StrictMode } from 'react';
+import { StrictMode, useEffect } from 'react';
 import { BrowserRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AuthProvider, useAuth } from '@/features/auth/context/AuthProvider';
-import { peekPendingAuthIntent } from '@/features/auth/model/pending-auth-intent';
-import { ListsProvider } from '@/features/lists/context/ListsProvider';
+import {
+  clearPendingAuthIntent,
+  peekPendingAuthIntent,
+  savePendingAuthIntent,
+} from '@/features/auth/model/pending-auth-intent';
+import { ListsProvider, useLists } from '@/features/lists/context/ListsProvider';
 import { ReleaseCard } from '@/features/releases/components/ReleaseCard';
 
 import type { AuthService } from '@/features/auth/api/auth-service';
@@ -19,7 +23,7 @@ const release: ReleaseItem = {
   id: 42,
   slug: 'eclipse-protocol',
   name: 'Eclipse Protocol',
-  coverUrl: 'https://images.example.com/eclipse-protocol.jpg',
+  coverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/eclipse-protocol.jpg',
   releaseDate: '2026-08-10',
   platforms: [
     { id: 6, name: 'PC (Microsoft Windows)', abbreviation: 'PC' },
@@ -47,7 +51,7 @@ const rpgList: UserListSummary = {
 };
 
 const expectedGameSnapshot = {
-  coverUrl: 'https://images.example.com/eclipse-protocol.jpg',
+  coverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/eclipse-protocol.jpg',
   igdbId: 42,
   name: 'Eclipse Protocol',
   releaseDate: '2026-08-10',
@@ -75,16 +79,14 @@ function createAuthService(initialUser: AuthenticatedUser | null): AuthService {
 }
 
 function createRepository(overrides: Partial<ListsRepository> = {}): ListsRepository {
-  let wantToPlay = false;
   return {
     addGameToLists: vi.fn().mockResolvedValue([]),
     createList: vi.fn().mockResolvedValue(rpgList),
     getWantToPlayIds: vi.fn().mockResolvedValue(new Set<number>()),
     listSummaries: vi.fn().mockResolvedValue([rpgList]),
-    toggleWantToPlay: vi.fn().mockImplementation(() => {
-      wantToPlay = !wantToPlay;
-      return Promise.resolve(wantToPlay);
-    }),
+    setWantToPlay: vi
+      .fn()
+      .mockImplementation((_game, desired: boolean) => Promise.resolve(desired)),
     ...overrides,
   };
 }
@@ -102,6 +104,18 @@ function AuthStatus() {
   return <span data-testid="auth-status">{state.status}</span>;
 }
 
+function MembershipLoader() {
+  const { state } = useAuth();
+  const { loadWantToPlayIds, scopeVersion } = useLists();
+
+  useEffect(() => {
+    if (state.status !== 'authenticated') return;
+    void loadWantToPlayIds([release.id]).catch(() => undefined);
+  }, [loadWantToPlayIds, scopeVersion, state.status]);
+
+  return null;
+}
+
 function renderPersistentCard({
   authService = createAuthService(authenticatedUser),
   onPendingActionConsumed,
@@ -114,6 +128,7 @@ function renderPersistentCard({
       <ListsProvider repository={repository}>
         <BrowserRouter>
           <AuthStatus />
+          <MembershipLoader />
           <ReleaseCard
             generatedAt="2026-08-10T12:00:00.000Z"
             item={release}
@@ -301,8 +316,8 @@ describe('ReleaseCard', () => {
 
   it('asks for authentication instead of mutating an anonymous card', async () => {
     const user = userEvent.setup();
-    const toggleWantToPlay = vi.fn().mockResolvedValue(true);
-    const repository = createRepository({ toggleWantToPlay });
+    const setWantToPlay = vi.fn().mockResolvedValue(true);
+    const repository = createRepository({ setWantToPlay });
     renderPersistentCard({
       authService: createAuthService(null),
       repository,
@@ -318,15 +333,15 @@ describe('ReleaseCard', () => {
       type: 'toggle-want-to-play',
       igdbId: 42,
     });
-    expect(toggleWantToPlay).not.toHaveBeenCalled();
+    expect(setWantToPlay).not.toHaveBeenCalled();
   });
 
   it('disables both responsive list actions while authentication is loading without redirecting or mutating', async () => {
     const pendingAuth = deferred<AuthenticatedUser | null>();
     const listSummaries = vi.fn().mockResolvedValue([rpgList]);
     const addGameToLists = vi.fn().mockResolvedValue([]);
-    const toggleWantToPlay = vi.fn().mockResolvedValue(true);
-    const repository = createRepository({ addGameToLists, listSummaries, toggleWantToPlay });
+    const setWantToPlay = vi.fn().mockResolvedValue(true);
+    const repository = createRepository({ addGameToLists, listSummaries, setWantToPlay });
     const authService: AuthService = {
       ...createAuthService(null),
       getCurrentUser: vi.fn(() => pendingAuth.promise),
@@ -351,7 +366,7 @@ describe('ReleaseCard', () => {
     expect(peekPendingAuthIntent(sessionStorage)).toBeNull();
     expect(listSummaries).not.toHaveBeenCalled();
     expect(addGameToLists).not.toHaveBeenCalled();
-    expect(toggleWantToPlay).not.toHaveBeenCalled();
+    expect(setWantToPlay).not.toHaveBeenCalled();
 
     pendingAuth.resolve(null);
     expect(await screen.findByTestId('auth-status')).toHaveTextContent('anonymous');
@@ -378,11 +393,112 @@ describe('ReleaseCard', () => {
     expect(addGameToLists).not.toHaveBeenCalled();
   });
 
+  it('keeps authenticated want-to-play controls disabled until this game membership is known', async () => {
+    const pendingMembership = deferred<ReadonlySet<number>>();
+    const repository = createRepository({
+      getWantToPlayIds: vi.fn(() => pendingMembership.promise),
+    });
+    renderPersistentCard({ repository });
+    await waitForAuthenticated();
+
+    for (const button of screen.getAllByRole('button', {
+      name: 'Marcar Eclipse Protocol como quero jogar',
+    })) {
+      expect(button).toBeDisabled();
+    }
+    for (const button of screen.getAllByRole('button', {
+      name: 'Adicionar Eclipse Protocol à lista',
+    })) {
+      expect(button).toBeEnabled();
+    }
+
+    pendingMembership.resolve(new Set<number>());
+    await waitFor(() => {
+      for (const button of screen.getAllByRole('button', {
+        name: 'Marcar Eclipse Protocol como quero jogar',
+      })) {
+        expect(button).toBeEnabled();
+      }
+    });
+  });
+
+  it('shows sanitized membership-read failure copy and retries only this game', async () => {
+    const user = userEvent.setup();
+    const getWantToPlayIds = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('raw membership detail'))
+      .mockResolvedValueOnce(new Set<number>());
+    renderPersistentCard({ repository: createRepository({ getWantToPlayIds }) });
+    await waitForAuthenticated();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Não foi possível verificar Quero jogar.');
+    expect(alert).not.toHaveTextContent('raw membership detail');
+    for (const button of screen.getAllByRole('button', {
+      name: 'Marcar Eclipse Protocol como quero jogar',
+    })) {
+      expect(button).toBeDisabled();
+    }
+
+    await user.click(
+      screen.getByRole('button', { name: 'Tentar novamente para Eclipse Protocol' }),
+    );
+
+    await waitFor(() => {
+      expect(getWantToPlayIds).toHaveBeenCalledTimes(2);
+    });
+    await waitFor(() => {
+      for (const button of screen.getAllByRole('button', {
+        name: 'Marcar Eclipse Protocol como quero jogar',
+      })) {
+        expect(button).toBeEnabled();
+      }
+    });
+  });
+
+  it('keeps a resumed intent until membership is known then requests desired true once', async () => {
+    const pendingMembership = deferred<ReadonlySet<number>>();
+    const getWantToPlayIds = vi.fn(() => pendingMembership.promise);
+    const setWantToPlay = vi.fn().mockResolvedValue(true);
+    savePendingAuthIntent(sessionStorage, {
+      version: 1,
+      type: 'toggle-want-to-play',
+      returnTo: '/lancamentos',
+      igdbId: release.id,
+    });
+    const onPendingActionConsumed = vi.fn(() => {
+      clearPendingAuthIntent(sessionStorage);
+    });
+    renderPersistentCard({
+      onPendingActionConsumed,
+      pendingAction: 'toggle-want-to-play',
+      repository: createRepository({ getWantToPlayIds, setWantToPlay }),
+      strict: true,
+    });
+    await waitForAuthenticated();
+
+    expect(peekPendingAuthIntent(sessionStorage)).toMatchObject({ igdbId: release.id });
+    expect(onPendingActionConsumed).not.toHaveBeenCalled();
+    expect(setWantToPlay).not.toHaveBeenCalled();
+
+    pendingMembership.resolve(new Set([release.id]));
+    await waitFor(() => {
+      expect(setWantToPlay).toHaveBeenCalledOnce();
+    });
+
+    expect(onPendingActionConsumed).toHaveBeenCalledOnce();
+    expect(onPendingActionConsumed.mock.invocationCallOrder[0]).toBeLessThan(
+      setWantToPlay.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
+    );
+    expect(setWantToPlay).toHaveBeenCalledWith(expectedGameSnapshot, true);
+    expect(peekPendingAuthIntent(sessionStorage)).toBeNull();
+  });
+
   it('changes want-to-play only after the RPC confirms and shares pending state', async () => {
     const user = userEvent.setup();
     const pending = deferred<boolean>();
-    const toggleWantToPlay = vi.fn(() => pending.promise);
-    const repository = createRepository({ toggleWantToPlay });
+    const setWantToPlay = vi.fn(() => pending.promise);
+    const repository = createRepository({ setWantToPlay });
     const authService = createAuthService(authenticatedUser);
     renderPersistentCard({ authService, repository });
     await waitForAuthenticated();
@@ -396,7 +512,7 @@ describe('ReleaseCard', () => {
       expect(button).toBeDisabled();
       expect(button).toHaveAttribute('aria-pressed', 'false');
     }
-    expect(toggleWantToPlay).toHaveBeenCalledWith(expectedGameSnapshot);
+    expect(setWantToPlay).toHaveBeenCalledWith(expectedGameSnapshot, true);
 
     pending.resolve(true);
     await waitFor(() => {
@@ -411,8 +527,8 @@ describe('ReleaseCard', () => {
 
   it('preserves confirmed want-to-play state and announces sanitized copy after RPC failure', async () => {
     const user = userEvent.setup();
-    const toggleWantToPlay = vi.fn().mockRejectedValue(new Error('raw rpc detail'));
-    const repository = createRepository({ toggleWantToPlay });
+    const setWantToPlay = vi.fn().mockRejectedValue(new Error('raw rpc detail'));
+    const repository = createRepository({ setWantToPlay });
     const authService = createAuthService(authenticatedUser);
     renderPersistentCard({ authService, repository });
     await waitForAuthenticated();

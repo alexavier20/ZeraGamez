@@ -110,7 +110,6 @@ export function ReleasesPage() {
       )
       .at(0);
     if (matchingItem) {
-      clearPendingAuthIntent(sessionStorage);
       queueMicrotask(() => {
         setActionAnnouncement(null);
         setPendingAction({
@@ -136,8 +135,16 @@ export function ReleasesPage() {
   }, [authState.status, loadMore, pagination.status, state]);
 
   const handlePendingActionConsumed = useCallback(() => {
+    const storedIntent = peekPendingAuthIntent(sessionStorage);
+    if (
+      pendingAction !== null &&
+      storedIntent?.type === pendingAction.type &&
+      storedIntent.igdbId === pendingAction.igdbId
+    ) {
+      clearPendingAuthIntent(sessionStorage);
+    }
     setPendingAction(null);
-  }, []);
+  }, [pendingAction]);
 
   const handlePlatformChange = (platform: ReleasePlatformFilterKey) => {
     setFilters((current) => ({ ...current, platform }));

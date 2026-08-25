@@ -20,15 +20,18 @@ export type ListsState =
   | { readonly status: 'success'; readonly lists: readonly UserListSummary[] }
   | { readonly status: 'error'; readonly message: string };
 
+export type WantToPlayMembershipStatus = 'loading' | 'ready' | 'error';
+
 export interface ListsContextValue {
   readonly listsState: ListsState;
   readonly scopeVersion: number;
   readonly wantToPlayIds: ReadonlySet<number>;
+  readonly wantToPlayMemberships: ReadonlyMap<number, WantToPlayMembershipStatus>;
   readonly addGameToLists: (game: GameSnapshot, listIds: readonly number[]) => Promise<void>;
   readonly createList: (input: CreateListInput) => Promise<UserListSummary>;
   readonly loadLists: (options?: { readonly force?: boolean }) => Promise<void>;
   readonly loadWantToPlayIds: (igdbIds: readonly number[]) => Promise<void>;
-  readonly toggleWantToPlay: (game: GameSnapshot) => Promise<boolean>;
+  readonly setWantToPlay: (game: GameSnapshot, desired: boolean) => Promise<boolean>;
 }
 
 interface ListsProviderProps {
@@ -42,6 +45,7 @@ interface ScopedState {
   readonly scopeVersion: number;
   readonly userId: string | null;
   readonly wantToPlayIds: ReadonlySet<number>;
+  readonly wantToPlayMemberships: ReadonlyMap<number, WantToPlayMembershipStatus>;
 }
 
 interface ActiveScope {
@@ -57,7 +61,7 @@ interface ScopedPromise {
   readonly scope: ActiveScope;
 }
 
-interface TogglePromise {
+interface MutationPromise {
   readonly promise: Promise<boolean>;
   readonly scope: ActiveScope;
 }
@@ -99,6 +103,7 @@ function initialScopedState(
     scopeVersion,
     userId,
     wantToPlayIds: new Set<number>(),
+    wantToPlayMemberships: new Map<number, WantToPlayMembershipStatus>(),
   };
 }
 
@@ -106,11 +111,12 @@ const defaultListsContext: ListsContextValue = {
   listsState: idleListsState,
   scopeVersion: 0,
   wantToPlayIds: new Set<number>(),
+  wantToPlayMemberships: new Map<number, WantToPlayMembershipStatus>(),
   addGameToLists: unavailableAction,
   createList: unavailableAction,
   loadLists: unavailableAction,
   loadWantToPlayIds: unavailableAction,
-  toggleWantToPlay: unavailableAction,
+  setWantToPlay: unavailableAction,
 };
 
 const ListsContext = createContext<ListsContextValue>(defaultListsContext);
@@ -129,12 +135,12 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
   const listInFlightRef = useRef<ScopedPromise | null>(null);
   const membershipLoadTokensRef = useRef(new Map<number, number>());
   const confirmedMutationVersionsRef = useRef(new Map<number, number>());
-  const toggleInFlightRef = useRef(new Map<number, TogglePromise>());
+  const mutationQueueRef = useRef(new Map<number, MutationPromise>());
 
   useLayoutEffect(() => {
     const membershipLoadTokens = membershipLoadTokensRef.current;
     const confirmedMutationVersions = confirmedMutationVersionsRef.current;
-    const toggleInFlight = toggleInFlightRef.current;
+    const mutationQueue = mutationQueueRef.current;
     const scope: ActiveScope = {
       active: true,
       listsState: idleListsState,
@@ -147,7 +153,7 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
     listInFlightRef.current = null;
     membershipLoadTokens.clear();
     confirmedMutationVersions.clear();
-    toggleInFlight.clear();
+    mutationQueue.clear();
 
     return () => {
       scope.active = false;
@@ -155,7 +161,7 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
       listInFlightRef.current = null;
       membershipLoadTokens.clear();
       confirmedMutationVersions.clear();
-      toggleInFlight.clear();
+      mutationQueue.clear();
     };
   }, [repository, scopedState.scopeVersion, userId]);
 
@@ -192,12 +198,31 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
     [isCurrentScope],
   );
 
-  const publishWantToPlayIds = useCallback(
-    (scope: ActiveScope, update: (current: ReadonlySet<number>) => ReadonlySet<number>) => {
+  const publishWantToPlayState = useCallback(
+    (
+      scope: ActiveScope,
+      update: (current: {
+        readonly ids: ReadonlySet<number>;
+        readonly memberships: ReadonlyMap<number, WantToPlayMembershipStatus>;
+      }) => {
+        readonly ids: ReadonlySet<number>;
+        readonly memberships: ReadonlyMap<number, WantToPlayMembershipStatus>;
+      },
+    ) => {
       if (!isCurrentScope(scope)) return;
       setScopedState((current) =>
         current.scopeVersion === scope.scopeVersion
-          ? { ...current, wantToPlayIds: update(current.wantToPlayIds) }
+          ? (() => {
+              const next = update({
+                ids: current.wantToPlayIds,
+                memberships: current.wantToPlayMemberships,
+              });
+              return {
+                ...current,
+                wantToPlayIds: next.ids,
+                wantToPlayMemberships: next.memberships,
+              };
+            })()
           : current,
       );
     },
@@ -324,11 +349,36 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
         );
       }
 
-      const loadedIds = await repositoryForScope.getWantToPlayIds(uniqueIds);
+      publishWantToPlayState(scope, (current) => {
+        const memberships = new Map(current.memberships);
+        for (const igdbId of uniqueIds) memberships.set(igdbId, 'loading');
+        return { ids: current.ids, memberships };
+      });
+
+      let loadedIds: ReadonlySet<number>;
+      try {
+        loadedIds = await repositoryForScope.getWantToPlayIds(uniqueIds);
+      } catch (error) {
+        if (!isCurrentScope(scope)) throw new ListsOperationCancelledError();
+        publishWantToPlayState(scope, (current) => {
+          const memberships = new Map(current.memberships);
+          for (const igdbId of uniqueIds) {
+            const isNewestLoad =
+              membershipLoadTokensRef.current.get(igdbId) === loadTokens.get(igdbId);
+            const hasNoNewConfirmation =
+              (confirmedMutationVersionsRef.current.get(igdbId) ?? 0) ===
+              confirmedMutationVersions.get(igdbId);
+            if (isNewestLoad && hasNoNewConfirmation) memberships.set(igdbId, 'error');
+          }
+          return { ids: current.ids, memberships };
+        });
+        throw error;
+      }
       if (!isCurrentScope(scope)) return;
 
-      publishWantToPlayIds(scope, (current) => {
-        const next = new Set(current);
+      publishWantToPlayState(scope, (current) => {
+        const ids = new Set(current.ids);
+        const memberships = new Map(current.memberships);
         for (const igdbId of uniqueIds) {
           const isNewestLoad =
             membershipLoadTokensRef.current.get(igdbId) === loadTokens.get(igdbId);
@@ -338,52 +388,55 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
           if (!isNewestLoad || !hasNoNewConfirmation) {
             continue;
           }
-          next.delete(igdbId);
-          if (loadedIds.has(igdbId)) next.add(igdbId);
+          ids.delete(igdbId);
+          if (loadedIds.has(igdbId)) ids.add(igdbId);
+          memberships.set(igdbId, 'ready');
         }
-        return next;
+        return { ids, memberships };
       });
     },
-    [isCurrentScope, publishWantToPlayIds, requireScope],
+    [isCurrentScope, publishWantToPlayState, requireScope],
   );
 
-  const toggleWantToPlay = useCallback<ListsContextValue['toggleWantToPlay']>(
-    async (game) => {
+  const setWantToPlay = useCallback<ListsContextValue['setWantToPlay']>(
+    async (game, desired) => {
       const scope = requireScope();
       const repositoryForScope = scope.repository;
       if (repositoryForScope === null) throw configurationError();
 
-      const existing = toggleInFlightRef.current.get(game.igdbId);
-      if (existing?.scope === scope) return existing.promise;
-
-      const operation = repositoryForScope
-        .toggleWantToPlay(game)
-        .then((isWantToPlay) => {
+      const previous = mutationQueueRef.current.get(game.igdbId);
+      const execute = () =>
+        repositoryForScope.setWantToPlay(game, desired).then((isWantToPlay) => {
           assertCurrentScope(scope);
           const confirmedVersion = (confirmedMutationVersionsRef.current.get(game.igdbId) ?? 0) + 1;
           confirmedMutationVersionsRef.current.set(game.igdbId, confirmedVersion);
-          publishWantToPlayIds(scope, (current) => {
-            const next = new Set(current);
-            if (isWantToPlay) next.add(game.igdbId);
-            else next.delete(game.igdbId);
-            return next;
+          publishWantToPlayState(scope, (current) => {
+            const ids = new Set(current.ids);
+            const memberships = new Map(current.memberships);
+            if (isWantToPlay) ids.add(game.igdbId);
+            else ids.delete(game.igdbId);
+            memberships.set(game.igdbId, 'ready');
+            return { ids, memberships };
           });
           return isWantToPlay;
-        })
+        });
+      const operation = (
+        previous?.scope === scope ? previous.promise.then(execute, execute) : execute()
+      )
         .catch((error: unknown) => {
           if (!isCurrentScope(scope)) throw new ListsOperationCancelledError();
           throw error;
         })
         .finally(() => {
-          if (toggleInFlightRef.current.get(game.igdbId)?.promise === operation) {
-            toggleInFlightRef.current.delete(game.igdbId);
+          if (mutationQueueRef.current.get(game.igdbId)?.promise === operation) {
+            mutationQueueRef.current.delete(game.igdbId);
           }
         });
 
-      toggleInFlightRef.current.set(game.igdbId, { promise: operation, scope });
+      mutationQueueRef.current.set(game.igdbId, { promise: operation, scope });
       return operation;
     },
-    [assertCurrentScope, isCurrentScope, publishWantToPlayIds, requireScope],
+    [assertCurrentScope, isCurrentScope, publishWantToPlayState, requireScope],
   );
 
   const value = useMemo<ListsContextValue>(
@@ -394,8 +447,9 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
       loadLists,
       loadWantToPlayIds,
       scopeVersion: scopedState.scopeVersion,
-      toggleWantToPlay,
+      setWantToPlay,
       wantToPlayIds: scopedState.wantToPlayIds,
+      wantToPlayMemberships: scopedState.wantToPlayMemberships,
     }),
     [
       addGameToLists,
@@ -405,7 +459,8 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
       scopedState.listsState,
       scopedState.scopeVersion,
       scopedState.wantToPlayIds,
-      toggleWantToPlay,
+      scopedState.wantToPlayMemberships,
+      setWantToPlay,
     ],
   );
 

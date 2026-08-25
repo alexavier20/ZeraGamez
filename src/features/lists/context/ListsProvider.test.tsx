@@ -91,7 +91,7 @@ function createRepository(overrides: Partial<ListsRepository> = {}): ListsReposi
     createList: vi.fn().mockResolvedValue(rpgList),
     getWantToPlayIds: vi.fn().mockResolvedValue(new Set<number>()),
     listSummaries: vi.fn().mockResolvedValue([]),
-    toggleWantToPlay: vi.fn().mockResolvedValue(false),
+    setWantToPlay: vi.fn().mockResolvedValue(false),
     ...overrides,
   };
 }
@@ -343,6 +343,37 @@ describe('ListsProvider', () => {
     expect(getWantToPlayIds).toHaveBeenNthCalledWith(1, [game.igdbId, 10]);
     expect(getWantToPlayIds).toHaveBeenNthCalledWith(2, [10, 11]);
     expect([...view.result.current.lists.wantToPlayIds]).toEqual([game.igdbId, 11]);
+    expect(view.result.current.lists.wantToPlayMemberships.get(game.igdbId)).toBe('ready');
+    expect(view.result.current.lists.wantToPlayMemberships.get(10)).toBe('ready');
+    expect(view.result.current.lists.wantToPlayMemberships.get(11)).toBe('ready');
+  });
+
+  it('scopes membership loading and sanitized retry state to each requested id', async () => {
+    const failedLoad = deferred<ReadonlySet<number>>();
+    const getWantToPlayIds = vi
+      .fn()
+      .mockImplementationOnce(() => failedLoad.promise)
+      .mockResolvedValueOnce(new Set([game.igdbId]));
+    const view = renderListsProvider(createRepository({ getWantToPlayIds }));
+    await waitForAuthenticated(view);
+
+    let first!: Promise<void>;
+    act(() => {
+      first = view.result.current.lists.loadWantToPlayIds([game.igdbId]);
+    });
+    expect(view.result.current.lists.wantToPlayMemberships.get(game.igdbId)).toBe('loading');
+    expect(view.result.current.lists.wantToPlayMemberships.get(10)).toBeUndefined();
+
+    failedLoad.reject(new Error('raw membership detail'));
+    await expect(first).rejects.toThrow('raw membership detail');
+    await waitFor(() => {
+      expect(view.result.current.lists.wantToPlayMemberships.get(game.igdbId)).toBe('error');
+    });
+    expect(view.result.current.lists.wantToPlayMemberships.get(10)).toBeUndefined();
+
+    await act(() => view.result.current.lists.loadWantToPlayIds([game.igdbId]));
+    expect(view.result.current.lists.wantToPlayMemberships.get(game.igdbId)).toBe('ready');
+    expect(view.result.current.lists.wantToPlayIds.has(game.igdbId)).toBe(true);
   });
 
   it('keeps the newest membership load when two loads for the same ID finish out of order', async () => {
@@ -372,13 +403,13 @@ describe('ListsProvider', () => {
 
   it('does not optimistically change memberships and preserves them when toggling fails', async () => {
     const pendingToggle = deferred<boolean>();
-    const toggleWantToPlay = vi
+    const setWantToPlay = vi
       .fn()
       .mockImplementationOnce(() => pendingToggle.promise)
       .mockRejectedValueOnce(new Error('rpc detail'));
     const repository = createRepository({
       getWantToPlayIds: vi.fn().mockResolvedValue(new Set([10])),
-      toggleWantToPlay,
+      setWantToPlay,
     });
     const view = renderListsProvider(repository);
     await waitForAuthenticated(view);
@@ -386,7 +417,7 @@ describe('ListsProvider', () => {
 
     let toggle!: Promise<boolean>;
     act(() => {
-      toggle = view.result.current.lists.toggleWantToPlay(game);
+      toggle = view.result.current.lists.setWantToPlay(game, true);
     });
     expect([...view.result.current.lists.wantToPlayIds]).toEqual([10]);
 
@@ -396,7 +427,9 @@ describe('ListsProvider', () => {
       expect([...view.result.current.lists.wantToPlayIds]).toEqual([10, game.igdbId]);
     });
 
-    await expect(view.result.current.lists.toggleWantToPlay(game)).rejects.toThrow('rpc detail');
+    await expect(view.result.current.lists.setWantToPlay(game, false)).rejects.toThrow(
+      'rpc detail',
+    );
     expect([...view.result.current.lists.wantToPlayIds]).toEqual([10, game.igdbId]);
   });
 
@@ -404,14 +437,14 @@ describe('ListsProvider', () => {
     const pendingLoad = deferred<ReadonlySet<number>>();
     const pendingToggle = deferred<boolean>();
     const getWantToPlayIds = vi.fn(() => pendingLoad.promise);
-    const toggleWantToPlay = vi.fn(() => pendingToggle.promise);
-    const view = renderListsProvider(createRepository({ getWantToPlayIds, toggleWantToPlay }));
+    const setWantToPlay = vi.fn(() => pendingToggle.promise);
+    const view = renderListsProvider(createRepository({ getWantToPlayIds, setWantToPlay }));
     await waitForAuthenticated(view);
 
     let load!: Promise<void>;
     let toggle!: Promise<boolean>;
     act(() => {
-      toggle = view.result.current.lists.toggleWantToPlay(game);
+      toggle = view.result.current.lists.setWantToPlay(game, true);
       load = view.result.current.lists.loadWantToPlayIds([game.igdbId]);
     });
     pendingToggle.reject(new Error('rpc detail'));
@@ -421,17 +454,17 @@ describe('ListsProvider', () => {
 
     expect(view.result.current.lists.wantToPlayIds.has(game.igdbId)).toBe(true);
     expect(getWantToPlayIds).toHaveBeenCalledOnce();
-    expect(toggleWantToPlay).toHaveBeenCalledOnce();
+    expect(setWantToPlay).toHaveBeenCalledOnce();
   });
 
   it('ignores a membership load that started before a confirmed toggle', async () => {
     const pendingLoad = deferred<ReadonlySet<number>>();
     const pendingToggle = deferred<boolean>();
     const getWantToPlayIds = vi.fn(() => pendingLoad.promise);
-    const toggleWantToPlay = vi.fn(() => pendingToggle.promise);
+    const setWantToPlay = vi.fn(() => pendingToggle.promise);
     const repository = createRepository({
       getWantToPlayIds,
-      toggleWantToPlay,
+      setWantToPlay,
     });
     const view = renderListsProvider(repository);
     await waitForAuthenticated(view);
@@ -440,7 +473,7 @@ describe('ListsProvider', () => {
     let toggle!: Promise<boolean>;
     act(() => {
       load = view.result.current.lists.loadWantToPlayIds([game.igdbId]);
-      toggle = view.result.current.lists.toggleWantToPlay(game);
+      toggle = view.result.current.lists.setWantToPlay(game, true);
     });
     pendingToggle.resolve(true);
     await act(async () => expect(toggle).resolves.toBe(true));
@@ -449,17 +482,17 @@ describe('ListsProvider', () => {
 
     expect(view.result.current.lists.wantToPlayIds.has(game.igdbId)).toBe(true);
     expect(getWantToPlayIds).toHaveBeenCalledOnce();
-    expect(toggleWantToPlay).toHaveBeenCalledOnce();
+    expect(setWantToPlay).toHaveBeenCalledOnce();
   });
 
   it('ignores a membership load that started during a confirmed toggle', async () => {
     const pendingLoad = deferred<ReadonlySet<number>>();
     const pendingToggle = deferred<boolean>();
     const getWantToPlayIds = vi.fn(() => pendingLoad.promise);
-    const toggleWantToPlay = vi.fn(() => pendingToggle.promise);
+    const setWantToPlay = vi.fn(() => pendingToggle.promise);
     const repository = createRepository({
       getWantToPlayIds,
-      toggleWantToPlay,
+      setWantToPlay,
     });
     const view = renderListsProvider(repository);
     await waitForAuthenticated(view);
@@ -467,7 +500,7 @@ describe('ListsProvider', () => {
     let load!: Promise<void>;
     let toggle!: Promise<boolean>;
     act(() => {
-      toggle = view.result.current.lists.toggleWantToPlay(game);
+      toggle = view.result.current.lists.setWantToPlay(game, true);
       load = view.result.current.lists.loadWantToPlayIds([game.igdbId]);
     });
     pendingToggle.resolve(true);
@@ -477,26 +510,62 @@ describe('ListsProvider', () => {
 
     expect(view.result.current.lists.wantToPlayIds.has(game.igdbId)).toBe(true);
     expect(getWantToPlayIds).toHaveBeenCalledOnce();
-    expect(toggleWantToPlay).toHaveBeenCalledOnce();
+    expect(setWantToPlay).toHaveBeenCalledOnce();
   });
 
-  it('shares one confirmed result across concurrent toggles of the same game', async () => {
-    const pendingToggle = deferred<boolean>();
-    const toggleWantToPlay = vi.fn(() => pendingToggle.promise);
-    const view = renderListsProvider(createRepository({ toggleWantToPlay }));
+  it('serializes desired-state mutations for the same game in call order', async () => {
+    const firstMutation = deferred<boolean>();
+    const secondMutation = deferred<boolean>();
+    const setWantToPlay = vi
+      .fn()
+      .mockImplementationOnce(() => firstMutation.promise)
+      .mockImplementationOnce(() => secondMutation.promise);
+    const view = renderListsProvider(createRepository({ setWantToPlay }));
     await waitForAuthenticated(view);
 
     let first!: Promise<boolean>;
     let second!: Promise<boolean>;
     act(() => {
-      first = view.result.current.lists.toggleWantToPlay(game);
-      second = view.result.current.lists.toggleWantToPlay(game);
+      first = view.result.current.lists.setWantToPlay(game, true);
+      second = view.result.current.lists.setWantToPlay(game, false);
     });
-    expect(toggleWantToPlay).toHaveBeenCalledOnce();
+    expect(setWantToPlay).toHaveBeenCalledOnce();
+    expect(setWantToPlay).toHaveBeenNthCalledWith(1, game, true);
 
-    pendingToggle.resolve(true);
-    await act(async () => expect(Promise.all([first, second])).resolves.toEqual([true, true]));
-    expect(view.result.current.lists.wantToPlayIds.has(game.igdbId)).toBe(true);
+    firstMutation.resolve(true);
+    await expect(first).resolves.toBe(true);
+    await waitFor(() => {
+      expect(setWantToPlay).toHaveBeenCalledTimes(2);
+    });
+    expect(setWantToPlay).toHaveBeenNthCalledWith(2, game, false);
+    secondMutation.resolve(false);
+    await act(async () => {
+      await expect(second).resolves.toBe(false);
+    });
+
+    expect(view.result.current.lists.wantToPlayMemberships.get(game.igdbId)).toBe('ready');
+    expect(view.result.current.lists.wantToPlayIds.has(game.igdbId)).toBe(false);
+  });
+
+  it('continues the serialized queue after an earlier desired-state mutation fails', async () => {
+    const firstMutation = deferred<boolean>();
+    const setWantToPlay = vi
+      .fn()
+      .mockImplementationOnce(() => firstMutation.promise)
+      .mockResolvedValueOnce(true);
+    const view = renderListsProvider(createRepository({ setWantToPlay }));
+    await waitForAuthenticated(view);
+
+    const first = view.result.current.lists.setWantToPlay(game, false);
+    const second = view.result.current.lists.setWantToPlay(game, true);
+    firstMutation.reject(new Error('rpc detail'));
+
+    await expect(first).rejects.toThrow('rpc detail');
+    await expect(second).resolves.toBe(true);
+    expect(setWantToPlay).toHaveBeenCalledTimes(2);
+    await waitFor(() => {
+      expect(view.result.current.lists.wantToPlayIds.has(game.igdbId)).toBe(true);
+    });
   });
 
   it('waits for add confirmation before refreshing list summaries', async () => {
@@ -616,11 +685,11 @@ describe('ListsProvider', () => {
   it('cancels a pending toggle when the provider unmounts', async () => {
     const pendingToggle = deferred<boolean>();
     const view = renderListsProvider(
-      createRepository({ toggleWantToPlay: vi.fn(() => pendingToggle.promise) }),
+      createRepository({ setWantToPlay: vi.fn(() => pendingToggle.promise) }),
     );
     await waitForAuthenticated(view);
 
-    const toggle = view.result.current.lists.toggleWantToPlay(game);
+    const toggle = view.result.current.lists.setWantToPlay(game, true);
     view.unmount();
     pendingToggle.resolve(true);
     const error = await toggle.catch((reason: unknown) => reason);
@@ -646,7 +715,7 @@ describe('ListsProvider', () => {
     await expect(view.result.current.lists.loadWantToPlayIds([game.igdbId])).rejects.toThrow(
       'As listas ainda não estão configuradas.',
     );
-    await expect(view.result.current.lists.toggleWantToPlay(game)).rejects.toThrow(
+    await expect(view.result.current.lists.setWantToPlay(game, true)).rejects.toThrow(
       'As listas ainda não estão configuradas.',
     );
   });
@@ -663,7 +732,7 @@ describe('ListsProvider', () => {
     expect(view.result.current.lists.createList).toBe(initial.createList);
     expect(view.result.current.lists.loadLists).toBe(initial.loadLists);
     expect(view.result.current.lists.loadWantToPlayIds).toBe(initial.loadWantToPlayIds);
-    expect(view.result.current.lists.toggleWantToPlay).toBe(initial.toggleWantToPlay);
+    expect(view.result.current.lists.setWantToPlay).toBe(initial.setWantToPlay);
   });
 
   it('keeps operation callback identities stable across auth scope changes', async () => {
@@ -679,6 +748,6 @@ describe('ListsProvider', () => {
     expect(view.result.current.lists.createList).toBe(initial.createList);
     expect(view.result.current.lists.loadLists).toBe(initial.loadLists);
     expect(view.result.current.lists.loadWantToPlayIds).toBe(initial.loadWantToPlayIds);
-    expect(view.result.current.lists.toggleWantToPlay).toBe(initial.toggleWantToPlay);
+    expect(view.result.current.lists.setWantToPlay).toBe(initial.setWantToPlay);
   });
 });

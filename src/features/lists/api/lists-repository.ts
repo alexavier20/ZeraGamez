@@ -43,9 +43,14 @@ export interface ListsRepository {
   createList(userId: string, input: CreateListInput): Promise<UserListSummary>;
   getWantToPlayIds(igdbIds: readonly number[]): Promise<ReadonlySet<number>>;
   listSummaries(): Promise<readonly UserListSummary[]>;
-  toggleWantToPlay(game: GameSnapshot): Promise<boolean>;
+  setWantToPlay(game: GameSnapshot, desired: boolean): Promise<boolean>;
 }
 
+const MAX_ADD_LIST_IDS = 1_000;
+const MEMBERSHIP_RPC_CHUNK_SIZE = 100;
+const MAX_COVER_URL_LENGTH = 2_048;
+const canonicalIgdbCoverPattern =
+  /^https:\/\/images\.igdb\.com\/igdb\/image\/upload\/t_cover_big_2x\/[A-Za-z0-9_-]+\.jpg$/;
 const databaseIdSchema = z.number().int().positive().refine(Number.isSafeInteger);
 
 const userIdSchema = z.uuid();
@@ -56,7 +61,12 @@ const isoCivilDateSchema = z
   .refine(isRealIsoCivilDate);
 
 const gameSnapshotInputSchema = z.object({
-  coverUrl: z.string().nullable(),
+  coverUrl: z
+    .string()
+    .trim()
+    .max(MAX_COVER_URL_LENGTH)
+    .refine((value) => canonicalIgdbCoverPattern.test(value))
+    .nullable(),
   igdbId: databaseIdSchema,
   name: z.string().trim().min(1).max(200),
   releaseDate: isoCivilDateSchema,
@@ -64,6 +74,7 @@ const gameSnapshotInputSchema = z.object({
 
 const addListIdsInputSchema = z.array(databaseIdSchema).min(1);
 const igdbIdsInputSchema = z.array(databaseIdSchema);
+const desiredStateInputSchema = z.boolean();
 
 const listSummaryRowSchema = z.object({
   covers: z.array(z.string()),
@@ -105,7 +116,9 @@ export function createSupabaseListsRepository(client: SupabaseListsPort): ListsR
       listIds: readonly number[],
     ): Promise<readonly number[]> {
       const normalizedGame = parseInput(gameSnapshotInputSchema, game);
-      const normalizedListIds = deduplicateIds(parseInput(addListIdsInputSchema, listIds));
+      const validatedListIds = parseInput(addListIdsInputSchema, listIds);
+      if (validatedListIds.length > MAX_ADD_LIST_IDS) throw new DataError('unexpected');
+      const normalizedListIds = deduplicateIds(validatedListIds);
 
       const associatedListIds = await readData(
         () =>
@@ -151,31 +164,40 @@ export function createSupabaseListsRepository(client: SupabaseListsPort): ListsR
       const normalizedIgdbIds = deduplicateIds(parseInput(igdbIdsInputSchema, igdbIds));
       if (normalizedIgdbIds.length === 0) return new RuntimeReadonlySet<number>();
 
-      const rows = await readData(
-        () =>
-          client.rpc('get_want_to_play_igdb_ids', {
-            p_igdb_ids: normalizedIgdbIds,
-          }),
-        wantToPlayRowsSchema,
-      );
+      const loadedIds = new Set<number>();
+      for (const chunk of chunkIds(normalizedIgdbIds, MEMBERSHIP_RPC_CHUNK_SIZE)) {
+        const rows = await readData(
+          () =>
+            client.rpc('get_want_to_play_igdb_ids', {
+              p_igdb_ids: chunk,
+            }),
+          wantToPlayRowsSchema,
+        );
+        const requestedIds = new Set(chunk);
+        for (const row of rows) {
+          if (requestedIds.has(row.igdb_id)) loadedIds.add(row.igdb_id);
+        }
+      }
 
-      return new RuntimeReadonlySet(rows.map((row) => row.igdb_id));
+      return new RuntimeReadonlySet(loadedIds);
     },
 
     async listSummaries(): Promise<readonly UserListSummary[]> {
       return loadListSummaries(client);
     },
 
-    async toggleWantToPlay(game: GameSnapshot): Promise<boolean> {
+    async setWantToPlay(game: GameSnapshot, desired: boolean): Promise<boolean> {
       const normalizedGame = parseInput(gameSnapshotInputSchema, game);
+      const normalizedDesired = parseInput(desiredStateInputSchema, desired);
 
       return readData(
         () =>
-          client.rpc('toggle_want_to_play', {
+          client.rpc('set_want_to_play', {
             p_igdb_id: normalizedGame.igdbId,
             p_name: normalizedGame.name,
             p_cover_url: normalizedGame.coverUrl,
             p_release_date: normalizedGame.releaseDate,
+            p_desired: normalizedDesired,
           }),
         toggleResultSchema,
       );
@@ -225,6 +247,14 @@ class RuntimeReadonlySet<Value> implements ReadonlySet<Value> {
 
 function deduplicateIds(ids: readonly number[]): readonly number[] {
   return [...new Set(ids)];
+}
+
+function chunkIds(ids: readonly number[], size: number): readonly (readonly number[])[] {
+  const chunks: number[][] = [];
+  for (let start = 0; start < ids.length; start += size) {
+    chunks.push(ids.slice(start, start + size));
+  }
+  return chunks;
 }
 
 function toUserListSummary(row: z.infer<typeof listSummaryRowSchema>): UserListSummary {

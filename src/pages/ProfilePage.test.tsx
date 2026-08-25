@@ -86,6 +86,14 @@ describe('ProfilePage', () => {
     expect(screen.queryByText('AX')).not.toBeInTheDocument();
   });
 
+  it('shows the email-code and Google access methods available to the account', async () => {
+    renderProfile(createAuthService(vi.fn().mockResolvedValue(undefined)));
+
+    expect(await screen.findByRole('heading', { name: 'Métodos de acesso' })).toBeInTheDocument();
+    expect(screen.getByText('Código por e-mail')).toBeInTheDocument();
+    expect(screen.getByText('Google')).toBeInTheDocument();
+  });
+
   it('clears pending intent, awaits sign out, and only then returns home', async () => {
     const user = userEvent.setup();
     const pendingSignOut = deferred<undefined>();

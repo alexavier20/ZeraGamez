@@ -49,6 +49,7 @@ interface ReleaseCardLayoutProps {
   readonly onToggleWantToPlay: () => void;
   readonly presentation: ReleasePresentation;
   readonly wantToPlay: boolean;
+  readonly wantToPlayDisabled: boolean;
 }
 
 const disabledActionClassName =
@@ -87,7 +88,9 @@ function WantToPlayButton({
           : 'border-transparent bg-app/80 hover:bg-app'
       }`}
       disabled={disabled}
-      onClick={onToggle}
+      onClick={() => {
+        onToggle();
+      }}
       type="button"
     >
       <Icon aria-hidden="true" size={15} />
@@ -125,6 +128,7 @@ function ReleaseCardDesktop({
   onToggleWantToPlay,
   presentation,
   wantToPlay,
+  wantToPlayDisabled,
 }: ReleaseCardLayoutProps) {
   return (
     <>
@@ -150,7 +154,7 @@ function ReleaseCardDesktop({
         </span>
         <div className="absolute right-2 top-2">
           <WantToPlayButton
-            disabled={actionPending || authLoading}
+            disabled={actionPending || wantToPlayDisabled}
             gameName={item.name}
             onToggle={onToggleWantToPlay}
             selected={wantToPlay}
@@ -218,6 +222,7 @@ function ReleaseCardMobile({
   onToggleWantToPlay,
   presentation,
   wantToPlay,
+  wantToPlayDisabled,
 }: ReleaseCardLayoutProps) {
   return (
     <>
@@ -252,7 +257,7 @@ function ReleaseCardMobile({
             <div className="-mr-1 -mt-1">
               <WantToPlayButton
                 compact
-                disabled={actionPending || authLoading}
+                disabled={actionPending || wantToPlayDisabled}
                 gameName={item.name}
                 onToggle={onToggleWantToPlay}
                 selected={wantToPlay}
@@ -311,8 +316,16 @@ export function ReleaseCard({
   pendingAction,
 }: ReleaseCardProps): React.ReactElement {
   const { state: authState } = useAuth();
-  const { addGameToLists, listsState, loadLists, scopeVersion, toggleWantToPlay, wantToPlayIds } =
-    useLists();
+  const {
+    addGameToLists,
+    listsState,
+    loadLists,
+    loadWantToPlayIds,
+    scopeVersion,
+    setWantToPlay,
+    wantToPlayIds,
+    wantToPlayMemberships,
+  } = useLists();
   const navigate = useNavigate();
   const [addToListsOpen, setAddToListsOpen] = useState(false);
   const [togglePending, setTogglePending] = useState(false);
@@ -323,7 +336,10 @@ export function ReleaseCard({
   const togglePendingRef = useRef(false);
   const resumedActionRef = useRef<PendingReleaseActionType | null>(null);
   const wantToPlay = wantToPlayIds.has(item.id);
+  const wantToPlayMembership = wantToPlayMemberships.get(item.id);
   const authLoading = authState.status === 'loading';
+  const wantToPlayDisabled =
+    authLoading || (authState.status === 'authenticated' && wantToPlayMembership !== 'ready');
   const presentation: ReleasePresentation = {
     date: formatReleaseDate(item.releaseDate),
     status: formatReleaseStatus(item.releaseDate, generatedAt),
@@ -369,28 +385,45 @@ export function ReleaseCard({
     openAddToLists(event.currentTarget);
   };
 
-  const handleToggleWantToPlay = useCallback(() => {
-    if (authState.status === 'loading') return;
-    if (authState.status !== 'authenticated') {
-      requestAuthentication('toggle-want-to-play');
-      return;
-    }
-    if (togglePendingRef.current) return;
+  const handleSetWantToPlay = useCallback(
+    (desired = !wantToPlay) => {
+      if (authState.status === 'loading') return;
+      if (authState.status !== 'authenticated') {
+        requestAuthentication('toggle-want-to-play');
+        return;
+      }
+      if (wantToPlayMembership !== 'ready') return;
+      if (togglePendingRef.current) return;
 
-    togglePendingRef.current = true;
-    setTogglePending(true);
-    setToggleError(null);
-    void toggleWantToPlay(toGameSnapshot(item))
-      .catch((error: unknown) => {
-        if (!isListsOperationCancelled(error)) {
-          setToggleError('Não foi possível atualizar Quero jogar. Tente novamente.');
-        }
-      })
-      .finally(() => {
-        togglePendingRef.current = false;
-        setTogglePending(false);
-      });
-  }, [authState.status, item, requestAuthentication, toggleWantToPlay]);
+      togglePendingRef.current = true;
+      setTogglePending(true);
+      setToggleError(null);
+      void setWantToPlay(toGameSnapshot(item), desired)
+        .catch((error: unknown) => {
+          if (!isListsOperationCancelled(error)) {
+            setToggleError('Não foi possível atualizar Quero jogar. Tente novamente.');
+          }
+        })
+        .finally(() => {
+          togglePendingRef.current = false;
+          setTogglePending(false);
+        });
+    },
+    [
+      authState.status,
+      item,
+      requestAuthentication,
+      setWantToPlay,
+      wantToPlay,
+      wantToPlayMembership,
+    ],
+  );
+
+  const retryWantToPlayMembership = useCallback(() => {
+    void loadWantToPlayIds([item.id]).catch((error: unknown) => {
+      if (isListsOperationCancelled(error)) return;
+    });
+  }, [item.id, loadWantToPlayIds]);
 
   const handleCloseAddToLists = useCallback(() => {
     setAddToListsOpen(false);
@@ -410,6 +443,7 @@ export function ReleaseCard({
       return;
     }
     if (authState.status !== 'authenticated') return;
+    if (pendingAction === 'toggle-want-to-play' && wantToPlayMembership !== 'ready') return;
 
     const action = pendingAction;
     let active = true;
@@ -418,7 +452,7 @@ export function ReleaseCard({
       resumedActionRef.current = action;
       onPendingActionConsumed?.();
       if (action === 'open-add-to-lists') openAddToLists();
-      else handleToggleWantToPlay();
+      else handleSetWantToPlay(true);
     });
 
     return () => {
@@ -426,10 +460,11 @@ export function ReleaseCard({
     };
   }, [
     authState.status,
-    handleToggleWantToPlay,
+    handleSetWantToPlay,
     onPendingActionConsumed,
     openAddToLists,
     pendingAction,
+    wantToPlayMembership,
   ]);
 
   return (
@@ -444,9 +479,10 @@ export function ReleaseCard({
           authLoading={authLoading}
           item={item}
           onAddToLists={handleOpenAddToLists}
-          onToggleWantToPlay={handleToggleWantToPlay}
+          onToggleWantToPlay={handleSetWantToPlay}
           presentation={presentation}
           wantToPlay={wantToPlay}
+          wantToPlayDisabled={wantToPlayDisabled}
         />
       </article>
       <article
@@ -459,9 +495,10 @@ export function ReleaseCard({
           authLoading={authLoading}
           item={item}
           onAddToLists={handleOpenAddToLists}
-          onToggleWantToPlay={handleToggleWantToPlay}
+          onToggleWantToPlay={handleSetWantToPlay}
           presentation={presentation}
           wantToPlay={wantToPlay}
+          wantToPlayDisabled={wantToPlayDisabled}
         />
       </article>
       {toggleError === null ? null : (
@@ -472,6 +509,21 @@ export function ReleaseCard({
           {toggleError}
         </p>
       )}
+      {authState.status === 'authenticated' && wantToPlayMembership === 'error' ? (
+        <div
+          className="mt-2 rounded-lg border border-brand/50 bg-bg-secondary px-3 py-2 text-sm text-content-primary"
+          role="alert"
+        >
+          <p>Não foi possível verificar Quero jogar.</p>
+          <button
+            className="mt-2 font-semibold underline underline-offset-2"
+            onClick={retryWantToPlayMembership}
+            type="button"
+          >
+            Tentar novamente para {item.name}
+          </button>
+        </div>
+      ) : null}
       {addToListsOpen ? (
         <AddToListsModal
           gameName={item.name}

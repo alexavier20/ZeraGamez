@@ -13,9 +13,22 @@ export function readSupabaseConfig(env: Record<string, string | undefined>): Sup
   const publishableKey = env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim();
 
   if (!url && !publishableKey) return { status: 'missing' };
-  if (!url || !publishableKey || !URL.canParse(url)) {
+  if (!url || !publishableKey || !isCredentialFreeHttpUrl(url)) {
     return { status: 'invalid', message: 'A autenticação ainda não está configurada.' };
   }
 
   return { status: 'available', config: { url, publishableKey } };
+}
+
+function isCredentialFreeHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (
+      (url.protocol === 'http:' || url.protocol === 'https:') &&
+      url.username === '' &&
+      url.password === ''
+    );
+  } catch {
+    return false;
+  }
 }

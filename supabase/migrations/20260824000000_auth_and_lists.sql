@@ -10,11 +10,23 @@ create table public.profiles (
 
 create table public.games (
   id bigint generated always as identity primary key,
-  igdb_id bigint not null unique,
-  name text not null check (char_length(btrim(name)) between 1 and 200),
-  cover_url text,
-  release_date date,
-  created_at timestamptz not null default now()
+  user_id uuid not null references auth.users(id) on delete cascade,
+  igdb_id bigint not null check (igdb_id between 1 and 9007199254740991),
+  name text not null check (
+    name = btrim(name)
+    and char_length(name) between 1 and 200
+  ),
+  cover_url text check (
+    cover_url is null
+    or (
+      cover_url = btrim(cover_url)
+      and char_length(cover_url) <= 2048
+      and cover_url ~ '^https://images[.]igdb[.]com/igdb/image/upload/t_cover_big_2x/[A-Za-z0-9_-]+[.]jpg$'
+    )
+  ),
+  release_date date not null,
+  created_at timestamptz not null default now(),
+  unique (user_id, igdb_id)
 );
 
 create table public.lists (
@@ -38,6 +50,8 @@ create index lists_user_id_created_at_idx on public.lists (user_id, created_at d
 create unique index lists_user_system_key_idx on public.lists (user_id, system_key)
   where system_key is not null;
 create index list_items_game_id_idx on public.list_items (game_id);
+create index list_items_list_id_added_at_game_id_idx
+  on public.list_items (list_id, added_at desc, game_id desc);
 
 create function public.handle_new_user()
 returns trigger
@@ -109,11 +123,11 @@ to authenticated
 using (id = (select auth.uid()))
 with check (id = (select auth.uid()));
 
-create policy games_select_authenticated
+create policy games_select_own
 on public.games
 for select
 to authenticated
-using (true);
+using (user_id = (select auth.uid()));
 
 create policy lists_select_own
 on public.lists
@@ -201,7 +215,9 @@ begin
         covered_item.added_at,
         covered_item.game_id
       from public.list_items as covered_item
-      join public.games as covered_game on covered_game.id = covered_item.game_id
+      join public.games as covered_game
+        on covered_game.id = covered_item.game_id
+        and covered_game.user_id = v_user_id
       where covered_item.list_id = user_list.id
         and covered_game.cover_url is not null
       order by covered_item.added_at desc, covered_item.game_id desc
@@ -227,10 +243,25 @@ begin
     raise exception 'Authentication required' using errcode = '28000';
   end if;
 
+  if cardinality(coalesce(p_igdb_ids, array[]::bigint[])) > 100 then
+    raise exception 'At most 100 game ids are allowed' using errcode = '22023';
+  end if;
+
+  if exists (
+    select 1
+    from unnest(coalesce(p_igdb_ids, array[]::bigint[])) as requested_game(igdb_id)
+    where requested_game.igdb_id is null
+      or requested_game.igdb_id not between 1 and 9007199254740991
+  ) then
+    raise exception 'Game ids must be positive safe integers' using errcode = '22023';
+  end if;
+
   return query
   select distinct stored_game.igdb_id
   from unnest(coalesce(p_igdb_ids, array[]::bigint[])) as requested_game(igdb_id)
-  join public.games as stored_game on stored_game.igdb_id = requested_game.igdb_id
+  join public.games as stored_game
+    on stored_game.user_id = v_user_id
+    and stored_game.igdb_id = requested_game.igdb_id
   join public.list_items as wanted_item on wanted_item.game_id = stored_game.id
   join public.lists as wanted_list on wanted_list.id = wanted_item.list_id
   where wanted_list.user_id = v_user_id
@@ -260,13 +291,49 @@ begin
     raise exception 'Authentication required' using errcode = '28000';
   end if;
 
+  if p_igdb_id is null or p_igdb_id not between 1 and 9007199254740991 then
+    raise exception 'Game id must be a positive safe integer' using errcode = '22023';
+  end if;
+
+  if p_name is null
+    or p_name <> btrim(p_name)
+    or char_length(p_name) not between 1 and 200
+  then
+    raise exception 'Game name must be canonical and between 1 and 200 characters'
+      using errcode = '22023';
+  end if;
+
+  if p_cover_url is not null and (
+    p_cover_url <> btrim(p_cover_url)
+    or char_length(p_cover_url) > 2048
+    or p_cover_url !~ '^https://images[.]igdb[.]com/igdb/image/upload/t_cover_big_2x/[A-Za-z0-9_-]+[.]jpg$'
+  ) then
+    raise exception 'Cover URL must be a canonical IGDB cover URL' using errcode = '22023';
+  end if;
+
+  if p_release_date is null then
+    raise exception 'Release date is required' using errcode = '22023';
+  end if;
+
+  if cardinality(coalesce(p_list_ids, array[]::bigint[])) > 1000 then
+    raise exception 'At most 1000 list ids are allowed' using errcode = '22023';
+  end if;
+
+  if exists (
+    select 1
+    from unnest(coalesce(p_list_ids, array[]::bigint[])) as requested_list(list_id)
+    where requested_list.list_id is null
+      or requested_list.list_id not between 1 and 9007199254740991
+  ) then
+    raise exception 'List ids must be positive safe integers' using errcode = '22023';
+  end if;
+
   select coalesce(
     array_agg(distinct requested_list.list_id order by requested_list.list_id),
     array[]::bigint[]
   )
   into v_list_ids
-  from unnest(coalesce(p_list_ids, array[]::bigint[])) as requested_list(list_id)
-  where requested_list.list_id is not null;
+  from unnest(coalesce(p_list_ids, array[]::bigint[])) as requested_list(list_id);
 
   if cardinality(v_list_ids) = 0 then
     raise exception 'At least one list is required' using errcode = '22023';
@@ -283,14 +350,18 @@ begin
     raise exception 'One or more lists are unavailable' using errcode = '42501';
   end if;
 
-  insert into public.games (igdb_id, name, cover_url, release_date)
-  values (p_igdb_id, p_name, p_cover_url, p_release_date)
-  on conflict (igdb_id) do nothing;
+  insert into public.games (user_id, igdb_id, name, cover_url, release_date)
+  values (v_user_id, p_igdb_id, p_name, p_cover_url, p_release_date)
+  on conflict (user_id, igdb_id) do update
+  set name = excluded.name,
+      cover_url = excluded.cover_url,
+      release_date = excluded.release_date;
 
   select stored_game.id
   into strict v_game_id
   from public.games as stored_game
-  where stored_game.igdb_id = p_igdb_id;
+  where stored_game.user_id = v_user_id
+    and stored_game.igdb_id = p_igdb_id;
 
   insert into public.list_items (list_id, game_id)
   select requested_list.list_id, v_game_id
@@ -310,11 +381,12 @@ begin
 end;
 $$;
 
-create function public.toggle_want_to_play(
+create function public.set_want_to_play(
   p_igdb_id bigint,
   p_name text,
   p_cover_url text,
-  p_release_date date
+  p_release_date date,
+  p_desired boolean
 )
 returns boolean
 language plpgsql
@@ -325,23 +397,62 @@ declare
   v_user_id uuid := auth.uid();
   v_list_id bigint;
   v_game_id bigint;
-  v_deleted integer;
 begin
   if v_user_id is null then
     raise exception 'Authentication required' using errcode = '28000';
   end if;
 
-  insert into public.lists as created_list (user_id, name, system_key)
-  values (v_user_id, 'Quero jogar!', 'want_to_play')
-  on conflict (user_id, system_key) where system_key is not null do nothing
-  returning created_list.id into v_list_id;
+  if p_desired is null then
+    raise exception 'Desired membership is required' using errcode = '22023';
+  end if;
+
+  if p_igdb_id is null or p_igdb_id not between 1 and 9007199254740991 then
+    raise exception 'Game id must be a positive safe integer' using errcode = '22023';
+  end if;
+
+  if p_name is null
+    or p_name <> btrim(p_name)
+    or char_length(p_name) not between 1 and 200
+  then
+    raise exception 'Game name must be canonical and between 1 and 200 characters'
+      using errcode = '22023';
+  end if;
+
+  if p_cover_url is not null and (
+    p_cover_url <> btrim(p_cover_url)
+    or char_length(p_cover_url) > 2048
+    or p_cover_url !~ '^https://images[.]igdb[.]com/igdb/image/upload/t_cover_big_2x/[A-Za-z0-9_-]+[.]jpg$'
+  ) then
+    raise exception 'Cover URL must be a canonical IGDB cover URL' using errcode = '22023';
+  end if;
+
+  if p_release_date is null then
+    raise exception 'Release date is required' using errcode = '22023';
+  end if;
+
+  select existing_list.id
+  into v_list_id
+  from public.lists as existing_list
+  where existing_list.user_id = v_user_id
+    and existing_list.system_key = 'want_to_play';
+
+  if v_list_id is null and not p_desired then
+    return false;
+  end if;
 
   if v_list_id is null then
-    select existing_list.id
-    into strict v_list_id
-    from public.lists as existing_list
-    where existing_list.user_id = v_user_id
-      and existing_list.system_key = 'want_to_play';
+    insert into public.lists as created_list (user_id, name, system_key)
+    values (v_user_id, 'Quero jogar!', 'want_to_play')
+    on conflict (user_id, system_key) where system_key is not null do nothing
+    returning created_list.id into v_list_id;
+
+    if v_list_id is null then
+      select existing_list.id
+      into strict v_list_id
+      from public.lists as existing_list
+      where existing_list.user_id = v_user_id
+        and existing_list.system_key = 'want_to_play';
+    end if;
   end if;
 
   perform 1
@@ -349,35 +460,42 @@ begin
   where locked_list.id = v_list_id
   for update;
 
-  insert into public.games (igdb_id, name, cover_url, release_date)
-  values (p_igdb_id, p_name, p_cover_url, p_release_date)
-  on conflict (igdb_id) do nothing;
+  if not p_desired then
+    select stored_game.id
+    into v_game_id
+    from public.games as stored_game
+    where stored_game.user_id = v_user_id
+      and stored_game.igdb_id = p_igdb_id;
+
+    if v_game_id is null then
+      return false;
+    end if;
+
+    delete from public.list_items as wanted_item
+    where wanted_item.list_id = v_list_id
+      and wanted_item.game_id = v_game_id;
+
+    return false;
+  end if;
+
+  insert into public.games (user_id, igdb_id, name, cover_url, release_date)
+  values (v_user_id, p_igdb_id, p_name, p_cover_url, p_release_date)
+  on conflict (user_id, igdb_id) do update
+  set name = excluded.name,
+      cover_url = excluded.cover_url,
+      release_date = excluded.release_date;
 
   select stored_game.id
   into strict v_game_id
   from public.games as stored_game
-  where stored_game.igdb_id = p_igdb_id;
-
-  delete from public.list_items as wanted_item
-  where wanted_item.list_id = v_list_id
-    and wanted_item.game_id = v_game_id;
-
-  get diagnostics v_deleted = row_count;
-
-  if v_deleted > 0 then
-    return false;
-  end if;
+  where stored_game.user_id = v_user_id
+    and stored_game.igdb_id = p_igdb_id;
 
   insert into public.list_items (list_id, game_id)
   values (v_list_id, v_game_id)
   on conflict (list_id, game_id) do nothing;
 
-  return exists (
-    select 1
-    from public.list_items as final_item
-    where final_item.list_id = v_list_id
-      and final_item.game_id = v_game_id
-  );
+  return true;
 end;
 $$;
 
@@ -385,12 +503,11 @@ revoke all on function public.handle_new_user() from public, anon, authenticated
 revoke all on function public.get_my_lists() from public, anon, authenticated;
 revoke all on function public.get_want_to_play_igdb_ids(bigint[]) from public, anon, authenticated;
 revoke all on function public.add_game_to_lists(bigint, text, text, date, bigint[]) from public, anon, authenticated;
-revoke all on function public.toggle_want_to_play(bigint, text, text, date) from public, anon, authenticated;
+revoke all on function public.set_want_to_play(bigint, text, text, date, boolean) from public, anon, authenticated;
 
-grant execute on function public.handle_new_user() to authenticated;
 grant execute on function public.get_my_lists() to authenticated;
 grant execute on function public.get_want_to_play_igdb_ids(bigint[]) to authenticated;
 grant execute on function public.add_game_to_lists(bigint, text, text, date, bigint[]) to authenticated;
-grant execute on function public.toggle_want_to_play(bigint, text, text, date) to authenticated;
+grant execute on function public.set_want_to_play(bigint, text, text, date, boolean) to authenticated;
 
 commit;

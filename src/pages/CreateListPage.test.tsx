@@ -76,7 +76,7 @@ function createRepository(createList: ListsRepository['createList']): ListsRepos
     createList,
     getWantToPlayIds: vi.fn().mockResolvedValue(new Set<number>()),
     listSummaries: vi.fn().mockResolvedValue([rpgList]),
-    toggleWantToPlay: vi.fn().mockResolvedValue(false),
+    setWantToPlay: vi.fn().mockResolvedValue(false),
   };
 }
 

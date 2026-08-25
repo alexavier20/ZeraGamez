@@ -13,13 +13,17 @@ export function getSupabaseClient(): SupabaseClient | null {
     return supabaseClient;
   }
 
-  supabaseClient = createClient(config.config.url, config.config.publishableKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-    },
-  });
+  try {
+    supabaseClient = createClient(config.config.url, config.config.publishableKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    });
+  } catch {
+    supabaseClient = null;
+  }
 
   return supabaseClient;
 }

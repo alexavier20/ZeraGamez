@@ -72,6 +72,22 @@ export function ProfilePage() {
         </div>
 
         <div className="mt-8 border-t border-white/10 pt-6">
+          <h3 className="font-heading text-base font-bold text-content-primary">
+            Métodos de acesso
+          </h3>
+          <ul className="mt-3 flex flex-wrap gap-2" aria-label="Métodos de acesso disponíveis">
+            {['Código por e-mail', 'Google'].map((method) => (
+              <li
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-text-muted"
+                key={method}
+              >
+                {method}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="mt-8 border-t border-white/10 pt-6">
           {error === null ? null : (
             <p
               className="mb-4 rounded-xl border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-100"

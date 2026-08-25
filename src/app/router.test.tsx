@@ -73,7 +73,7 @@ function createListsRepository(): ListsRepository {
     createList: vi.fn(),
     getWantToPlayIds: vi.fn().mockResolvedValue(new Set<number>()),
     listSummaries: vi.fn().mockResolvedValue([]),
-    toggleWantToPlay: vi.fn().mockResolvedValue(false),
+    setWantToPlay: vi.fn().mockResolvedValue(false),
   };
 }
 
@@ -173,7 +173,7 @@ describe('AppRouter', () => {
     await waitFor(() => {
       expect(window.location.pathname).toBe('/');
     });
-    expect(screen.getByRole('heading', { name: 'Zera GameZ' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Zera GameZ' })).toBeInTheDocument();
   });
 
   it('releases a failed logout guard and redirects to login after auth emitted null', async () => {
