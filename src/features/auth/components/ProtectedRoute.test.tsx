@@ -2,15 +2,16 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { AuthService } from '@/features/auth/api/auth-service';
 import { AuthProvider } from '@/features/auth/context/AuthProvider';
-import type { AuthenticatedUser } from '@/features/auth/model/auth';
 import {
   PENDING_AUTH_INTENT_KEY,
   peekPendingAuthIntent,
 } from '@/features/auth/model/pending-auth-intent';
 
 import { ProtectedRoute } from './ProtectedRoute';
+
+import type { AuthService } from '@/features/auth/api/auth-service';
+import type { AuthenticatedUser } from '@/features/auth/model/auth';
 
 const authenticatedUser: AuthenticatedUser = {
   id: 'user-1',

@@ -11,7 +11,7 @@ import {
 
 interface TransportResponse {
   readonly data: unknown;
-  readonly error: unknown | null;
+  readonly error: unknown;
 }
 
 interface CreatedListInsert {
@@ -35,10 +35,7 @@ interface ListsTablePort {
 
 interface SupabaseListsPort {
   from(table: 'lists'): ListsTablePort;
-  rpc(
-    name: string,
-    args?: Readonly<Record<string, unknown>>,
-  ): PromiseLike<unknown>;
+  rpc(name: string, args?: Readonly<Record<string, unknown>>): PromiseLike<unknown>;
 }
 
 export interface ListsRepository {
@@ -49,14 +46,9 @@ export interface ListsRepository {
   toggleWantToPlay(game: GameSnapshot): Promise<boolean>;
 }
 
-const databaseIdSchema = z
-  .number()
-  .finite()
-  .int()
-  .positive()
-  .refine(Number.isSafeInteger);
+const databaseIdSchema = z.number().int().positive().refine(Number.isSafeInteger);
 
-const userIdSchema = z.string().uuid();
+const userIdSchema = z.uuid();
 
 const isoCivilDateSchema = z
   .string()
@@ -99,16 +91,12 @@ const transportEnvelopeSchema = z
   .record(z.string(), z.unknown())
   .refine(
     (value) =>
-      Object.hasOwn(value, 'data') &&
-      Object.hasOwn(value, 'error') &&
-      value.error !== undefined,
+      Object.hasOwn(value, 'data') && Object.hasOwn(value, 'error') && value.error !== undefined,
   )
-  .transform(
-    (value): TransportResponse => ({
-      data: value.data,
-      error: value.error,
-    }),
-  );
+  .transform((value): TransportResponse => ({
+    data: value.data,
+    error: value.error,
+  }));
 
 export function createSupabaseListsRepository(client: SupabaseListsPort): ListsRepository {
   return {
@@ -250,9 +238,7 @@ function toUserListSummary(row: z.infer<typeof listSummaryRowSchema>): UserListS
   });
 }
 
-async function loadListSummaries(
-  client: SupabaseListsPort,
-): Promise<readonly UserListSummary[]> {
+async function loadListSummaries(client: SupabaseListsPort): Promise<readonly UserListSummary[]> {
   const rows = await readData(() => client.rpc('get_my_lists'), listSummaryRowsSchema);
 
   return Object.freeze(rows.map(toUserListSummary));
@@ -303,8 +289,6 @@ function isRealIsoCivilDate(value: string): boolean {
   date.setUTCFullYear(year, month - 1, day);
 
   return (
-    date.getUTCFullYear() === year &&
-    date.getUTCMonth() === month - 1 &&
-    date.getUTCDate() === day
+    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
   );
 }

@@ -25,8 +25,8 @@ describe('normalizeCreateListInput', () => {
     expect(() => normalizeCreateListInput({ name: 'x'.repeat(81), description: '' })).toThrow(
       'O nome deve ter no máximo 80 caracteres.',
     );
-    expect(() =>
-      normalizeCreateListInput({ name: 'RPGs', description: 'x'.repeat(501) }),
-    ).toThrow('A descrição deve ter no máximo 500 caracteres.');
+    expect(() => normalizeCreateListInput({ name: 'RPGs', description: 'x'.repeat(501) })).toThrow(
+      'A descrição deve ter no máximo 500 caracteres.',
+    );
   });
 });

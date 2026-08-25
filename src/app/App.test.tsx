@@ -123,6 +123,23 @@ function createAuthService(initialUser: AuthenticatedUser | null): AuthService {
   };
 }
 
+function createControllableAuthService(initialUser: AuthenticatedUser | null) {
+  const listeners = new Set<(user: AuthenticatedUser | null) => void>();
+
+  return {
+    emit(user: AuthenticatedUser | null) {
+      for (const listener of listeners) listener(user);
+    },
+    service: {
+      ...createAuthService(initialUser),
+      onAuthStateChange: vi.fn((listener: (user: AuthenticatedUser | null) => void) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      }),
+    } satisfies AuthService,
+  };
+}
+
 function createListsRepository(overrides: Partial<ListsRepository> = {}): ListsRepository {
   return {
     addGameToLists: vi.fn().mockResolvedValue([]),
@@ -453,6 +470,74 @@ describe('Zera GameZ', () => {
       releaseDate: '2026-08-10',
     });
     expect(peekPendingAuthIntent(sessionStorage)).toBeNull();
+  });
+
+  it('returns from login and resumes adding the release to a real list', async () => {
+    const user = userEvent.setup();
+    const auth = createControllableAuthService(null);
+    const addGameToLists = vi.fn().mockResolvedValue([rpgList.id]);
+    const repository = createListsRepository({ addGameToLists });
+    window.history.replaceState({}, '', '/lancamentos');
+
+    render(<AppRouter authService={auth.service} listsRepository={repository} />);
+
+    await user.click(
+      (
+        await screen.findAllByRole('button', {
+          name: 'Adicionar Eclipse Protocol à lista',
+        })
+      )[0],
+    );
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/entrar');
+    });
+
+    act(() => {
+      auth.emit(authenticatedUser);
+    });
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/lancamentos');
+    });
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Adicionar Eclipse Protocol à lista',
+    });
+    await user.click(await within(dialog).findByRole('button', { name: 'RPGs' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Adicionar' }));
+
+    await waitFor(() => {
+      expect(addGameToLists).toHaveBeenCalledWith(
+        {
+          coverUrl: null,
+          igdbId: 1,
+          name: 'Eclipse Protocol',
+          releaseDate: '2026-08-10',
+        },
+        [7],
+      );
+    });
+  });
+
+  it('keeps public releases available without configuration and guides protected-route login', async () => {
+    const user = userEvent.setup();
+    window.history.replaceState({}, '', '/lancamentos');
+
+    render(<AppRouter authService={null} listsRepository={null} />);
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Próximos lançamentos' }),
+    ).toBeInTheDocument();
+    expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
+
+    await user.click(screen.getByRole('link', { name: 'Minhas listas' }));
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Entre para continuar' }),
+    ).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/entrar');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'A autenticação ainda não está configurada.',
+    );
   });
 
   it('automatically searches later pages before consuming a matching pending action', async () => {

@@ -106,7 +106,12 @@ describe('pending auth intents', () => {
 
     storage.setItem(
       PENDING_AUTH_INTENT_KEY,
-      JSON.stringify({ version: 2, type: 'toggle-want-to-play', returnTo: '/lancamentos', igdbId: 7346 }),
+      JSON.stringify({
+        version: 2,
+        type: 'toggle-want-to-play',
+        returnTo: '/lancamentos',
+        igdbId: 7346,
+      }),
     );
 
     expect(consumePendingAuthIntent(storage)).toBeNull();

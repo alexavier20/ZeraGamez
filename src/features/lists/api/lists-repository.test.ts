@@ -2,19 +2,13 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { DataError } from '@/shared/supabase/data-error';
 
-import type { GameSnapshot } from '../model/lists';
 import { createSupabaseListsRepository } from './lists-repository';
+
+import type { GameSnapshot } from '../model/lists';
 
 interface TransportResponse {
   readonly data: unknown;
-  readonly error: unknown | null;
-}
-
-interface ListInsertValues {
-  readonly description: string | null;
-  readonly name: string;
-  readonly system_key: null;
-  readonly user_id: string;
+  readonly error: unknown;
 }
 
 const game: GameSnapshot = {
@@ -51,18 +45,17 @@ function createListsPort(
   rpcData: Readonly<Record<string, unknown>> = {},
   createdData: unknown = createdListRow,
 ) {
-  const single = vi.fn(async (): Promise<TransportResponse> => ({
-    data: createdData,
-    error: null,
-  }));
-  const select = vi.fn((_columns: string) => ({ single }));
-  const insert = vi.fn((_values: ListInsertValues) => ({ select }));
-  const from = vi.fn((_table: string) => ({ insert }));
-  const rpc = vi.fn(
-    async (
-      name: string,
-      _args?: Readonly<Record<string, unknown>>,
-    ): Promise<TransportResponse> => ({
+  const single = vi.fn((): Promise<TransportResponse> =>
+    Promise.resolve({
+      data: createdData,
+      error: null,
+    }),
+  );
+  const select = vi.fn(() => ({ single }));
+  const insert = vi.fn(() => ({ select }));
+  const from = vi.fn(() => ({ insert }));
+  const rpc = vi.fn((name: string): Promise<TransportResponse> =>
+    Promise.resolve({
       data: rpcData[name] ?? null,
       error: null,
     }),

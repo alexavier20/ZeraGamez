@@ -38,7 +38,10 @@ export function normalizeOtp(value: string): string {
   return otp;
 }
 
-function readMetadataString(metadata: Record<string, unknown> | undefined, key: string): string | null {
+function readMetadataString(
+  metadata: Record<string, unknown> | undefined,
+  key: string,
+): string | null {
   const value = metadata?.[key];
 
   if (typeof value !== 'string') return null;
@@ -53,5 +56,10 @@ function toInitials(value: string): string {
     .map((word) => word.trim())
     .filter(Boolean);
 
-  return words.slice(0, 2).map((word) => word[0]?.toUpperCase()).join('') || '?';
+  return (
+    words
+      .slice(0, 2)
+      .map((word) => word.charAt(0).toUpperCase())
+      .join('') || '?'
+  );
 }

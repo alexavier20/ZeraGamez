@@ -22,10 +22,7 @@ export interface CreateListInput {
 }
 
 const createListInputSchema = z.object({
-  description: z
-    .string()
-    .trim()
-    .max(500, 'A descrição deve ter no máximo 500 caracteres.'),
+  description: z.string().trim().max(500, 'A descrição deve ter no máximo 500 caracteres.'),
   name: z
     .string()
     .trim()

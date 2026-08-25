@@ -11,9 +11,11 @@ import {
 type LoginStage = 'email' | 'code';
 type Submission = 'idle' | 'request' | 'verify' | 'resend' | 'google';
 type LoginField = 'email' | 'code';
-type Message =
-  | { readonly field?: LoginField; readonly text: string; readonly type: 'error' | 'success' }
-  | null;
+type Message = {
+  readonly field?: LoginField;
+  readonly text: string;
+  readonly type: 'error' | 'success';
+} | null;
 
 const genericAuthError = 'Não foi possível concluir o acesso. Tente novamente.';
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -62,7 +64,7 @@ export function LoginPage() {
     resumedAuthentication.current = true;
     const intent = peekPendingAuthIntent(sessionStorage);
     if (intent?.type === 'navigate') consumePendingAuthIntent(sessionStorage);
-    navigate(intent?.returnTo ?? '/', { replace: true });
+    void navigate(intent?.returnTo ?? '/', { replace: true });
   }, [navigate, state.status]);
 
   const requestCode = async () => {
@@ -164,7 +166,10 @@ export function LoginPage() {
         </p>
 
         {unavailable ? (
-          <p className="mt-5 rounded-lg border border-brand/50 bg-filter-active px-3 py-2 text-sm" role="alert">
+          <p
+            className="mt-5 rounded-lg border border-brand/50 bg-filter-active px-3 py-2 text-sm"
+            role="alert"
+          >
             {state.message}
           </p>
         ) : message?.type === 'error' ? (
@@ -196,13 +201,19 @@ export function LoginPage() {
                 E-mail
               </label>
               <input
-                aria-describedby={message?.field === 'email' && message.type === 'error' ? 'login-email-error' : undefined}
+                aria-describedby={
+                  message?.field === 'email' && message.type === 'error'
+                    ? 'login-email-error'
+                    : undefined
+                }
                 aria-invalid={message?.field === 'email' && message.type === 'error'}
                 autoComplete="email"
                 className="h-12 w-full rounded-xl border border-white/20 bg-app px-3 outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/30"
                 disabled={unavailable}
                 id="login-email"
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                }}
                 ref={setEmailInput}
                 type="email"
                 value={email}
@@ -229,7 +240,11 @@ export function LoginPage() {
                 Código de verificação
               </label>
               <input
-                aria-describedby={message?.field === 'code' && message.type === 'error' ? 'login-code-error' : undefined}
+                aria-describedby={
+                  message?.field === 'code' && message.type === 'error'
+                    ? 'login-code-error'
+                    : undefined
+                }
                 aria-invalid={message?.field === 'code' && message.type === 'error'}
                 autoComplete="one-time-code"
                 className="h-12 w-full rounded-xl border border-white/20 bg-app px-3 text-center font-heading text-xl tracking-[0.45em] outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/30"
@@ -237,7 +252,9 @@ export function LoginPage() {
                 id="login-code"
                 inputMode="numeric"
                 maxLength={6}
-                onChange={(event) => setCode(event.target.value)}
+                onChange={(event) => {
+                  setCode(event.target.value);
+                }}
                 ref={codeInput}
                 value={code}
               />

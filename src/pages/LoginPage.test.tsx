@@ -3,9 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { AuthService } from '@/features/auth/api/auth-service';
 import { AuthProvider } from '@/features/auth/context/AuthProvider';
-import type { AuthenticatedUser } from '@/features/auth/model/auth';
 import {
   PENDING_AUTH_INTENT_KEY,
   peekPendingAuthIntent,
@@ -13,6 +11,9 @@ import {
 } from '@/features/auth/model/pending-auth-intent';
 
 import { LoginPage } from './LoginPage';
+
+import type { AuthService } from '@/features/auth/api/auth-service';
+import type { AuthenticatedUser } from '@/features/auth/model/auth';
 
 const authenticatedUser: AuthenticatedUser = {
   id: 'user-1',
@@ -35,7 +36,9 @@ function createFakeAuthService(initialUser: AuthenticatedUser | null) {
     signInWithGoogle: vi.fn().mockResolvedValue(undefined),
     signOut: vi.fn().mockResolvedValue(undefined),
     emit(user: AuthenticatedUser | null) {
-      listeners.forEach((listener) => listener(user));
+      listeners.forEach((listener) => {
+        listener(user);
+      });
     },
   } satisfies AuthService & { emit(user: AuthenticatedUser | null): void };
 }
@@ -180,7 +183,9 @@ describe('LoginPage', () => {
     await user.click(screen.getByRole('button', { name: 'Reenviar código' }));
 
     expect(service.requestEmailCode).toHaveBeenLastCalledWith('alex@example.com');
-    expect(screen.getByRole('status')).toHaveTextContent('Enviamos um novo código para alex@example.com.');
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Enviamos um novo código para alex@example.com.',
+    );
     expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite');
   });
 
@@ -223,9 +228,9 @@ describe('LoginPage', () => {
     const user = userEvent.setup();
     const service = createFakeAuthService(null);
     service.verifyEmailCode.mockRejectedValueOnce(new Error('verification provider detail'));
-    service.requestEmailCode.mockResolvedValueOnce(undefined).mockRejectedValueOnce(
-      new Error('resend provider detail'),
-    );
+    service.requestEmailCode
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('resend provider detail'));
     service.signInWithGoogle.mockRejectedValueOnce(new Error('oauth provider detail'));
     renderLogin(service);
 
@@ -253,9 +258,9 @@ describe('LoginPage', () => {
   it('returns focus to the code field after an async resend error', async () => {
     const user = userEvent.setup();
     const service = createFakeAuthService(null);
-    service.requestEmailCode.mockResolvedValueOnce(undefined).mockRejectedValueOnce(
-      new Error('resend provider detail'),
-    );
+    service.requestEmailCode
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('resend provider detail'));
     renderLogin(service);
 
     await user.type(screen.getByRole('textbox', { name: 'E-mail' }), 'alex@example.com');
@@ -288,7 +293,9 @@ describe('LoginPage', () => {
     const service = createFakeAuthService(authenticatedUser);
     renderLogin(service);
 
-    await waitFor(() => expect(window.location.pathname).toBe('/minhas-listas'));
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/minhas-listas');
+    });
     expect(peekPendingAuthIntent(sessionStorage)).toBeNull();
   });
 
@@ -309,9 +316,13 @@ describe('LoginPage', () => {
     await user.click(screen.getByRole('button', { name: 'Confirmar código' }));
     expect(window.location.pathname).toBe('/entrar');
 
-    act(() => service.emit(authenticatedUser));
+    act(() => {
+      service.emit(authenticatedUser);
+    });
 
-    await waitFor(() => expect(window.location.pathname).toBe('/minhas-listas'));
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/minhas-listas');
+    });
     expect(peekPendingAuthIntent(sessionStorage)).toBeNull();
   });
 
@@ -326,7 +337,9 @@ describe('LoginPage', () => {
     const service = createFakeAuthService(authenticatedUser);
     renderLogin(service);
 
-    await waitFor(() => expect(window.location.pathname).toBe('/lancamentos'));
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/lancamentos');
+    });
     expect(peekPendingAuthIntent(sessionStorage)).toEqual({
       version: 1,
       type: 'open-add-to-lists',

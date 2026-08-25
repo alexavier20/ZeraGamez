@@ -1,6 +1,6 @@
 # Zera GameZ
 
-O **Zera GameZ** será uma plataforma sobre jogos e lançamentos de games. O projeto ainda está em sua etapa inicial: esta versão contém a fundação técnica, uma página acessível de “Em construção” e a infraestrutura server-side para consultar lançamentos da IGDB. A resposta ainda é exibida somente no console do navegador; não há cards, listas ou dados fictícios na interface.
+O **Zera GameZ** é uma plataforma para acompanhar lançamentos de games e organizar jogos em listas pessoais. A versão atual exibe os próximos lançamentos da IGDB em cards, oferece autenticação sem senha por código de e-mail ou Google e permite manter várias listas customizadas, incluindo “Quero jogar”.
 
 ## Tecnologias
 
@@ -14,6 +14,7 @@ O **Zera GameZ** será uma plataforma sobre jogos e lançamentos de games. O pro
 - Vitest, React Testing Library, `user-event`, `jest-dom` e jsdom
 - Zod para validação de contratos públicos e dados externos
 - Vercel Functions e CLI da Vercel para a API server-side e o desenvolvimento local integrado
+- Supabase Auth, Postgres, Row Level Security e SDK JavaScript para autenticação e listas
 - GitHub Actions para integração contínua
 
 As versões exatas instaladas estão registradas no `package-lock.json`.
@@ -66,6 +67,27 @@ platforms e genres como listas de IDs separadas por vírgulas. Sem parâmetros, 
 consulta cobre hoje em America/Sao_Paulo até 90 dias depois e retorna até 50
 jogos consolidados.
 
+## Configuração do Supabase
+
+1. Crie um projeto no Supabase e aplique a migration
+   `supabase/migrations/20260824000000_auth_and_lists.sql` com a CLI do Supabase
+   ou pelo SQL Editor do painel. A migration cria os perfis, jogos, listas,
+   associações, funções e políticas de Row Level Security necessárias.
+2. Em **Authentication > Email Templates**, configure o e-mail de acesso para
+   renderizar o código de seis dígitos com `{{ .Token }}`.
+3. Configure um provedor SMTP de produção antes do lançamento público. O serviço
+   de e-mail padrão do Supabase é adequado apenas para testes iniciais e possui
+   limitações de entrega.
+4. Habilite o provedor Google e informe o Client ID e o Client Secret no
+   Supabase. No console do Google, use a URL de callback exibida pelo Supabase;
+   em **Authentication > URL Configuration**, permita
+   `http://localhost:3000/entrar` e a URL `/entrar` do domínio de produção.
+5. Defina `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` no `.env.local`
+   e também nos ambientes Development, Preview e Production da Vercel. Esses
+   valores são públicos e a autorização dos dados continua protegida por RLS.
+6. A chave `service_role` é secreta: ela nunca deve usar o prefixo `VITE_`, ser
+   colocada no `.env.local` do frontend ou entrar no bundle enviado ao navegador.
+
 ## Comandos disponíveis
 
 | Comando                | Finalidade                                           |
@@ -93,6 +115,7 @@ zera-gamez/
 ├── api/
 │   └── releases.ts
 ├── public/
+│   └── assets/
 ├── server/
 │   └── releases/
 │       ├── application/
@@ -100,15 +123,18 @@ zera-gamez/
 │       └── infrastructure/
 ├── shared/
 │   └── contracts/
+├── supabase/
+│   └── migrations/
 ├── src/
 │   ├── app/
 │   │   ├── App.test.tsx
 │   │   ├── App.tsx
 │   │   └── router.tsx
 │   ├── features/
+│   │   ├── auth/
+│   │   ├── lists/
 │   │   └── releases/
-│   │       ├── api/
-│   │       └── hooks/
+│   ├── pages/
 │   ├── styles/
 │   │   └── global.css
 │   ├── test/
@@ -130,33 +156,18 @@ zera-gamez/
 └── vite.config.ts
 ```
 
-`public/` fica disponível para arquivos estáticos que não precisem passar pelo pipeline do Vite. Ela permanece vazia nesta etapa para evitar ativos sem uso.
-
 ## Decisões arquiteturais
 
-- A aplicação usa uma SPA pequena com `BrowserRouter`, uma rota `/` e redirecionamento simples de endereços desconhecidos para a página inicial.
+- A aplicação usa uma SPA com `BrowserRouter`, rotas públicas para início, lançamentos e login, além de rotas protegidas para listas, criação de lista e perfil. Endereços desconhecidos redirecionam para a página inicial.
 - O alias `@/` aponta para `src/` no TypeScript, Vite, testes e ESLint, reduzindo imports relativos frágeis.
 - O token `brand` centraliza a cor principal `#e70012`; `surface` registra o fundo escuro inicial. Ambos ficam no tema do Tailwind.
 - O CSS global contém apenas o carregamento do Tailwind, tokens e bases do documento. O layout continua mobile-first.
 - O lint com informação de tipos detecta, entre outros problemas, promises ignoradas e imports inválidos.
-- A configuração atual permanece deliberadamente simples: não há estado global ou contextos sem uso. A integração de lançamentos usa portas pequenas, caso de uso, domínio e adaptadores server-side para manter credenciais e regras de consolidação desacopladas do React e da Vercel.
+- Autenticação e listas ficam atrás de contextos e portas injetáveis. Sem as variáveis públicas do Supabase, as páginas públicas continuam funcionando e as ações protegidas direcionam para uma tela de login com orientação de configuração.
+- A integração de lançamentos usa portas pequenas, caso de uso, domínio e adaptadores server-side para manter credenciais e regras de consolidação desacopladas do React e da Vercel.
 
-Quando novas funcionalidades surgirem, a organização deve evoluir gradualmente a partir da estrutura orientada a funcionalidades já usada pelos lançamentos, sem criar diretórios vazios antes da necessidade:
-
-```text
-src/
-├── app/
-├── features/
-│   ├── games/
-│   ├── authentication/
-│   └── favorites/
-└── shared/
-    ├── components/
-    ├── hooks/
-    ├── lib/
-    ├── services/
-    └── types/
-```
+Novas funcionalidades devem evoluir gradualmente a organização por domínio já
+usada em `src/features`, sem criar diretórios vazios antes da necessidade.
 
 Integrações externas futuras devem ficar atrás de serviços ou adaptadores. Dados recebidos de APIs deverão ser validados antes de chegar aos componentes.
 
@@ -164,6 +175,8 @@ Integrações externas futuras devem ficar atrás de serviços ou adaptadores. D
 
 - Nunca envie arquivos `.env` reais ao Git.
 - Variáveis prefixadas com `VITE_` são incorporadas ao bundle e ficam visíveis no navegador. Elas **não podem conter segredos**, tokens, senhas ou credenciais.
+- `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` são configurações públicas; a proteção dos dados depende das políticas de Row Level Security.
+- Nunca exponha a chave `service_role` no frontend nem use o prefixo `VITE_` nela.
 - Não registre informações sensíveis no console.
 - Dados externos da IGDB são validados antes de alcançar o domínio ou os componentes.
 - Use `unknown`, e não `any`, antes da validação de dados de origem externa.
@@ -181,7 +194,9 @@ Install Command: npm install
 
 O `vercel.json` reescreve rotas da SPA para `index.html`, permitindo atualizar e acessar URLs internas diretamente. A Vercel continua servindo arquivos estáticos existentes antes de aplicar o fallback da aplicação, enquanto `api/releases.ts` é publicada como Vercel Function.
 
-Não há banco de dados ou domínio configurados nesta etapa. A CLI da Vercel é usada apenas para executar localmente o frontend e a Function com `npm run dev` (ou `npm run dev:vercel`).
+O banco e a autenticação são fornecidos pelo projeto Supabase configurado pelos
+passos acima. A CLI da Vercel executa localmente o frontend e a Function com
+`npm run dev` (ou `npm run dev:vercel`).
 
 ## Integração contínua
 
@@ -205,4 +220,6 @@ O deploy não faz parte do workflow. A publicação futura deverá usar a integr
 - Zustand somente se surgir uma necessidade real de estado global no cliente
 - shadcn/ui ou Radix UI somente após a definição do design system
 
-Também não foram instalados Axios, Redux, bibliotecas de gráficos, animação, datas ou ícones, nem SDKs de autenticação ou banco de dados. Essas dependências só devem ser avaliadas diante de uma necessidade concreta.
+Também não foram instalados Axios, Redux, bibliotecas de gráficos, animação ou
+datas. Essas dependências só devem ser avaliadas diante de uma necessidade
+concreta.

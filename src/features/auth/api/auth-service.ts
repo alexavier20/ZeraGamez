@@ -9,13 +9,13 @@ interface AuthUserRecord {
 }
 
 interface AuthResult {
-  readonly error: unknown | null;
+  readonly error: unknown;
 }
 
 interface SupabaseAuthPort {
   getUser(): Promise<{
     readonly data: { readonly user: AuthUserRecord | null };
-    readonly error: unknown | null;
+    readonly error: unknown;
   }>;
   onAuthStateChange(
     listener: (event: string, session: { readonly user: AuthUserRecord } | null) => void,
@@ -98,7 +98,7 @@ export function createSupabaseAuthService(client: SupabaseClientPort): AuthServi
   };
 }
 
-function throwIfAuthError(error: unknown | null): void {
+function throwIfAuthError(error: unknown): void {
   if (error !== null) throw toDataError(error);
 }
 
