@@ -1,5 +1,11 @@
 export type DataErrorCode =
-  'configuration' | 'unauthenticated' | 'permission' | 'conflict' | 'network' | 'unexpected';
+  | 'configuration'
+  | 'unauthenticated'
+  | 'permission'
+  | 'conflict'
+  | 'network'
+  | 'google_provider_disabled'
+  | 'unexpected';
 
 const DATA_ERROR_MESSAGES: Record<DataErrorCode, string> = {
   configuration: 'A autenticação ainda não está configurada.',
@@ -7,6 +13,8 @@ const DATA_ERROR_MESSAGES: Record<DataErrorCode, string> = {
   permission: 'Você não tem permissão para realizar esta ação.',
   conflict: 'Não foi possível concluir porque os dados foram alterados.',
   network: 'Não foi possível conectar ao serviço. Tente novamente.',
+  google_provider_disabled:
+    'O login com Google não está habilitado. Use o código enviado por e-mail para entrar.',
   unexpected: 'Algo deu errado. Tente novamente.',
 };
 

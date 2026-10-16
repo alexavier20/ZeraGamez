@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 
 import { useAuth } from '@/features/auth/context/AuthProvider';
 import { normalizeOtp } from '@/features/auth/model/auth';
+import { DataError } from '@/shared/supabase/data-error';
 import {
   consumePendingAuthIntent,
   peekPendingAuthIntent,
@@ -142,8 +143,14 @@ export function LoginPage() {
     setMessage(null);
     try {
       await signInWithGoogle(`${window.location.origin}/entrar`);
-    } catch {
-      setMessage({ type: 'error', text: genericAuthError });
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text:
+          error instanceof DataError && error.code === 'google_provider_disabled'
+            ? error.message
+            : genericAuthError,
+      });
     } finally {
       setSubmission('idle');
     }

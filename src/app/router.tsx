@@ -16,6 +16,7 @@ import { MyListsPage } from '@/pages/MyListsPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { ReleasesPage } from '@/pages/ReleasesPage';
 import { headerRoutes } from '@/shared/components/header/header.config';
+import { isGoogleAuthProviderEnabled } from '@/shared/supabase/auth-settings';
 import { getSupabaseClient } from '@/shared/supabase/client';
 
 interface AppRouterProps {
@@ -35,7 +36,12 @@ function getDefaultDependencies(): DefaultDependencies {
 
   const client = getSupabaseClient();
   defaultDependencies = {
-    authService: client === null ? null : createSupabaseAuthService(client),
+    authService:
+      client === null
+        ? null
+        : createSupabaseAuthService(client, {
+            isGoogleProviderEnabled: isGoogleAuthProviderEnabled,
+          }),
     listsRepository: client === null ? null : createSupabaseListsRepository(client),
   };
   return defaultDependencies;

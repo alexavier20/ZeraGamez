@@ -1,4 +1,4 @@
-import { toDataError } from '@/shared/supabase/data-error';
+import { DataError, toDataError } from '@/shared/supabase/data-error';
 
 import { toAuthenticatedUser, type AuthenticatedUser } from '../model/auth';
 
@@ -40,6 +40,10 @@ interface SupabaseClientPort {
   readonly auth: SupabaseAuthPort;
 }
 
+interface AuthServiceOptions {
+  readonly isGoogleProviderEnabled?: () => Promise<boolean>;
+}
+
 export interface AuthService {
   getCurrentUser(): Promise<AuthenticatedUser | null>;
   onAuthStateChange(listener: (user: AuthenticatedUser | null) => void): () => void;
@@ -49,7 +53,10 @@ export interface AuthService {
   signOut(): Promise<void>;
 }
 
-export function createSupabaseAuthService(client: SupabaseClientPort): AuthService {
+export function createSupabaseAuthService(
+  client: SupabaseClientPort,
+  options: AuthServiceOptions = {},
+): AuthService {
   return {
     async getCurrentUser(): Promise<AuthenticatedUser | null> {
       const response = await callAuth(() => client.auth.getUser());
@@ -82,12 +89,32 @@ export function createSupabaseAuthService(client: SupabaseClientPort): AuthServi
     },
 
     async signInWithGoogle(redirectTo: string): Promise<void> {
-      const response = await callAuth(() =>
-        client.auth.signInWithOAuth({
+      if (options.isGoogleProviderEnabled !== undefined) {
+        let providerEnabled: boolean;
+        try {
+          providerEnabled = await options.isGoogleProviderEnabled();
+        } catch (error) {
+          throw toDataError(error);
+        }
+        if (!providerEnabled) throw new DataError('google_provider_disabled');
+      }
+
+      let response: AuthResult;
+      try {
+        response = await client.auth.signInWithOAuth({
           provider: 'google',
           options: { redirectTo },
-        }),
-      );
+        });
+      } catch (error) {
+        if (isGoogleProviderDisabledError(error)) {
+          throw new DataError('google_provider_disabled');
+        }
+        throw toDataError(error);
+      }
+
+      if (isGoogleProviderDisabledError(response.error)) {
+        throw new DataError('google_provider_disabled');
+      }
       throwIfAuthError(response.error);
     },
 
@@ -96,6 +123,17 @@ export function createSupabaseAuthService(client: SupabaseClientPort): AuthServi
       throwIfAuthError(response.error);
     },
   };
+}
+
+function isGoogleProviderDisabledError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false;
+
+  const candidate = error as { readonly message?: unknown; readonly msg?: unknown };
+  return [candidate.message, candidate.msg].some(
+    (message) =>
+      typeof message === 'string' &&
+      /unsupported provider:\s*provider is not enabled/i.test(message),
+  );
 }
 
 function throwIfAuthError(error: unknown): void {
