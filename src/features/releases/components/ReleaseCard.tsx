@@ -1,6 +1,6 @@
 import { BookmarkPlus, CircleCheck, Gamepad2, Plus } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 
 import { useAuth } from '@/features/auth/context/AuthProvider';
 import { savePendingAuthIntent } from '@/features/auth/model/pending-auth-intent';
@@ -133,22 +133,28 @@ function ReleaseCardDesktop({
   return (
     <>
       <div className="relative">
-        {item.coverUrl ? (
-          <img
-            alt={`Capa de ${item.name}`}
-            className="h-[244px] w-full rounded-xl object-cover"
-            loading="lazy"
-            src={item.coverUrl}
-          />
-        ) : (
-          <div
-            aria-label={`Capa indisponível de ${item.name}`}
-            className="flex h-[244px] w-full items-center justify-center rounded-xl bg-gradient-to-br from-bg-secondary to-surface-hover text-text-muted"
-            role="img"
-          >
-            <Gamepad2 aria-hidden="true" size={32} />
-          </div>
-        )}
+        <Link
+          aria-label={`Ver detalhes de ${item.name}`}
+          className="block rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          to={`/jogos/${String(item.id)}`}
+        >
+          {item.coverUrl ? (
+            <img
+              alt={`Capa de ${item.name}`}
+              className="h-[244px] w-full rounded-xl object-cover transition-opacity hover:opacity-85"
+              loading="lazy"
+              src={item.coverUrl}
+            />
+          ) : (
+            <div
+              aria-label={`Capa indisponível de ${item.name}`}
+              className="flex h-[244px] w-full items-center justify-center rounded-xl bg-gradient-to-br from-bg-secondary to-surface-hover text-text-muted"
+              role="img"
+            >
+              <Gamepad2 aria-hidden="true" size={32} />
+            </div>
+          )}
+        </Link>
         <span className="absolute bottom-2 left-2 rounded-md bg-app/85 px-2 py-1 text-[11px] font-semibold text-content-primary">
           {presentation.status}
         </span>
@@ -168,7 +174,12 @@ function ReleaseCardDesktop({
             className="truncate font-heading text-base font-semibold text-text-primary"
             title={item.name}
           >
-            {item.name}
+            <Link
+              className="rounded-sm hover:text-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              to={`/jogos/${String(item.id)}`}
+            >
+              {item.name}
+            </Link>
           </h3>
           <p className="mt-1 text-xs text-text-muted">{presentation.date}</p>
         </div>
@@ -227,22 +238,28 @@ function ReleaseCardMobile({
   return (
     <>
       <div className="relative h-full">
-        {item.coverUrl ? (
-          <img
-            alt={`Capa de ${item.name}`}
-            className="h-full w-[82px] rounded-[10px] object-cover"
-            loading="lazy"
-            src={item.coverUrl}
-          />
-        ) : (
-          <div
-            aria-label={`Capa indisponível de ${item.name}`}
-            className="flex h-full w-[82px] items-center justify-center rounded-[10px] bg-gradient-to-br from-bg-secondary to-surface-hover text-text-muted"
-            role="img"
-          >
-            <Gamepad2 aria-hidden="true" size={24} />
-          </div>
-        )}
+        <Link
+          aria-label={`Ver detalhes de ${item.name}`}
+          className="block h-full rounded-[10px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          to={`/jogos/${String(item.id)}`}
+        >
+          {item.coverUrl ? (
+            <img
+              alt={`Capa de ${item.name}`}
+              className="h-full w-[82px] rounded-[10px] object-cover transition-opacity hover:opacity-85"
+              loading="lazy"
+              src={item.coverUrl}
+            />
+          ) : (
+            <div
+              aria-label={`Capa indisponível de ${item.name}`}
+              className="flex h-full w-[82px] items-center justify-center rounded-[10px] bg-gradient-to-br from-bg-secondary to-surface-hover text-text-muted"
+              role="img"
+            >
+              <Gamepad2 aria-hidden="true" size={24} />
+            </div>
+          )}
+        </Link>
       </div>
 
       <div className="flex min-w-0 flex-col justify-between py-0.5">
@@ -252,7 +269,12 @@ function ReleaseCardMobile({
               className="min-w-0 truncate font-heading text-sm font-semibold text-text-primary"
               title={item.name}
             >
-              {item.name}
+              <Link
+                className="rounded-sm hover:text-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                to={`/jogos/${String(item.id)}`}
+              >
+                {item.name}
+              </Link>
             </h3>
             <div className="-mr-1 -mt-1">
               <WantToPlayButton

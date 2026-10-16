@@ -10,6 +10,7 @@ import {
 } from '@/features/lists/api/lists-repository';
 import { ListsProvider } from '@/features/lists/context/ListsProvider';
 import { CreateListPage } from '@/pages/CreateListPage';
+import { GameDetailsPage } from '@/pages/GameDetailsPage';
 import { HomePage } from '@/pages/HomePage';
 import { LoginPage } from '@/pages/LoginPage';
 import { MyListsPage } from '@/pages/MyListsPage';
@@ -62,6 +63,7 @@ export function AppRouter({ authService, listsRepository }: AppRouterProps) {
             <Route element={<AppLayout />}>
               <Route index element={<HomePage />} />
               <Route path={headerRoutes.releases} element={<ReleasesPage />} />
+              <Route path="/jogos/:gameId" element={<GameDetailsPage />} />
               <Route path="/entrar" element={<LoginPage />} />
               <Route element={<ProtectedRoute />}>
                 <Route path={headerRoutes.lists} element={<MyListsPage />} />
