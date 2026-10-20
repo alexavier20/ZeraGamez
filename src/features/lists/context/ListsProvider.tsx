@@ -12,7 +12,12 @@ import {
 import { useAuth } from '@/features/auth/context/AuthProvider';
 
 import type { ListsRepository } from '@/features/lists/api/lists-repository';
-import type { CreateListInput, GameSnapshot, UserListSummary } from '@/features/lists/model/lists';
+import type {
+  CreateListInput,
+  GameSnapshot,
+  ListGame,
+  UserListSummary,
+} from '@/features/lists/model/lists';
 
 export type ListsState =
   | { readonly status: 'idle' }
@@ -28,10 +33,16 @@ export interface ListsContextValue {
   readonly wantToPlayIds: ReadonlySet<number>;
   readonly wantToPlayMemberships: ReadonlyMap<number, WantToPlayMembershipStatus>;
   readonly addGameToLists: (game: GameSnapshot, listIds: readonly number[]) => Promise<void>;
+  readonly addGamesToList: (games: readonly GameSnapshot[], listId: number) => Promise<void>;
   readonly createList: (input: CreateListInput) => Promise<UserListSummary>;
+  readonly deleteList: (listId: number) => Promise<void>;
+  readonly loadListGames: (listId: number) => Promise<readonly ListGame[]>;
   readonly loadLists: (options?: { readonly force?: boolean }) => Promise<void>;
   readonly loadWantToPlayIds: (igdbIds: readonly number[]) => Promise<void>;
+  readonly moveGameInList: (listId: number, igdbId: number, position: number) => Promise<void>;
+  readonly removeGameFromList: (listId: number, igdbId: number) => Promise<boolean>;
   readonly setWantToPlay: (game: GameSnapshot, desired: boolean) => Promise<boolean>;
+  readonly updateList: (listId: number, input: CreateListInput) => Promise<void>;
 }
 
 interface ListsProviderProps {
@@ -113,10 +124,16 @@ const defaultListsContext: ListsContextValue = {
   wantToPlayIds: new Set<number>(),
   wantToPlayMemberships: new Map<number, WantToPlayMembershipStatus>(),
   addGameToLists: unavailableAction,
+  addGamesToList: unavailableAction,
   createList: unavailableAction,
+  deleteList: unavailableAction,
+  loadListGames: unavailableAction,
   loadLists: unavailableAction,
   loadWantToPlayIds: unavailableAction,
+  moveGameInList: unavailableAction,
+  removeGameFromList: unavailableAction,
   setWantToPlay: unavailableAction,
+  updateList: unavailableAction,
 };
 
 const ListsContext = createContext<ListsContextValue>(defaultListsContext);
@@ -310,6 +327,29 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
     [assertCurrentScope, isCurrentScope, loadListsForScope, publishListsState, requireScope],
   );
 
+  const deleteList = useCallback<ListsContextValue['deleteList']>(
+    async (listId) => {
+      const scope = requireScope();
+      const repositoryForScope = scope.repository;
+      if (repositoryForScope === null) throw configurationError();
+
+      try {
+        await repositoryForScope.deleteList(listId);
+      } catch (error) {
+        if (!isCurrentScope(scope)) throw new ListsOperationCancelledError();
+        throw error;
+      }
+      assertCurrentScope(scope);
+
+      const currentLists = scope.listsState.status === 'success' ? scope.listsState.lists : [];
+      publishListsState(scope, {
+        status: 'success',
+        lists: currentLists.filter((list) => list.id !== listId),
+      });
+    },
+    [assertCurrentScope, isCurrentScope, publishListsState, requireScope],
+  );
+
   const addGameToLists = useCallback<ListsContextValue['addGameToLists']>(
     async (game, listIds) => {
       const scope = requireScope();
@@ -318,6 +358,105 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
 
       try {
         await repositoryForScope.addGameToLists(game, listIds);
+      } catch (error) {
+        if (!isCurrentScope(scope)) throw new ListsOperationCancelledError();
+        throw error;
+      }
+      assertCurrentScope(scope);
+      await loadListsForScope(scope, true);
+      assertCurrentScope(scope);
+    },
+    [assertCurrentScope, isCurrentScope, loadListsForScope, requireScope],
+  );
+
+  const addGamesToList = useCallback<ListsContextValue['addGamesToList']>(
+    async (games, listId) => {
+      const scope = requireScope();
+      const repositoryForScope = scope.repository;
+      if (repositoryForScope === null) throw configurationError();
+
+      for (const game of games) {
+        assertCurrentScope(scope);
+        try {
+          await repositoryForScope.addGameToLists(game, [listId]);
+        } catch (error) {
+          if (!isCurrentScope(scope)) throw new ListsOperationCancelledError();
+          throw error;
+        }
+      }
+
+      assertCurrentScope(scope);
+      await loadListsForScope(scope, true);
+      assertCurrentScope(scope);
+    },
+    [assertCurrentScope, isCurrentScope, loadListsForScope, requireScope],
+  );
+
+  const loadListGames = useCallback<ListsContextValue['loadListGames']>(
+    async (listId) => {
+      const scope = requireScope();
+      const repositoryForScope = scope.repository;
+      if (repositoryForScope === null) throw configurationError();
+
+      let games: readonly ListGame[];
+      try {
+        games = await repositoryForScope.getListGames(listId);
+      } catch (error) {
+        if (!isCurrentScope(scope)) throw new ListsOperationCancelledError();
+        throw error;
+      }
+      assertCurrentScope(scope);
+      return games;
+    },
+    [assertCurrentScope, isCurrentScope, requireScope],
+  );
+
+  const removeGameFromList = useCallback<ListsContextValue['removeGameFromList']>(
+    async (listId, igdbId) => {
+      const scope = requireScope();
+      const repositoryForScope = scope.repository;
+      if (repositoryForScope === null) throw configurationError();
+
+      let removed: boolean;
+      try {
+        removed = await repositoryForScope.removeGameFromList(listId, igdbId);
+      } catch (error) {
+        if (!isCurrentScope(scope)) throw new ListsOperationCancelledError();
+        throw error;
+      }
+      assertCurrentScope(scope);
+      await loadListsForScope(scope, true);
+      assertCurrentScope(scope);
+      return removed;
+    },
+    [assertCurrentScope, isCurrentScope, loadListsForScope, requireScope],
+  );
+
+  const moveGameInList = useCallback<ListsContextValue['moveGameInList']>(
+    async (listId, igdbId, position) => {
+      const scope = requireScope();
+      const repositoryForScope = scope.repository;
+      if (repositoryForScope === null) throw configurationError();
+
+      try {
+        await repositoryForScope.moveGameInList(listId, igdbId, position);
+      } catch (error) {
+        if (!isCurrentScope(scope)) throw new ListsOperationCancelledError();
+        throw error;
+      }
+      assertCurrentScope(scope);
+    },
+    [assertCurrentScope, isCurrentScope, requireScope],
+  );
+
+  const updateList = useCallback<ListsContextValue['updateList']>(
+    async (listId, input) => {
+      const scope = requireScope();
+      const repositoryForScope = scope.repository;
+      if (repositoryForScope === null) throw configurationError();
+
+      try {
+        await repositoryForScope.updateList(listId, input);
       } catch (error) {
         if (!isCurrentScope(scope)) throw new ListsOperationCancelledError();
         throw error;
@@ -444,25 +583,37 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
   const value = useMemo<ListsContextValue>(
     () => ({
       addGameToLists,
+      addGamesToList,
       createList,
+      deleteList,
+      loadListGames,
       listsState: scopedState.listsState,
       loadLists,
       loadWantToPlayIds,
+      moveGameInList,
+      removeGameFromList,
       scopeVersion: scopedState.scopeVersion,
       setWantToPlay,
+      updateList,
       wantToPlayIds: scopedState.wantToPlayIds,
       wantToPlayMemberships: scopedState.wantToPlayMemberships,
     }),
     [
       addGameToLists,
+      addGamesToList,
       createList,
+      deleteList,
+      loadListGames,
       loadLists,
       loadWantToPlayIds,
+      moveGameInList,
+      removeGameFromList,
       scopedState.listsState,
       scopedState.scopeVersion,
       scopedState.wantToPlayIds,
       scopedState.wantToPlayMemberships,
       setWantToPlay,
+      updateList,
     ],
   );
 

@@ -7,6 +7,8 @@ export interface GameSnapshot {
   readonly releaseDate: string;
 }
 
+export type ListGame = GameSnapshot;
+
 export interface UserListSummary {
   readonly covers: readonly string[];
   readonly description: string | null;

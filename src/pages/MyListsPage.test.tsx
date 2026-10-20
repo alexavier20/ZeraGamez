@@ -64,9 +64,14 @@ function createRepository(listSummaries: ListsRepository['listSummaries']): List
   return {
     addGameToLists: vi.fn().mockResolvedValue([]),
     createList: vi.fn().mockResolvedValue(rpgList),
+    deleteList: vi.fn().mockResolvedValue(undefined),
+    getListGames: vi.fn().mockResolvedValue([]),
     getWantToPlayIds: vi.fn().mockResolvedValue(new Set<number>()),
+    moveGameInList: vi.fn().mockResolvedValue(undefined),
     listSummaries,
+    removeGameFromList: vi.fn().mockResolvedValue(true),
     setWantToPlay: vi.fn().mockResolvedValue(false),
+    updateList: vi.fn().mockResolvedValue(undefined),
   };
 }
 

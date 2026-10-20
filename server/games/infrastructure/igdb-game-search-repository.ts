@@ -1,0 +1,147 @@
+import { z } from 'zod';
+
+import {
+  gameSearchResultSchema,
+  type GameSearchResult,
+} from '../../../shared/contracts/game-search';
+import {
+  InvalidUpstreamResponseError,
+  isTimeoutError,
+  ServiceUnavailableError,
+  UpstreamTimeoutError,
+} from '../../releases/infrastructure/upstream-errors';
+
+import type {
+  AccessTokenLease,
+  AccessTokenProvider,
+} from '../../releases/infrastructure/twitch-token-provider';
+import type { GameSearchRepository } from '../application/search-games';
+
+const igdbDateSchema = z
+  .number()
+  .int()
+  .transform((seconds, context) => {
+    const milliseconds = seconds * 1_000;
+    if (!Number.isSafeInteger(milliseconds)) {
+      context.addIssue({ code: 'custom', message: 'Invalid IGDB date.' });
+      return z.NEVER;
+    }
+    const date = new Date(milliseconds);
+    if (Number.isNaN(date.getTime())) {
+      context.addIssue({ code: 'custom', message: 'Invalid IGDB date.' });
+      return z.NEVER;
+    }
+    return date.toISOString().slice(0, 10);
+  });
+
+const igdbGameSchema = z.object({
+  id: z.number().int().positive(),
+  name: z.string().trim().min(1).max(200),
+  first_release_date: igdbDateSchema.nullable().optional(),
+  cover: z
+    .object({ image_id: z.string().regex(/^[A-Za-z0-9_-]{1,200}$/) })
+    .nullable()
+    .optional(),
+  platforms: z.array(z.object({ name: z.string().trim().min(1) })).optional(),
+});
+
+const igdbGamesSchema = z.array(igdbGameSchema).max(12);
+
+interface IgdbGameSearchRepositoryOptions {
+  clientId: string;
+  fetcher: typeof fetch;
+  tokenProvider: AccessTokenProvider;
+  timeoutMs?: number;
+}
+
+interface IgdbRequestResult {
+  readonly response: Response;
+  readonly timeoutSignal: AbortSignal;
+  readonly tokenLease: AccessTokenLease;
+}
+
+function imageUrl(imageId: string) {
+  return `https://images.igdb.com/igdb/image/upload/t_cover_big_2x/${encodeURIComponent(imageId)}.jpg`;
+}
+
+function escapeApicalypseString(value: string) {
+  return value.replaceAll('\\', '\\\\').replaceAll('"', '\\"');
+}
+
+function toGameSearchResult(game: z.infer<typeof igdbGameSchema>): GameSearchResult {
+  return gameSearchResultSchema.parse({
+    id: game.id,
+    name: game.name,
+    coverUrl: game.cover ? imageUrl(game.cover.image_id) : null,
+    releaseDate: game.first_release_date ?? null,
+    platforms: [...new Set((game.platforms ?? []).map(({ name }) => name))],
+  });
+}
+
+export class IgdbGameSearchRepository implements GameSearchRepository {
+  private readonly options: IgdbGameSearchRepositoryOptions;
+
+  constructor(options: IgdbGameSearchRepositoryOptions) {
+    this.options = options;
+  }
+
+  async search(query: string): Promise<readonly GameSearchResult[]> {
+    let requestResult = await this.request(query);
+    if (requestResult.response.status === 401) {
+      this.options.tokenProvider.invalidate(requestResult.tokenLease);
+      requestResult = await this.request(query);
+    }
+
+    const { response, timeoutSignal } = requestResult;
+    if (!response.ok) throw new ServiceUnavailableError('IGDB indisponível.');
+
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch (error) {
+      if (isTimeoutError(error) || isTimeoutError(timeoutSignal.reason)) {
+        throw new UpstreamTimeoutError('IGDB excedeu o tempo limite.');
+      }
+      if (error instanceof SyntaxError) {
+        throw new InvalidUpstreamResponseError('Resposta IGDB inválida.');
+      }
+      throw new ServiceUnavailableError('IGDB indisponível.');
+    }
+
+    const result = igdbGamesSchema.safeParse(payload);
+    if (!result.success) throw new InvalidUpstreamResponseError('Resposta IGDB inválida.');
+
+    return Object.freeze(result.data.map(toGameSearchResult));
+  }
+
+  private async request(query: string): Promise<IgdbRequestResult> {
+    const tokenLease = await this.options.tokenProvider.getToken();
+    const timeoutSignal = AbortSignal.timeout(this.options.timeoutMs ?? 10_000);
+    const safeQuery = escapeApicalypseString(query);
+    const body = [
+      'search "' + safeQuery + '";',
+      'fields id,name,first_release_date,cover.image_id,platforms.name;',
+      'where version_parent = null;',
+      'limit 12;',
+    ].join(' ');
+
+    try {
+      const response = await this.options.fetcher('https://api.igdb.com/v4/games', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          Authorization: 'Bearer ' + tokenLease.token,
+          'Client-ID': this.options.clientId,
+        },
+        body,
+        signal: timeoutSignal,
+      });
+      return { response, timeoutSignal, tokenLease };
+    } catch (error) {
+      if (isTimeoutError(error) || isTimeoutError(timeoutSignal.reason)) {
+        throw new UpstreamTimeoutError('IGDB excedeu o tempo limite.');
+      }
+      throw new ServiceUnavailableError('IGDB indisponível.');
+    }
+  }
+}

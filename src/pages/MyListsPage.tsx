@@ -1,52 +1,146 @@
-import { Plus } from 'lucide-react';
-import { useEffect } from 'react';
+import { Plus, Settings } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 
-import { useLists } from '@/features/lists/context/ListsProvider';
+import { AddGamesToListModal } from '@/features/lists/components/AddGamesToListModal';
+import { DeleteListModal } from '@/features/lists/components/DeleteListModal';
+import { ListDetailsModal } from '@/features/lists/components/ListDetailsModal';
+import { isListsOperationCancelled, useLists } from '@/features/lists/context/ListsProvider';
 import { headerRoutes } from '@/shared/components/header/header.config';
 import { PageHeading } from '@/shared/components/page-heading/PageHeading';
 
-import type { UserListSummary } from '@/features/lists/model/lists';
+import type { CreateListInput, UserListSummary } from '@/features/lists/model/lists';
+
+type ListModalMode = 'add-games' | 'details';
 
 function gameCountLabel(count: number): string {
   return `${String(count)} ${count === 1 ? 'jogo' : 'jogos'}`;
 }
 
-function ListSummary({ list }: { readonly list: UserListSummary }) {
+interface ListSummaryProps {
+  readonly list: UserListSummary;
+  readonly onDelete: (list: UserListSummary) => void;
+  readonly onSelect: (list: UserListSummary) => void;
+}
+
+function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
+  const settingsButtonRef = useRef<HTMLButtonElement>(null);
+  const settingsMenuId = `list-settings-${String(list.id)}`;
   const covers = list.covers
     .filter((cover): cover is string => typeof cover === 'string' && cover.length > 0)
     .slice(0, 3);
 
+  useEffect(() => {
+    if (!settingsOpen) return;
+
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (event.target instanceof Node && !settingsRef.current?.contains(event.target)) {
+        setSettingsOpen(false);
+      }
+    };
+    const closeOnEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSettingsOpen(false);
+        settingsButtonRef.current?.focus();
+      }
+    };
+
+    document.addEventListener('pointerdown', closeOnOutsideClick);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsideClick);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [settingsOpen]);
+
   return (
-    <article className="overflow-hidden rounded-2xl border border-white/10 bg-surface shadow-lg shadow-black/10">
-      {covers.length > 0 ? (
-        <div className="grid h-36 grid-cols-3 overflow-hidden bg-surface-raised">
-          {covers.map((cover, index) => (
-            <img
-              alt={`Capa de ${list.name} ${String(index + 1)}`}
-              className="h-full w-full object-cover"
-              key={`${String(list.id)}:${String(index)}:${cover}`}
-              src={cover}
-            />
-          ))}
-        </div>
-      ) : (
-        <div
-          aria-hidden="true"
-          className="h-20 bg-gradient-to-br from-brand/25 to-surface-raised"
-        />
-      )}
-      <div className="space-y-2 p-5">
-        <div className="flex items-start justify-between gap-4">
-          <h2 className="font-heading text-xl font-bold text-content-primary">{list.name}</h2>
-          <span className="shrink-0 rounded-full bg-brand/15 px-3 py-1 text-xs font-semibold text-brand-light">
-            {gameCountLabel(list.gameCount)}
-          </span>
-        </div>
-        {list.description === null || list.description.length === 0 ? null : (
-          <p className="text-sm leading-6 text-text-muted">{list.description}</p>
+    <article className="relative rounded-2xl border border-white/10 bg-surface shadow-lg shadow-black/10 transition-colors hover:border-brand/45">
+      <button
+        aria-haspopup="dialog"
+        aria-label={`Abrir detalhes da lista ${list.name}`}
+        className="block w-full overflow-hidden rounded-2xl text-left focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-brand"
+        onClick={() => {
+          onSelect(list);
+        }}
+        type="button"
+      >
+        {covers.length > 0 ? (
+          <div className="grid h-36 grid-cols-3 overflow-hidden bg-surface-raised">
+            {covers.map((cover, index) => (
+              <img
+                alt={`Capa de ${list.name} ${String(index + 1)}`}
+                className="h-full w-full object-cover"
+                key={`${String(list.id)}:${String(index)}:${cover}`}
+                src={cover}
+              />
+            ))}
+          </div>
+        ) : (
+          <div
+            aria-hidden="true"
+            className="h-20 bg-gradient-to-br from-brand/25 to-surface-raised"
+          />
         )}
-      </div>
+        <div className="space-y-2 p-5">
+          <div className="flex items-start justify-between gap-4">
+            <h2 className="font-heading text-xl font-bold text-content-primary">{list.name}</h2>
+            <span className="shrink-0 rounded-full bg-brand/15 px-3 py-1 text-xs font-semibold text-brand-light">
+              {gameCountLabel(list.gameCount)}
+            </span>
+          </div>
+          {list.description === null || list.description.length === 0 ? null : (
+            <p className="text-sm leading-6 text-text-muted">{list.description}</p>
+          )}
+        </div>
+      </button>
+      {list.systemKey === null ? (
+        <div className="absolute top-3 right-3 z-10" ref={settingsRef}>
+          <button
+            aria-controls={settingsMenuId}
+            aria-expanded={settingsOpen}
+            aria-label={`Configurações da lista ${list.name}`}
+            className="flex size-10 items-center justify-center rounded-xl border border-white/15 bg-black/65 text-white shadow-md backdrop-blur-sm transition hover:border-brand/60 hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            onClick={() => {
+              setSettingsOpen((open) => !open);
+            }}
+            ref={settingsButtonRef}
+            type="button"
+          >
+            <Settings aria-hidden="true" size={18} />
+          </button>
+          {settingsOpen ? (
+            <div
+              className="absolute top-12 right-0 min-w-40 overflow-hidden rounded-xl border border-border-brand bg-surface p-1.5 shadow-xl"
+              id={settingsMenuId}
+              aria-label={`Opções da lista ${list.name}`}
+              role="group"
+            >
+              <button
+                className="flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-content-primary transition hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-brand"
+                onClick={() => {
+                  setSettingsOpen(false);
+                  onSelect(list);
+                }}
+                type="button"
+              >
+                Editar
+              </button>
+              <button
+                className="flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-red-200 transition hover:bg-red-500/15 focus-visible:outline-2 focus-visible:outline-red-300"
+                onClick={() => {
+                  setSettingsOpen(false);
+                  onDelete(list);
+                }}
+                type="button"
+              >
+                Excluir
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -71,7 +165,82 @@ function LoadingLists() {
 }
 
 export function MyListsPage() {
-  const { listsState, loadLists } = useLists();
+  const lists = useLists();
+  const { addGamesToList, deleteList, listsState, loadLists, scopeVersion, updateList } = lists;
+  const [selectedList, setSelectedList] = useState<{
+    readonly list: UserListSummary;
+    readonly mode: ListModalMode;
+    readonly scopeVersion: number;
+  } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    readonly list: UserListSummary;
+    readonly scopeVersion: number;
+  } | null>(null);
+  const [isDeletingList, setIsDeletingList] = useState(false);
+  const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
+  const activeDeleteList = deleteTarget?.scopeVersion === scopeVersion ? deleteTarget.list : null;
+  const activeList =
+    selectedList?.scopeVersion === scopeVersion
+      ? listsState.status === 'success'
+        ? (listsState.lists.find((list) => list.id === selectedList.list.id) ?? selectedList.list)
+        : selectedList.list
+      : null;
+
+  const closeModal = useCallback(() => {
+    setSelectedList(null);
+  }, []);
+  const saveGames = useCallback(
+    (games: Parameters<typeof addGamesToList>[0]) => {
+      if (activeList === null) return Promise.resolve();
+      return addGamesToList(games, activeList.id);
+    },
+    [activeList, addGamesToList],
+  );
+  const returnToDetails = useCallback(() => {
+    setSelectedList((current) => (current === null ? null : { ...current, mode: 'details' }));
+  }, []);
+  const openAddGames = useCallback(() => {
+    setSelectedList((current) => (current === null ? null : { ...current, mode: 'add-games' }));
+  }, []);
+  const updateSelectedList = useCallback(
+    async (listId: number, input: CreateListInput) => {
+      await updateList(listId, input);
+      setSelectedList((current) =>
+        current?.list.id !== listId
+          ? current
+          : {
+              ...current,
+              list: { ...current.list, name: input.name, description: input.description || null },
+            },
+      );
+    },
+    [updateList],
+  );
+  const closeDeleteModal = useCallback(() => {
+    setDeleteTarget(null);
+    setDeleteErrorMessage(null);
+  }, []);
+  const confirmDeleteList = useCallback(async () => {
+    if (activeDeleteList === null || isDeletingList) return;
+
+    setIsDeletingList(true);
+    setDeleteErrorMessage(null);
+    try {
+      await deleteList(activeDeleteList.id);
+      setDeleteTarget(null);
+      setSelectedList((current) => (current?.list.id === activeDeleteList.id ? null : current));
+    } catch (error) {
+      if (!isListsOperationCancelled(error)) {
+        setDeleteErrorMessage(
+          error instanceof Error
+            ? error.message
+            : 'Não foi possível excluir esta lista. Tente novamente.',
+        );
+      }
+    } finally {
+      setIsDeletingList(false);
+    }
+  }, [activeDeleteList, deleteList, isDeletingList]);
 
   useEffect(() => {
     if (listsState.status === 'idle') void loadLists();
@@ -119,11 +288,45 @@ export function MyListsPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {listsState.lists.map((list) => (
-              <ListSummary key={list.id} list={list} />
+              <ListSummary
+                key={list.id}
+                list={list}
+                onDelete={(selected) => {
+                  setDeleteErrorMessage(null);
+                  setDeleteTarget({ list: selected, scopeVersion });
+                }}
+                onSelect={(selected) => {
+                  setSelectedList({ list: selected, mode: 'details', scopeVersion });
+                }}
+              />
             ))}
           </div>
         )}
       </section>
+      {activeList === null || selectedList === null ? null : selectedList.mode === 'add-games' ? (
+        <AddGamesToListModal list={activeList} onClose={returnToDetails} onSave={saveGames} />
+      ) : (
+        <ListDetailsModal
+          list={activeList}
+          onAddGames={openAddGames}
+          onClose={closeModal}
+          onLoadGames={lists.loadListGames}
+          onMoveGame={lists.moveGameInList}
+          onRemoveGame={lists.removeGameFromList}
+          onUpdate={updateSelectedList}
+        />
+      )}
+      {activeDeleteList === null ? null : (
+        <DeleteListModal
+          errorMessage={deleteErrorMessage}
+          isDeleting={isDeletingList}
+          list={activeDeleteList}
+          onClose={closeDeleteModal}
+          onConfirm={() => {
+            void confirmDeleteList();
+          }}
+        />
+      )}
     </main>
   );
 }

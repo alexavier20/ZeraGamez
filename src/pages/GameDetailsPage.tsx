@@ -1,4 +1,5 @@
-import { ArrowLeft, CalendarDays, Gamepad2, Star } from 'lucide-react';
+import { ArrowLeft, CalendarDays, CircleCheck, Gamepad2, Star, Trophy } from 'lucide-react';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 
 import {
@@ -54,6 +55,8 @@ function InfoList({
 
 function GameHero({ game }: { readonly game: GameDetails }) {
   const heroImage = game.artworks[0] ?? game.screenshots[0];
+  const [wantsToPlay, setWantsToPlay] = useState(false);
+  const [completed, setCompleted] = useState(false);
 
   return (
     <section className="relative isolate overflow-hidden rounded-3xl border border-border-brand bg-surface shadow-[0_20px_64px_#00000040]">
@@ -123,16 +126,48 @@ function GameHero({ game }: { readonly game: GameDetails }) {
             </ul>
           )}
 
-          {game.videos[0] ? (
-            <a
-              className="mt-6 inline-flex h-11 w-fit items-center justify-center rounded-lg bg-brand px-5 text-sm font-bold text-white transition-colors hover:bg-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-              href={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(game.videos[0].videoId)}`}
-              rel="noreferrer"
-              target="_blank"
+          <div className="mt-6 flex flex-wrap items-center gap-2.5 sm:gap-3">
+            {game.videos[0] ? (
+              <a
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-white/20 bg-app/70 px-4 text-sm font-semibold text-content-primary transition-colors hover:border-white/40 hover:bg-app focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                href={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(game.videos[0].videoId)}`}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Assistir trailer
+              </a>
+            ) : null}
+            <button
+              aria-pressed={wantsToPlay}
+              className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+                wantsToPlay
+                  ? 'bg-[#16b957] shadow-[0_0_0_2px_#ffffff66]'
+                  : 'bg-[#16c765] hover:bg-[#13b85b]'
+              }`}
+              onClick={() => {
+                setWantsToPlay((current) => !current);
+              }}
+              type="button"
             >
-              Assistir trailer
-            </a>
-          ) : null}
+              <CircleCheck aria-hidden="true" size={19} />
+              Quero jogar!
+            </button>
+            <button
+              aria-pressed={completed}
+              className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+                completed
+                  ? 'bg-[#16b957] shadow-[0_0_0_2px_#ffffff66]'
+                  : 'bg-[#16c765] hover:bg-[#13b85b]'
+              }`}
+              onClick={() => {
+                setCompleted((current) => !current);
+              }}
+              type="button"
+            >
+              <Trophy aria-hidden="true" size={19} />
+              Já zerei!
+            </button>
+          </div>
         </div>
       </div>
     </section>

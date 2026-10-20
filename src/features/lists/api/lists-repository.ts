@@ -6,6 +6,7 @@ import {
   normalizeCreateListInput,
   type CreateListInput,
   type GameSnapshot,
+  type ListGame,
   type UserListSummary,
 } from '../model/lists';
 
@@ -41,9 +42,14 @@ interface SupabaseListsPort {
 export interface ListsRepository {
   addGameToLists(game: GameSnapshot, listIds: readonly number[]): Promise<readonly number[]>;
   createList(userId: string, input: CreateListInput): Promise<UserListSummary>;
+  deleteList(listId: number): Promise<void>;
+  getListGames(listId: number): Promise<readonly ListGame[]>;
   getWantToPlayIds(igdbIds: readonly number[]): Promise<ReadonlySet<number>>;
   listSummaries(): Promise<readonly UserListSummary[]>;
+  moveGameInList(listId: number, igdbId: number, position: number): Promise<void>;
+  removeGameFromList(listId: number, igdbId: number): Promise<boolean>;
   setWantToPlay(game: GameSnapshot, desired: boolean): Promise<boolean>;
+  updateList(listId: number, input: CreateListInput): Promise<void>;
 }
 
 const MAX_ADD_LIST_IDS = 1_000;
@@ -52,6 +58,7 @@ const MAX_COVER_URL_LENGTH = 2_048;
 const canonicalIgdbCoverPattern =
   /^https:\/\/images\.igdb\.com\/igdb\/image\/upload\/t_cover_big_2x\/[A-Za-z0-9_-]+\.jpg$/;
 const databaseIdSchema = z.number().int().positive().refine(Number.isSafeInteger);
+const listPositionSchema = z.number().int().nonnegative().max(2_147_483_647);
 
 const userIdSchema = z.uuid();
 
@@ -96,7 +103,20 @@ const createdListRowSchema = z.object({
 
 const databaseIdArraySchema = z.array(databaseIdSchema);
 const wantToPlayRowsSchema = z.array(z.object({ igdb_id: databaseIdSchema }));
+const listGameRowSchema = z.object({
+  cover_url: z
+    .string()
+    .trim()
+    .max(MAX_COVER_URL_LENGTH)
+    .refine((value) => canonicalIgdbCoverPattern.test(value))
+    .nullable(),
+  igdb_id: databaseIdSchema,
+  name: z.string().trim().min(1).max(200),
+  release_date: isoCivilDateSchema,
+});
+const listGameRowsSchema = z.array(listGameRowSchema);
 const toggleResultSchema = z.boolean();
+const listMutationResultSchema = z.boolean();
 
 const transportEnvelopeSchema = z
   .record(z.string(), z.unknown())
@@ -160,6 +180,34 @@ export function createSupabaseListsRepository(client: SupabaseListsPort): ListsR
       });
     },
 
+    async deleteList(listId: number): Promise<void> {
+      const normalizedListId = parseInput(databaseIdSchema, listId);
+
+      await readData(
+        () => client.rpc('delete_user_list', { p_list_id: normalizedListId }),
+        listMutationResultSchema,
+      );
+    },
+
+    async getListGames(listId: number): Promise<readonly ListGame[]> {
+      const normalizedListId = parseInput(databaseIdSchema, listId);
+      const rows = await readData(
+        () => client.rpc('get_list_games', { p_list_id: normalizedListId }),
+        listGameRowsSchema,
+      );
+
+      return Object.freeze(
+        rows.map((row) =>
+          Object.freeze({
+            coverUrl: row.cover_url,
+            igdbId: row.igdb_id,
+            name: row.name,
+            releaseDate: row.release_date,
+          }),
+        ),
+      );
+    },
+
     async getWantToPlayIds(igdbIds: readonly number[]): Promise<ReadonlySet<number>> {
       const normalizedIgdbIds = deduplicateIds(parseInput(igdbIdsInputSchema, igdbIds));
       if (normalizedIgdbIds.length === 0) return new RuntimeReadonlySet<number>();
@@ -186,6 +234,36 @@ export function createSupabaseListsRepository(client: SupabaseListsPort): ListsR
       return loadListSummaries(client);
     },
 
+    async moveGameInList(listId: number, igdbId: number, position: number): Promise<void> {
+      const normalizedListId = parseInput(databaseIdSchema, listId);
+      const normalizedIgdbId = parseInput(databaseIdSchema, igdbId);
+      const normalizedPosition = parseInput(listPositionSchema, position);
+
+      await readData(
+        () =>
+          client.rpc('move_list_game', {
+            p_list_id: normalizedListId,
+            p_igdb_id: normalizedIgdbId,
+            p_position: normalizedPosition,
+          }),
+        listMutationResultSchema,
+      );
+    },
+
+    async removeGameFromList(listId: number, igdbId: number): Promise<boolean> {
+      const normalizedListId = parseInput(databaseIdSchema, listId);
+      const normalizedIgdbId = parseInput(databaseIdSchema, igdbId);
+
+      return readData(
+        () =>
+          client.rpc('remove_game_from_list', {
+            p_list_id: normalizedListId,
+            p_igdb_id: normalizedIgdbId,
+          }),
+        listMutationResultSchema,
+      );
+    },
+
     async setWantToPlay(game: GameSnapshot, desired: boolean): Promise<boolean> {
       const normalizedGame = parseInput(gameSnapshotInputSchema, game);
       const normalizedDesired = parseInput(desiredStateInputSchema, desired);
@@ -200,6 +278,21 @@ export function createSupabaseListsRepository(client: SupabaseListsPort): ListsR
             p_desired: normalizedDesired,
           }),
         toggleResultSchema,
+      );
+    },
+
+    async updateList(listId: number, input: CreateListInput): Promise<void> {
+      const normalizedListId = parseInput(databaseIdSchema, listId);
+      const normalizedInput = normalizeListInput(input);
+
+      await readData(
+        () =>
+          client.rpc('update_list', {
+            p_list_id: normalizedListId,
+            p_name: normalizedInput.name,
+            p_description: normalizedInput.description || null,
+          }),
+        listMutationResultSchema,
       );
     },
   };
