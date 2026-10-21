@@ -15,7 +15,6 @@ export const headerCopy = {
   searchButtonLabel: 'Executar busca',
   notificationsLabel: 'Abrir notificações',
   tabletMenuLabel: 'Abrir menu',
-  createList: 'Criar lista',
   mobileNavigationLabel: 'Navegação móvel',
   desktopNavigationLabel: 'Navegação principal',
 } as const;

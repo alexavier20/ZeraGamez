@@ -67,7 +67,7 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
         type="button"
       >
         {covers.length > 0 ? (
-          <div className="grid h-36 grid-cols-3 overflow-hidden bg-surface-raised">
+          <div className="grid aspect-[3/1] grid-cols-3 overflow-hidden bg-surface-raised">
             {covers.map((cover, index) => (
               <img
                 alt={`Capa de ${list.name} ${String(index + 1)}`}
@@ -80,13 +80,13 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
         ) : (
           <div
             aria-hidden="true"
-            className="h-20 bg-gradient-to-br from-brand/25 to-surface-raised"
+            className="aspect-[3/1] bg-gradient-to-br from-brand/25 to-surface-raised"
           />
         )}
-        <div className="space-y-2 p-5">
+        <div className="space-y-2 p-4">
           <div className="flex items-start justify-between gap-4">
-            <h2 className="font-heading text-xl font-bold text-content-primary">{list.name}</h2>
-            <span className="shrink-0 rounded-full bg-brand/15 px-3 py-1 text-xs font-semibold text-brand-light">
+            <h2 className="font-heading text-lg font-bold text-content-primary">{list.name}</h2>
+            <span className="shrink-0 rounded-full bg-brand/15 px-2.5 py-1 text-xs font-semibold text-brand-light">
               {gameCountLabel(list.gameCount)}
             </span>
           </div>
@@ -101,14 +101,14 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
             aria-controls={settingsMenuId}
             aria-expanded={settingsOpen}
             aria-label={`Configurações da lista ${list.name}`}
-            className="flex size-10 items-center justify-center rounded-xl border border-white/15 bg-black/65 text-white shadow-md backdrop-blur-sm transition hover:border-brand/60 hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            className="flex size-9 items-center justify-center rounded-xl border border-white/15 bg-black/65 text-white shadow-md backdrop-blur-sm transition hover:border-brand/60 hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             onClick={() => {
               setSettingsOpen((open) => !open);
             }}
             ref={settingsButtonRef}
             type="button"
           >
-            <Settings aria-hidden="true" size={18} />
+            <Settings aria-hidden="true" size={17} />
           </button>
           {settingsOpen ? (
             <div
@@ -185,6 +185,14 @@ export function MyListsPage() {
         ? (listsState.lists.find((list) => list.id === selectedList.list.id) ?? selectedList.list)
         : selectedList.list
       : null;
+  const systemLists =
+    listsState.status === 'success'
+      ? listsState.lists.filter((list) => list.systemKey !== null)
+      : [];
+  const userLists =
+    listsState.status === 'success'
+      ? listsState.lists.filter((list) => list.systemKey === null)
+      : [];
 
   const closeModal = useCallback(() => {
     setSelectedList(null);
@@ -275,31 +283,73 @@ export function MyListsPage() {
               Tentar novamente
             </button>
           </div>
-        ) : listsState.lists.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/20 bg-surface p-8 text-center">
-            <p className="text-text-muted">Você ainda não criou nenhuma lista.</p>
-            <Link
-              className="mt-5 inline-flex rounded-xl bg-brand px-4 py-2.5 text-sm font-bold text-white"
-              to={headerRoutes.createList}
-            >
-              Criar minha primeira lista
-            </Link>
-          </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {listsState.lists.map((list) => (
-              <ListSummary
-                key={list.id}
-                list={list}
-                onDelete={(selected) => {
-                  setDeleteErrorMessage(null);
-                  setDeleteTarget({ list: selected, scopeVersion });
-                }}
-                onSelect={(selected) => {
-                  setSelectedList({ list: selected, mode: 'details', scopeVersion });
-                }}
-              />
-            ))}
+          <div className="space-y-10">
+            <section aria-labelledby="system-lists-heading">
+              <h2
+                className="mb-4 font-heading text-2xl font-bold text-text-primary"
+                id="system-lists-heading"
+              >
+                Listas do sistema
+              </h2>
+              {systemLists.length === 0 ? (
+                <p className="rounded-2xl border border-dashed border-white/15 bg-surface px-5 py-6 text-sm text-text-muted">
+                  As listas automáticas aparecerão aqui quando você adicionar jogos.
+                </p>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {systemLists.map((list) => (
+                    <ListSummary
+                      key={list.id}
+                      list={list}
+                      onDelete={(selected) => {
+                        setDeleteErrorMessage(null);
+                        setDeleteTarget({ list: selected, scopeVersion });
+                      }}
+                      onSelect={(selected) => {
+                        setSelectedList({ list: selected, mode: 'details', scopeVersion });
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section aria-labelledby="user-lists-heading">
+              <h2
+                className="mb-4 font-heading text-2xl font-bold text-text-primary"
+                id="user-lists-heading"
+              >
+                Minhas Listas
+              </h2>
+              {userLists.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-white/20 bg-surface p-8 text-center">
+                  <p className="text-text-muted">Você ainda não criou nenhuma lista.</p>
+                  <Link
+                    className="mt-5 inline-flex rounded-xl bg-brand px-4 py-2.5 text-sm font-bold text-white"
+                    to={headerRoutes.createList}
+                  >
+                    Criar minha primeira lista
+                  </Link>
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {userLists.map((list) => (
+                    <ListSummary
+                      key={list.id}
+                      list={list}
+                      onDelete={(selected) => {
+                        setDeleteErrorMessage(null);
+                        setDeleteTarget({ list: selected, scopeVersion });
+                      }}
+                      onSelect={(selected) => {
+                        setSelectedList({ list: selected, mode: 'details', scopeVersion });
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
           </div>
         )}
       </section>
@@ -310,9 +360,11 @@ export function MyListsPage() {
           list={activeList}
           onAddGames={openAddGames}
           onClose={closeModal}
+          onLoadCoverGameIds={lists.getListCoverGameIds}
           onLoadGames={lists.loadListGames}
           onMoveGame={lists.moveGameInList}
           onRemoveGame={lists.removeGameFromList}
+          onSetCoverGameIds={lists.setListCoverGameIds}
           onUpdate={updateSelectedList}
         />
       )}

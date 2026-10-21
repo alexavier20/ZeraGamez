@@ -2,6 +2,7 @@ import {
   CalendarDays,
   Gamepad2,
   Grid2X2,
+  Image,
   List as ListIcon,
   LoaderCircle,
   Pencil,
@@ -10,6 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import {
+  useCallback,
   useEffect,
   useId,
   useRef,
@@ -23,6 +25,7 @@ import { ZodError } from 'zod';
 
 import { isListsOperationCancelled } from '@/features/lists/context/ListsProvider';
 import { normalizeCreateListInput } from '@/features/lists/model/lists';
+import { DataError } from '@/shared/supabase/data-error';
 
 import type { ListGame, UserListSummary, CreateListInput } from '@/features/lists/model/lists';
 
@@ -30,9 +33,11 @@ interface ListDetailsModalProps {
   readonly list: UserListSummary;
   readonly onAddGames: () => void;
   readonly onClose: () => void;
+  readonly onLoadCoverGameIds: (listId: number) => Promise<readonly number[]>;
   readonly onLoadGames: (listId: number) => Promise<readonly ListGame[]>;
   readonly onMoveGame: (listId: number, igdbId: number, position: number) => Promise<void>;
   readonly onRemoveGame: (listId: number, igdbId: number) => Promise<boolean>;
+  readonly onSetCoverGameIds: (listId: number, igdbIds: readonly number[]) => Promise<void>;
   readonly onUpdate: (listId: number, input: CreateListInput) => Promise<void>;
 }
 
@@ -41,11 +46,17 @@ type GamesState =
   | { readonly status: 'success'; readonly games: readonly ListGame[] }
   | { readonly status: 'error' };
 
+type CoverSelectionState =
+  | { readonly listId: number; readonly status: 'loading' }
+  | { readonly ids: readonly number[]; readonly listId: number; readonly status: 'success' }
+  | { readonly listId: number; readonly status: 'error' };
+
 const focusableSelector =
   'button:not([disabled]), a[href], input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 const gameLoadErrorMessage = 'Não foi possível carregar os jogos desta lista. Tente novamente.';
 
-function formatReleaseDate(value: string): string {
+function formatReleaseDate(value: string | null): string {
+  if (value === null) return 'Data indisponível';
   return new Intl.DateTimeFormat('pt-BR', {
     day: 'numeric',
     month: 'short',
@@ -58,9 +69,11 @@ function ListDetailsDialog({
   list,
   onAddGames,
   onClose,
+  onLoadCoverGameIds,
   onLoadGames,
   onMoveGame,
   onRemoveGame,
+  onSetCoverGameIds,
   onUpdate,
 }: ListDetailsModalProps) {
   const titleId = useId();
@@ -72,6 +85,11 @@ function ListDetailsDialog({
   const swapFeedbackTimeoutRef = useRef<number | null>(null);
   const busyRef = useRef(false);
   const [gamesState, setGamesState] = useState<GamesState>({ status: 'loading' });
+  const [coverSelectionState, setCoverSelectionState] = useState<CoverSelectionState>({
+    listId: list.id,
+    status: 'loading',
+  });
+  const [coverSelectionSaving, setCoverSelectionSaving] = useState(false);
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(list.name);
@@ -87,6 +105,25 @@ function ListDetailsDialog({
   );
   const [reorderAnnouncement, setReorderAnnouncement] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const currentCoverSelection =
+    coverSelectionState.listId === list.id
+      ? coverSelectionState
+      : ({ listId: list.id, status: 'loading' } as const);
+  const selectedCoverIds =
+    currentCoverSelection.status === 'success' ? currentCoverSelection.ids : [];
+  const coverSelectionLoading = currentCoverSelection.status === 'loading';
+  const coverSelectionError = currentCoverSelection.status === 'error';
+
+  const loadCoverSelection = useCallback(async () => {
+    try {
+      const ids = await onLoadCoverGameIds(list.id);
+      setCoverSelectionState({ ids, listId: list.id, status: 'success' });
+    } catch (error) {
+      if (!isListsOperationCancelled(error)) {
+        setCoverSelectionState({ listId: list.id, status: 'error' });
+      }
+    }
+  }, [list.id, onLoadCoverGameIds]);
 
   const loadGames = async () => {
     setGamesState({ status: 'loading' });
@@ -114,6 +151,23 @@ function ListDetailsDialog({
       isActive = false;
     };
   }, [list.id, onLoadGames]);
+
+  useEffect(() => {
+    let isActive = true;
+    void onLoadCoverGameIds(list.id)
+      .then((ids) => {
+        if (isActive) setCoverSelectionState({ ids, listId: list.id, status: 'success' });
+      })
+      .catch((error: unknown) => {
+        if (isActive && !isListsOperationCancelled(error)) {
+          setCoverSelectionState({ listId: list.id, status: 'error' });
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [list.id, onLoadCoverGameIds]);
 
   useEffect(() => {
     if (editing) nameInputRef.current?.focus();
@@ -197,7 +251,12 @@ function ListDetailsDialog({
       setEditing(false);
     } catch (error) {
       if (!isListsOperationCancelled(error)) {
-        setErrorMessage('Não foi possível salvar as alterações. Tente novamente.');
+        setErrorMessage(
+          error instanceof DataError &&
+            (error.code === 'list_name_conflict' || error.code === 'list_name_reserved')
+            ? error.message
+            : 'Não foi possível salvar as alterações. Tente novamente.',
+        );
       }
     } finally {
       busyRef.current = false;
@@ -221,6 +280,14 @@ function ListDetailsDialog({
             }
           : current,
       );
+      setCoverSelectionState((current) =>
+        current.listId === list.id && current.status === 'success'
+          ? {
+              ...current,
+              ids: current.ids.filter((igdbId) => igdbId !== game.igdbId),
+            }
+          : current,
+      );
     } catch (error) {
       if (!isListsOperationCancelled(error)) {
         setErrorMessage(`Não foi possível remover “${game.name}”. Tente novamente.`);
@@ -228,6 +295,33 @@ function ListDetailsDialog({
     } finally {
       busyRef.current = false;
       setBusyGameId(null);
+    }
+  };
+
+  const toggleCoverGame = async (game: ListGame) => {
+    if (busyRef.current || coverSelectionLoading || coverSelectionError || game.coverUrl === null) {
+      return;
+    }
+
+    const isSelected = selectedCoverIds.includes(game.igdbId);
+    if (!isSelected && selectedCoverIds.length >= 3) return;
+    const nextIds = isSelected
+      ? selectedCoverIds.filter((igdbId) => igdbId !== game.igdbId)
+      : [...selectedCoverIds, game.igdbId];
+
+    busyRef.current = true;
+    setCoverSelectionSaving(true);
+    setErrorMessage(null);
+    try {
+      await onSetCoverGameIds(list.id, nextIds);
+      setCoverSelectionState({ ids: nextIds, listId: list.id, status: 'success' });
+    } catch (error) {
+      if (!isListsOperationCancelled(error)) {
+        setErrorMessage('Não foi possível atualizar as capas da lista. Tente novamente.');
+      }
+    } finally {
+      busyRef.current = false;
+      setCoverSelectionSaving(false);
     }
   };
 
@@ -263,7 +357,6 @@ function ListDetailsDialog({
     const nextGames = [...currentGames];
     const movedGame = currentGames[currentPosition];
     const targetGame = currentGames[position];
-    if (movedGame === undefined || targetGame === undefined) return;
     nextGames[currentPosition] = targetGame;
     nextGames[position] = movedGame;
 
@@ -302,7 +395,7 @@ function ListDetailsDialog({
     void reorderGame(draggedId, targetPosition);
   };
 
-  const handleGameDragOver = (event: DragEvent<HTMLLIElement>, gameId: number) => {
+  const handleGameDragOver = (event: DragEvent<HTMLDivElement>, gameId: number) => {
     if (!canReorder || draggedGameId === null || draggedGameId === gameId) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
@@ -331,7 +424,7 @@ function ListDetailsDialog({
     }
   };
 
-  const handleGameDrop = (event: DragEvent<HTMLLIElement>, gameId: number) => {
+  const handleGameDrop = (event: DragEvent<HTMLDivElement>, gameId: number) => {
     event.preventDefault();
     const droppedId = Number(event.dataTransfer.getData('text/plain'));
     const sourceId = draggedGameId ?? droppedId;
@@ -340,7 +433,7 @@ function ListDetailsDialog({
     setDropTarget(null);
   };
 
-  const handleReorderKeyDown = (event: KeyboardEvent<HTMLLIElement>, gameId: number) => {
+  const handleReorderKeyDown = (event: KeyboardEvent<HTMLDivElement>, gameId: number) => {
     if (!event.altKey || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
     event.preventDefault();
     const currentPosition = games.findIndex((game) => game.igdbId === gameId);
@@ -522,6 +615,23 @@ function ListDetailsDialog({
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="font-heading text-lg font-semibold text-content-primary">Jogos</h3>
+              <p className="mt-1 text-xs text-text-muted">
+                {coverSelectionLoading
+                  ? 'Carregando capas escolhidas…'
+                  : `${String(selectedCoverIds.length)}/3 capas escolhidas. Se nenhuma for escolhida, usamos os últimos jogos adicionados.`}
+              </p>
+              {coverSelectionError ? (
+                <button
+                  className="mt-1 text-xs font-semibold text-red-200 underline underline-offset-2"
+                  onClick={() => {
+                    setCoverSelectionState({ listId: list.id, status: 'loading' });
+                    void loadCoverSelection();
+                  }}
+                  type="button"
+                >
+                  Não foi possível carregar as capas. Tentar novamente
+                </button>
+              ) : null}
             </div>
             <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap sm:justify-end">
               <label className="flex min-h-10 min-w-[min(100%,18rem)] flex-1 items-center gap-2 rounded-xl border border-border-brand bg-bg-secondary px-3 text-text-muted focus-within:border-brand/70 sm:flex-none">
@@ -632,6 +742,55 @@ function ListDetailsDialog({
                 {visibleGames.map((game) => {
                   const position = games.findIndex((item) => item.igdbId === game.igdbId);
                   const isDropTarget = dropTarget === game.igdbId;
+                  const isCoverSelected = selectedCoverIds.includes(game.igdbId);
+                  const selectedCoverPosition = selectedCoverIds.indexOf(game.igdbId) + 1;
+                  const cannotAddCover = !isCoverSelected && selectedCoverIds.length >= 3;
+                  const coverButton =
+                    game.coverUrl === null ? null : (
+                      <button
+                        aria-label={
+                          isCoverSelected
+                            ? `Remover ${game.name} da capa ${String(selectedCoverPosition)} da lista`
+                            : `Usar ${game.name} na capa da lista`
+                        }
+                        aria-pressed={isCoverSelected}
+                        className={
+                          gamesView === 'grid'
+                            ? `absolute top-2 left-2 z-10 flex size-8 items-center justify-center rounded-lg shadow-lg backdrop-blur-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-white ${isCoverSelected ? 'bg-brand text-white' : 'bg-black/65 text-white hover:bg-brand/80'}`
+                            : `relative flex size-9 items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-brand ${isCoverSelected ? 'bg-brand/15 text-brand-light' : 'text-text-muted hover:bg-brand/10 hover:text-brand-light'}`
+                        }
+                        disabled={
+                          coverSelectionLoading ||
+                          coverSelectionError ||
+                          coverSelectionSaving ||
+                          saving ||
+                          busyGameId !== null ||
+                          isReordering ||
+                          cannotAddCover
+                        }
+                        onClick={() => {
+                          void toggleCoverGame(game);
+                        }}
+                        title={
+                          cannotAddCover
+                            ? 'Você já escolheu três capas. Remova uma para escolher outra.'
+                            : isCoverSelected
+                              ? `Remover capa ${String(selectedCoverPosition)} da lista`
+                              : 'Usar como capa da lista'
+                        }
+                        type="button"
+                      >
+                        <Image aria-hidden="true" size={16} />
+                        {isCoverSelected ? (
+                          <span
+                            aria-hidden="true"
+                            className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-brand text-[9px] font-bold text-white ring-1 ring-bg-primary"
+                          >
+                            {String(selectedCoverPosition)}
+                          </span>
+                        ) : null}
+                      </button>
+                    );
                   const removeButton = (
                     <button
                       aria-label={`Remover ${game.name} da lista`}
@@ -659,83 +818,98 @@ function ListDetailsDialog({
                       : `grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-b border-white/5 px-4 py-3 transition-colors last:border-b-0 hover:bg-surface-hover/70 sm:grid-cols-[minmax(0,1fr)_minmax(9rem,auto)_auto] ${canReorder ? 'cursor-grab active:cursor-grabbing' : ''} ${draggedGameId === game.igdbId ? 'opacity-50' : ''} ${isDropTarget ? 'bg-brand/10 ring-1 ring-inset ring-brand' : ''} ${swappedGameIds.has(game.igdbId) ? 'bg-brand/15 ring-1 ring-inset ring-brand/70' : ''}`;
 
                   return (
-                    <li
-                      aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
-                      aria-label={`Jogo ${game.name}, posição ${String(position + 1)} de ${String(games.length)}. Use Alt e as setas para trocar com um jogo adjacente.`}
-                      className={itemClassName}
-                      draggable={canReorder}
-                      key={game.igdbId}
-                      onDragEnd={() => {
-                        setDraggedGameId(null);
-                        setDropTarget(null);
-                      }}
-                      onDragOver={(event) => {
-                        handleGameDragOver(event, game.igdbId);
-                      }}
-                      onDragStart={(event) => {
-                        event.dataTransfer.effectAllowed = 'move';
-                        event.dataTransfer.setData('text/plain', String(game.igdbId));
-                        setDraggedGameId(game.igdbId);
-                        setErrorMessage(null);
-                      }}
-                      onDrop={(event) => {
-                        handleGameDrop(event, game.igdbId);
-                      }}
-                      onKeyDown={(event) => {
-                        handleReorderKeyDown(event, game.igdbId);
-                      }}
-                      tabIndex={canReorder ? 0 : undefined}
-                    >
+                    <li className={itemClassName} key={game.igdbId}>
+                      <div
+                        aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
+                        aria-label={`Jogo ${game.name}, posição ${String(position + 1)} de ${String(games.length)}. Use Alt e as setas para trocar com um jogo adjacente.`}
+                        className={
+                          gamesView === 'grid'
+                            ? 'flex min-w-0 flex-1 flex-col outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand'
+                            : 'col-span-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand'
+                        }
+                        draggable={canReorder}
+                        onDragEnd={() => {
+                          setDraggedGameId(null);
+                          setDropTarget(null);
+                        }}
+                        onDragOver={(event) => {
+                          handleGameDragOver(event, game.igdbId);
+                        }}
+                        onDragStart={(event) => {
+                          event.dataTransfer.effectAllowed = 'move';
+                          event.dataTransfer.setData('text/plain', String(game.igdbId));
+                          setDraggedGameId(game.igdbId);
+                          setErrorMessage(null);
+                        }}
+                        onDrop={(event) => {
+                          handleGameDrop(event, game.igdbId);
+                        }}
+                        onKeyDown={(event) => {
+                          handleReorderKeyDown(event, game.igdbId);
+                        }}
+                        role="button"
+                        tabIndex={canReorder ? 0 : undefined}
+                      >
+                        {gamesView === 'grid' ? (
+                          <>
+                            <div className="aspect-video w-full overflow-hidden bg-surface-raised">
+                              {game.coverUrl === null ? (
+                                <span className="flex size-full items-center justify-center text-text-muted">
+                                  <Gamepad2 aria-hidden="true" size={32} />
+                                </span>
+                              ) : (
+                                <img
+                                  alt={`Capa de ${game.name}`}
+                                  className="size-full object-cover"
+                                  draggable={false}
+                                  loading="lazy"
+                                  src={game.coverUrl}
+                                />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1 px-3 py-2.5">
+                              <span className="line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-content-primary">
+                                {game.name}
+                              </span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex min-w-0 items-center gap-3">
+                              {game.coverUrl === null ? (
+                                <span className="flex h-12 w-9 shrink-0 items-center justify-center rounded-md bg-surface-raised text-text-muted">
+                                  <Gamepad2 aria-hidden="true" size={17} />
+                                </span>
+                              ) : (
+                                <img
+                                  alt={`Capa de ${game.name}`}
+                                  className="h-12 w-9 shrink-0 rounded-md object-cover"
+                                  draggable={false}
+                                  loading="lazy"
+                                  src={game.coverUrl}
+                                />
+                              )}
+                              <span className="truncate text-sm font-medium text-content-primary">
+                                {game.name}
+                              </span>
+                            </div>
+                            <span className="hidden items-center gap-1.5 whitespace-nowrap text-xs text-text-muted sm:inline-flex">
+                              <CalendarDays aria-hidden="true" size={14} />
+                              {formatReleaseDate(game.releaseDate)}
+                            </span>
+                          </>
+                        )}
+                      </div>
                       {gamesView === 'grid' ? (
                         <>
-                          <div className="aspect-video w-full overflow-hidden bg-surface-raised">
-                            {game.coverUrl === null ? (
-                              <span className="flex size-full items-center justify-center text-text-muted">
-                                <Gamepad2 aria-hidden="true" size={32} />
-                              </span>
-                            ) : (
-                              <img
-                                alt={`Capa de ${game.name}`}
-                                className="size-full object-cover"
-                                draggable={false}
-                                loading="lazy"
-                                src={game.coverUrl}
-                              />
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1 px-3 py-2.5">
-                            <span className="line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-content-primary">
-                              {game.name}
-                            </span>
-                          </div>
+                          {coverButton}
                           {removeButton}
                         </>
                       ) : (
-                        <>
-                          <div className="flex min-w-0 items-center gap-3">
-                            {game.coverUrl === null ? (
-                              <span className="flex h-12 w-9 shrink-0 items-center justify-center rounded-md bg-surface-raised text-text-muted">
-                                <Gamepad2 aria-hidden="true" size={17} />
-                              </span>
-                            ) : (
-                              <img
-                                alt={`Capa de ${game.name}`}
-                                className="h-12 w-9 shrink-0 rounded-md object-cover"
-                                draggable={false}
-                                loading="lazy"
-                                src={game.coverUrl}
-                              />
-                            )}
-                            <span className="truncate text-sm font-medium text-content-primary">
-                              {game.name}
-                            </span>
-                          </div>
-                          <span className="hidden items-center gap-1.5 whitespace-nowrap text-xs text-text-muted sm:inline-flex">
-                            <CalendarDays aria-hidden="true" size={14} />
-                            {formatReleaseDate(game.releaseDate)}
-                          </span>
-                          <div className="flex items-center gap-1">{removeButton}</div>
-                        </>
+                        <div className="flex items-center gap-1">
+                          {coverButton}
+                          {removeButton}
+                        </div>
                       )}
                     </li>
                   );

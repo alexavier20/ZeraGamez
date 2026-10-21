@@ -1,13 +1,21 @@
-import { ArrowLeft, CalendarDays, CircleCheck, Gamepad2, Star, Trophy } from 'lucide-react';
-import { useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { ArrowLeft, CalendarDays, Check, CircleCheck, Gamepad2, Star, Trophy } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router';
 
+import { useAuth } from '@/features/auth/context/AuthProvider';
+import {
+  clearPendingAuthIntent,
+  peekPendingAuthIntent,
+  savePendingAuthIntent,
+} from '@/features/auth/model/pending-auth-intent';
 import {
   GameDetailsError,
   GameDetailsLoading,
   GameDetailsNotFound,
 } from '@/features/games/components/GameDetailsStates';
 import { useGameDetails } from '@/features/games/hooks/use-game-details';
+import { isListsOperationCancelled, useLists } from '@/features/lists/context/ListsProvider';
+import { DataError } from '@/shared/supabase/data-error';
 
 import type { GameDetails } from '../../shared/contracts/game-details';
 
@@ -55,8 +63,162 @@ function InfoList({
 
 function GameHero({ game }: { readonly game: GameDetails }) {
   const heroImage = game.artworks[0] ?? game.screenshots[0];
-  const [wantsToPlay, setWantsToPlay] = useState(false);
+  const { state: authState } = useAuth();
+  const {
+    getCompletedIds,
+    loadWantToPlayIds,
+    scopeVersion,
+    setCompleted: saveCompleted,
+    setWantToPlay,
+    wantToPlayIds,
+    wantToPlayMemberships,
+  } = useLists();
+  const navigate = useNavigate();
   const [completed, setCompleted] = useState(false);
+  const [completedStatus, setCompletedStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [pendingListKey, setPendingListKey] = useState<'completed' | 'want_to_play' | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const resumedIntentRef = useRef<string | null>(null);
+  const gameSnapshot = useMemo(
+    () => ({
+      coverUrl: game.coverUrl,
+      igdbId: game.id,
+      name: game.name,
+      releaseDate: game.firstReleaseDate,
+    }),
+    [game.coverUrl, game.firstReleaseDate, game.id, game.name],
+  );
+  const wantsToPlay = wantToPlayIds.has(game.id);
+  const wantToPlayStatus = wantToPlayMemberships.get(game.id);
+
+  useEffect(() => {
+    if (authState.status !== 'authenticated') return;
+    void loadWantToPlayIds([game.id]).catch((error: unknown) => {
+      if (!isListsOperationCancelled(error)) {
+        setActionError(
+          error instanceof DataError ? error.message : 'Não foi possível carregar suas listas.',
+        );
+      }
+    });
+  }, [authState.status, game.id, loadWantToPlayIds, scopeVersion]);
+
+  useEffect(() => {
+    if (authState.status !== 'authenticated') {
+      queueMicrotask(() => {
+        setCompleted(false);
+        setCompletedStatus('ready');
+      });
+      return;
+    }
+
+    const pendingIntent = peekPendingAuthIntent(sessionStorage);
+    if (
+      pendingIntent?.type === 'toggle-system-list' &&
+      pendingIntent.systemKey === 'completed' &&
+      pendingIntent.igdbId === game.id
+    ) {
+      return;
+    }
+
+    let active = true;
+    queueMicrotask(() => {
+      if (active) setCompletedStatus('loading');
+    });
+    void getCompletedIds([game.id])
+      .then((completedIds) => {
+        if (!active) return;
+        setCompleted(completedIds.has(game.id));
+        setCompletedStatus('ready');
+      })
+      .catch((error: unknown) => {
+        if (!active || isListsOperationCancelled(error)) return;
+        setCompletedStatus('error');
+        setActionError(
+          error instanceof DataError ? error.message : 'Não foi possível carregar suas listas.',
+        );
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [authState.status, game.id, getCompletedIds, scopeVersion]);
+
+  const runSystemListAction = useCallback(
+    (systemKey: 'completed' | 'want_to_play', desired: boolean) => {
+      setPendingListKey(systemKey);
+      setActionError(null);
+      const operation =
+        systemKey === 'completed'
+          ? saveCompleted(gameSnapshot, desired)
+          : setWantToPlay(gameSnapshot, desired);
+      void operation
+        .then((confirmed) => {
+          if (systemKey === 'completed') {
+            setCompleted(confirmed);
+            setCompletedStatus('ready');
+          }
+        })
+        .catch((error: unknown) => {
+          if (isListsOperationCancelled(error)) return;
+          setActionError(
+            error instanceof DataError ? error.message : 'Não foi possível atualizar sua lista.',
+          );
+        })
+        .finally(() => {
+          setPendingListKey(null);
+        });
+    },
+    [gameSnapshot, saveCompleted, setWantToPlay],
+  );
+
+  useEffect(() => {
+    if (authState.status !== 'authenticated') return;
+    const pendingIntent = peekPendingAuthIntent(sessionStorage);
+    if (
+      pendingIntent?.type !== 'toggle-system-list' ||
+      pendingIntent.igdbId !== game.id ||
+      pendingIntent.returnTo !== `/jogos/${String(game.id)}`
+    ) {
+      return;
+    }
+
+    const intentKey = `${pendingIntent.systemKey}:${String(pendingIntent.igdbId)}`;
+    if (resumedIntentRef.current === intentKey) return;
+    resumedIntentRef.current = intentKey;
+    clearPendingAuthIntent(sessionStorage);
+    runSystemListAction(pendingIntent.systemKey, true);
+  }, [authState.status, game.id, runSystemListAction]);
+
+  const toggleSystemList = (systemKey: 'completed' | 'want_to_play') => {
+    if (pendingListKey !== null) return;
+    if (authState.status === 'anonymous') {
+      savePendingAuthIntent(sessionStorage, {
+        version: 1,
+        type: 'toggle-system-list',
+        returnTo: `/jogos/${String(game.id)}`,
+        igdbId: game.id,
+        systemKey,
+      });
+      void navigate('/entrar');
+      return;
+    }
+    if (authState.status !== 'authenticated') return;
+
+    if (systemKey === 'want_to_play') {
+      if (wantToPlayStatus !== 'ready') return;
+      runSystemListAction(systemKey, !wantsToPlay);
+      return;
+    }
+    if (completedStatus !== 'ready') return;
+    runSystemListAction(systemKey, !completed);
+  };
+
+  const actionDisabled =
+    pendingListKey !== null || authState.status === 'loading' || authState.status === 'unavailable';
+  const wantToPlayDisabled =
+    actionDisabled || (authState.status === 'authenticated' && wantToPlayStatus !== 'ready');
+  const completedDisabled =
+    actionDisabled || (authState.status === 'authenticated' && completedStatus !== 'ready');
 
   return (
     <section className="relative isolate overflow-hidden rounded-3xl border border-border-brand bg-surface shadow-[0_20px_64px_#00000040]">
@@ -138,36 +300,55 @@ function GameHero({ game }: { readonly game: GameDetails }) {
               </a>
             ) : null}
             <button
+              aria-label={
+                wantsToPlay ? 'Remover da lista Quero Jogar!' : 'Adicionar à lista Quero Jogar!'
+              }
               aria-pressed={wantsToPlay}
-              className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+              disabled={wantToPlayDisabled}
+              className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-white transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60 ${
                 wantsToPlay
-                  ? 'bg-[#16b957] shadow-[0_0_0_2px_#ffffff66]'
+                  ? 'bg-[#118c45] ring-2 ring-inset ring-white/80 shadow-[0_0_0_2px_#ffffff66]'
                   : 'bg-[#16c765] hover:bg-[#13b85b]'
               }`}
               onClick={() => {
-                setWantsToPlay((current) => !current);
+                toggleSystemList('want_to_play');
               }}
               type="button"
             >
-              <CircleCheck aria-hidden="true" size={19} />
-              Quero jogar!
+              {wantsToPlay ? (
+                <Check aria-hidden="true" size={19} />
+              ) : (
+                <CircleCheck aria-hidden="true" size={19} />
+              )}
+              {wantsToPlay ? 'Na lista' : 'Quero jogar!'}
             </button>
             <button
+              aria-label={completed ? 'Remover da lista Já Zerei' : 'Adicionar à lista Já Zerei'}
               aria-pressed={completed}
-              className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+              disabled={completedDisabled}
+              className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-white transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60 ${
                 completed
-                  ? 'bg-[#16b957] shadow-[0_0_0_2px_#ffffff66]'
+                  ? 'bg-[#118c45] ring-2 ring-inset ring-white/80 shadow-[0_0_0_2px_#ffffff66]'
                   : 'bg-[#16c765] hover:bg-[#13b85b]'
               }`}
               onClick={() => {
-                setCompleted((current) => !current);
+                toggleSystemList('completed');
               }}
               type="button"
             >
-              <Trophy aria-hidden="true" size={19} />
-              Já zerei!
+              {completed ? (
+                <Check aria-hidden="true" size={19} />
+              ) : (
+                <Trophy aria-hidden="true" size={19} />
+              )}
+              {completed ? 'Jogo zerado' : 'Já zerei!'}
             </button>
           </div>
+          {actionError === null ? null : (
+            <p className="mt-3 text-sm text-red-200" role="alert">
+              {actionError}
+            </p>
+          )}
         </div>
       </div>
     </section>

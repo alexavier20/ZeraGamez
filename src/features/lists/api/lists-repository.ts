@@ -4,6 +4,7 @@ import { DataError, toDataError } from '@/shared/supabase/data-error';
 
 import {
   normalizeCreateListInput,
+  type CompletedGameSnapshot,
   type CreateListInput,
   type GameSnapshot,
   type ListGame,
@@ -43,12 +44,16 @@ export interface ListsRepository {
   addGameToLists(game: GameSnapshot, listIds: readonly number[]): Promise<readonly number[]>;
   createList(userId: string, input: CreateListInput): Promise<UserListSummary>;
   deleteList(listId: number): Promise<void>;
+  getCompletedIds?(igdbIds: readonly number[]): Promise<ReadonlySet<number>>;
+  getListCoverGameIds?(listId: number): Promise<readonly number[]>;
   getListGames(listId: number): Promise<readonly ListGame[]>;
   getWantToPlayIds(igdbIds: readonly number[]): Promise<ReadonlySet<number>>;
   listSummaries(): Promise<readonly UserListSummary[]>;
   moveGameInList(listId: number, igdbId: number, position: number): Promise<void>;
   removeGameFromList(listId: number, igdbId: number): Promise<boolean>;
-  setWantToPlay(game: GameSnapshot, desired: boolean): Promise<boolean>;
+  setCompleted?(game: CompletedGameSnapshot, desired: boolean): Promise<boolean>;
+  setListCoverGameIds?(listId: number, igdbIds: readonly number[]): Promise<void>;
+  setWantToPlay(game: CompletedGameSnapshot, desired: boolean): Promise<boolean>;
   updateList(listId: number, input: CreateListInput): Promise<void>;
 }
 
@@ -78,9 +83,13 @@ const gameSnapshotInputSchema = z.object({
   name: z.string().trim().min(1).max(200),
   releaseDate: isoCivilDateSchema,
 });
+const completedGameSnapshotInputSchema = gameSnapshotInputSchema.extend({
+  releaseDate: isoCivilDateSchema.nullable(),
+});
 
 const addListIdsInputSchema = z.array(databaseIdSchema).min(1);
 const igdbIdsInputSchema = z.array(databaseIdSchema);
+const listCoverGameIdsInputSchema = z.array(databaseIdSchema).max(3).refine(uniqueIds);
 const desiredStateInputSchema = z.boolean();
 
 const listSummaryRowSchema = z.object({
@@ -89,7 +98,7 @@ const listSummaryRowSchema = z.object({
   game_count: z.number().int().nonnegative().refine(Number.isSafeInteger),
   id: databaseIdSchema,
   name: z.string().min(1).max(80),
-  system_key: z.literal('want_to_play').nullable(),
+  system_key: z.enum(['completed', 'want_to_play']).nullable(),
 });
 
 const listSummaryRowsSchema = z.array(listSummaryRowSchema);
@@ -102,6 +111,7 @@ const createdListRowSchema = z.object({
 });
 
 const databaseIdArraySchema = z.array(databaseIdSchema);
+const listCoverGameRowsSchema = z.array(z.object({ igdb_id: databaseIdSchema })).max(3);
 const wantToPlayRowsSchema = z.array(z.object({ igdb_id: databaseIdSchema }));
 const listGameRowSchema = z.object({
   cover_url: z
@@ -112,7 +122,7 @@ const listGameRowSchema = z.object({
     .nullable(),
   igdb_id: databaseIdSchema,
   name: z.string().trim().min(1).max(200),
-  release_date: isoCivilDateSchema,
+  release_date: isoCivilDateSchema.nullable(),
 });
 const listGameRowsSchema = z.array(listGameRowSchema);
 const toggleResultSchema = z.boolean();
@@ -189,6 +199,28 @@ export function createSupabaseListsRepository(client: SupabaseListsPort): ListsR
       );
     },
 
+    async getCompletedIds(igdbIds: readonly number[]): Promise<ReadonlySet<number>> {
+      const normalizedIgdbIds = deduplicateIds(parseInput(igdbIdsInputSchema, igdbIds));
+      if (normalizedIgdbIds.length === 0) return new RuntimeReadonlySet<number>();
+
+      const loadedIds = new Set<number>();
+      for (const chunk of chunkIds(normalizedIgdbIds, MEMBERSHIP_RPC_CHUNK_SIZE)) {
+        const rows = await readData(
+          () =>
+            client.rpc('get_completed_igdb_ids', {
+              p_igdb_ids: chunk,
+            }),
+          wantToPlayRowsSchema,
+        );
+        const requestedIds = new Set(chunk);
+        for (const row of rows) {
+          if (requestedIds.has(row.igdb_id)) loadedIds.add(row.igdb_id);
+        }
+      }
+
+      return new RuntimeReadonlySet(loadedIds);
+    },
+
     async getListGames(listId: number): Promise<readonly ListGame[]> {
       const normalizedListId = parseInput(databaseIdSchema, listId);
       const rows = await readData(
@@ -206,6 +238,16 @@ export function createSupabaseListsRepository(client: SupabaseListsPort): ListsR
           }),
         ),
       );
+    },
+
+    async getListCoverGameIds(listId: number): Promise<readonly number[]> {
+      const normalizedListId = parseInput(databaseIdSchema, listId);
+      const rows = await readData(
+        () => client.rpc('get_list_cover_game_ids', { p_list_id: normalizedListId }),
+        listCoverGameRowsSchema,
+      );
+
+      return Object.freeze(rows.map((row) => row.igdb_id));
     },
 
     async getWantToPlayIds(igdbIds: readonly number[]): Promise<ReadonlySet<number>> {
@@ -264,8 +306,8 @@ export function createSupabaseListsRepository(client: SupabaseListsPort): ListsR
       );
     },
 
-    async setWantToPlay(game: GameSnapshot, desired: boolean): Promise<boolean> {
-      const normalizedGame = parseInput(gameSnapshotInputSchema, game);
+    async setWantToPlay(game: CompletedGameSnapshot, desired: boolean): Promise<boolean> {
+      const normalizedGame = parseInput(completedGameSnapshotInputSchema, game);
       const normalizedDesired = parseInput(desiredStateInputSchema, desired);
 
       return readData(
@@ -278,6 +320,37 @@ export function createSupabaseListsRepository(client: SupabaseListsPort): ListsR
             p_desired: normalizedDesired,
           }),
         toggleResultSchema,
+      );
+    },
+
+    async setCompleted(game: CompletedGameSnapshot, desired: boolean): Promise<boolean> {
+      const normalizedGame = parseInput(completedGameSnapshotInputSchema, game);
+      const normalizedDesired = parseInput(desiredStateInputSchema, desired);
+
+      return readData(
+        () =>
+          client.rpc('set_completed', {
+            p_igdb_id: normalizedGame.igdbId,
+            p_name: normalizedGame.name,
+            p_cover_url: normalizedGame.coverUrl,
+            p_release_date: normalizedGame.releaseDate,
+            p_desired: normalizedDesired,
+          }),
+        toggleResultSchema,
+      );
+    },
+
+    async setListCoverGameIds(listId: number, igdbIds: readonly number[]): Promise<void> {
+      const normalizedListId = parseInput(databaseIdSchema, listId);
+      const normalizedIgdbIds = parseInput(listCoverGameIdsInputSchema, igdbIds);
+
+      await readData(
+        () =>
+          client.rpc('set_list_cover_game_ids', {
+            p_list_id: normalizedListId,
+            p_igdb_ids: normalizedIgdbIds,
+          }),
+        listMutationResultSchema,
       );
     },
 
@@ -340,6 +413,10 @@ class RuntimeReadonlySet<Value> implements ReadonlySet<Value> {
 
 function deduplicateIds(ids: readonly number[]): readonly number[] {
   return [...new Set(ids)];
+}
+
+function uniqueIds(ids: readonly number[]): boolean {
+  return new Set(ids).size === ids.length;
 }
 
 function chunkIds(ids: readonly number[], size: number): readonly (readonly number[])[] {

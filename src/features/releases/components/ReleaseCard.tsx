@@ -135,20 +135,20 @@ function ReleaseCardDesktop({
       <div className="relative">
         <Link
           aria-label={`Ver detalhes de ${item.name}`}
-          className="block rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="block aspect-[5/4] w-full rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           to={`/jogos/${String(item.id)}`}
         >
           {item.coverUrl ? (
             <img
               alt={`Capa de ${item.name}`}
-              className="h-[244px] w-full rounded-xl object-cover transition-opacity hover:opacity-85"
+              className="size-full rounded-xl object-cover transition-opacity hover:opacity-85"
               loading="lazy"
               src={item.coverUrl}
             />
           ) : (
             <div
               aria-label={`Capa indisponível de ${item.name}`}
-              className="flex h-[244px] w-full items-center justify-center rounded-xl bg-gradient-to-br from-bg-secondary to-surface-hover text-text-muted"
+              className="flex size-full items-center justify-center rounded-xl bg-gradient-to-br from-bg-secondary to-surface-hover text-text-muted"
               role="img"
             >
               <Gamepad2 aria-hidden="true" size={32} />
@@ -492,7 +492,7 @@ export function ReleaseCard({
   return (
     <>
       <article
-        className="hidden h-[407px] rounded-2xl border border-border-brand bg-surface p-3 shadow-[0_8px_24px_#00000040] sm:flex sm:flex-col sm:gap-2"
+        className="hidden h-[407px] rounded-2xl border border-border-brand bg-surface p-3 shadow-[0_8px_24px_#00000040] sm:flex sm:flex-col sm:gap-2 xl:h-[350px]"
         data-testid={`release-card-desktop-${String(item.id)}`}
       >
         <ReleaseCardDesktop

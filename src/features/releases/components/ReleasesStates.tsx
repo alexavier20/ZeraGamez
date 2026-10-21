@@ -11,7 +11,7 @@ interface StatePanelProps {
   readonly title: string;
 }
 
-const skeletonIndexes = [0, 1, 2, 3] as const;
+const skeletonIndexes = [0, 1, 2, 3, 4] as const;
 
 function StatePanel({
   action,
@@ -40,7 +40,7 @@ export function ReleasesLoading(): React.ReactElement {
   return (
     <div className="mt-7 space-y-4">
       <StatePanel icon={LoaderCircle} role="status" title="Carregando jogos" />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {skeletonIndexes.map((index) => (
           <div
             aria-hidden="true"

@@ -9,26 +9,43 @@ const returnToSchema = z.enum([
   '/minhas-listas/nova',
   '/perfil',
 ]);
+const gameDetailsPathSchema = z.string().regex(/^\/jogos\/[1-9]\d*$/);
 
-const pendingAuthIntentSchema = z.discriminatedUnion('type', [
-  z.object({
-    version: z.literal(1),
-    type: z.literal('navigate'),
-    returnTo: returnToSchema,
-  }),
-  z.object({
-    version: z.literal(1),
-    type: z.literal('open-add-to-lists'),
-    returnTo: z.literal('/lancamentos'),
-    igdbId: z.number(),
-  }),
-  z.object({
-    version: z.literal(1),
-    type: z.literal('toggle-want-to-play'),
-    returnTo: z.literal('/lancamentos'),
-    igdbId: z.number(),
-  }),
-]);
+const pendingAuthIntentSchema = z
+  .discriminatedUnion('type', [
+    z.object({
+      version: z.literal(1),
+      type: z.literal('navigate'),
+      returnTo: returnToSchema,
+    }),
+    z.object({
+      version: z.literal(1),
+      type: z.literal('open-add-to-lists'),
+      returnTo: z.literal('/lancamentos'),
+      igdbId: z.number(),
+    }),
+    z.object({
+      version: z.literal(1),
+      type: z.literal('toggle-want-to-play'),
+      returnTo: z.literal('/lancamentos'),
+      igdbId: z.number(),
+    }),
+    z.object({
+      version: z.literal(1),
+      type: z.literal('toggle-system-list'),
+      returnTo: gameDetailsPathSchema,
+      igdbId: z.number().int().positive().refine(Number.isSafeInteger),
+      systemKey: z.enum(['completed', 'want_to_play']),
+    }),
+  ])
+  .superRefine((intent, context) => {
+    if (
+      intent.type === 'toggle-system-list' &&
+      intent.returnTo !== `/jogos/${String(intent.igdbId)}`
+    ) {
+      context.addIssue({ code: 'custom', message: 'Invalid game details path' });
+    }
+  });
 
 export type PendingAuthIntent = z.infer<typeof pendingAuthIntentSchema>;
 

@@ -1,4 +1,4 @@
-import { Bell, Plus } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { Link } from 'react-router';
 
 import { headerCopy, headerRoutes } from './header.config';
@@ -49,13 +49,6 @@ export function HeaderActions({
         to={headerRoutes.profile}
       >
         {user.initials}
-      </Link>
-      <Link
-        className="flex h-10 items-center gap-2 rounded-xl border border-white/25 bg-app px-4 text-sm font-semibold text-text-primary transition-colors hover:bg-bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary"
-        to={headerRoutes.createList}
-      >
-        <Plus aria-hidden="true" size={17} />
-        {headerCopy.createList}
       </Link>
     </div>
   );

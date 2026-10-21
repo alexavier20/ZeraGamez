@@ -7,7 +7,14 @@ export interface GameSnapshot {
   readonly releaseDate: string;
 }
 
-export type ListGame = GameSnapshot;
+export interface CompletedGameSnapshot {
+  readonly coverUrl: string | null;
+  readonly igdbId: number;
+  readonly name: string;
+  readonly releaseDate: string | null;
+}
+
+export type ListGame = CompletedGameSnapshot;
 
 export interface UserListSummary {
   readonly covers: readonly string[];
@@ -15,7 +22,7 @@ export interface UserListSummary {
   readonly gameCount: number;
   readonly id: number;
   readonly name: string;
-  readonly systemKey: 'want_to_play' | null;
+  readonly systemKey: 'completed' | 'want_to_play' | null;
 }
 
 export interface CreateListInput {
@@ -29,7 +36,11 @@ const createListInputSchema = z.object({
     .string()
     .trim()
     .min(1, 'Informe um nome para a lista.')
-    .max(80, 'O nome deve ter no máximo 80 caracteres.'),
+    .max(80, 'O nome deve ter no máximo 80 caracteres.')
+    .refine(
+      (value) => !['quero jogar!', 'já zerei'].includes(value.toLocaleLowerCase('pt-BR')),
+      'Os nomes "Quero Jogar!" e "Já Zerei" são reservados para listas automáticas.',
+    ),
 });
 
 export function normalizeCreateListInput(input: CreateListInput): CreateListInput {

@@ -13,6 +13,7 @@ import { useAuth } from '@/features/auth/context/AuthProvider';
 
 import type { ListsRepository } from '@/features/lists/api/lists-repository';
 import type {
+  CompletedGameSnapshot,
   CreateListInput,
   GameSnapshot,
   ListGame,
@@ -36,12 +37,16 @@ export interface ListsContextValue {
   readonly addGamesToList: (games: readonly GameSnapshot[], listId: number) => Promise<void>;
   readonly createList: (input: CreateListInput) => Promise<UserListSummary>;
   readonly deleteList: (listId: number) => Promise<void>;
+  readonly getCompletedIds: (igdbIds: readonly number[]) => Promise<ReadonlySet<number>>;
+  readonly getListCoverGameIds: (listId: number) => Promise<readonly number[]>;
   readonly loadListGames: (listId: number) => Promise<readonly ListGame[]>;
   readonly loadLists: (options?: { readonly force?: boolean }) => Promise<void>;
   readonly loadWantToPlayIds: (igdbIds: readonly number[]) => Promise<void>;
   readonly moveGameInList: (listId: number, igdbId: number, position: number) => Promise<void>;
   readonly removeGameFromList: (listId: number, igdbId: number) => Promise<boolean>;
-  readonly setWantToPlay: (game: GameSnapshot, desired: boolean) => Promise<boolean>;
+  readonly setCompleted: (game: CompletedGameSnapshot, desired: boolean) => Promise<boolean>;
+  readonly setListCoverGameIds: (listId: number, igdbIds: readonly number[]) => Promise<void>;
+  readonly setWantToPlay: (game: CompletedGameSnapshot, desired: boolean) => Promise<boolean>;
   readonly updateList: (listId: number, input: CreateListInput) => Promise<void>;
 }
 
@@ -127,11 +132,15 @@ const defaultListsContext: ListsContextValue = {
   addGamesToList: unavailableAction,
   createList: unavailableAction,
   deleteList: unavailableAction,
+  getCompletedIds: unavailableAction,
+  getListCoverGameIds: unavailableAction,
   loadListGames: unavailableAction,
   loadLists: unavailableAction,
   loadWantToPlayIds: unavailableAction,
   moveGameInList: unavailableAction,
   removeGameFromList: unavailableAction,
+  setCompleted: unavailableAction,
+  setListCoverGameIds: unavailableAction,
   setWantToPlay: unavailableAction,
   updateList: unavailableAction,
 };
@@ -580,12 +589,92 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
     [assertCurrentScope, isCurrentScope, publishWantToPlayState, requireScope],
   );
 
+  const getCompletedIds = useCallback<ListsContextValue['getCompletedIds']>(
+    async (igdbIds) => {
+      const scope = requireScope();
+      const repositoryForScope = scope.repository;
+      if (repositoryForScope?.getCompletedIds === undefined) throw configurationError();
+
+      let completedIds: ReadonlySet<number>;
+      try {
+        completedIds = await repositoryForScope.getCompletedIds(igdbIds);
+      } catch (error) {
+        if (!isCurrentScope(scope)) throw new ListsOperationCancelledError();
+        throw error;
+      }
+      assertCurrentScope(scope);
+      return completedIds;
+    },
+    [assertCurrentScope, isCurrentScope, requireScope],
+  );
+
+  const setCompleted = useCallback<ListsContextValue['setCompleted']>(
+    async (game, desired) => {
+      const scope = requireScope();
+      const repositoryForScope = scope.repository;
+      if (repositoryForScope?.setCompleted === undefined) throw configurationError();
+
+      let isCompleted: boolean;
+      try {
+        isCompleted = await repositoryForScope.setCompleted(game, desired);
+      } catch (error) {
+        if (!isCurrentScope(scope)) throw new ListsOperationCancelledError();
+        throw error;
+      }
+      assertCurrentScope(scope);
+      await loadListsForScope(scope, true);
+      assertCurrentScope(scope);
+      return isCompleted;
+    },
+    [assertCurrentScope, isCurrentScope, loadListsForScope, requireScope],
+  );
+
+  const getListCoverGameIds = useCallback<ListsContextValue['getListCoverGameIds']>(
+    async (listId) => {
+      const scope = requireScope();
+      const repositoryForScope = scope.repository;
+      if (repositoryForScope?.getListCoverGameIds === undefined) throw configurationError();
+
+      let coverGameIds: readonly number[];
+      try {
+        coverGameIds = await repositoryForScope.getListCoverGameIds(listId);
+      } catch (error) {
+        if (!isCurrentScope(scope)) throw new ListsOperationCancelledError();
+        throw error;
+      }
+      assertCurrentScope(scope);
+      return coverGameIds;
+    },
+    [assertCurrentScope, isCurrentScope, requireScope],
+  );
+
+  const setListCoverGameIds = useCallback<ListsContextValue['setListCoverGameIds']>(
+    async (listId, igdbIds) => {
+      const scope = requireScope();
+      const repositoryForScope = scope.repository;
+      if (repositoryForScope?.setListCoverGameIds === undefined) throw configurationError();
+
+      try {
+        await repositoryForScope.setListCoverGameIds(listId, igdbIds);
+      } catch (error) {
+        if (!isCurrentScope(scope)) throw new ListsOperationCancelledError();
+        throw error;
+      }
+      assertCurrentScope(scope);
+      await loadListsForScope(scope, true);
+      assertCurrentScope(scope);
+    },
+    [assertCurrentScope, isCurrentScope, loadListsForScope, requireScope],
+  );
+
   const value = useMemo<ListsContextValue>(
     () => ({
       addGameToLists,
       addGamesToList,
       createList,
       deleteList,
+      getCompletedIds,
+      getListCoverGameIds,
       loadListGames,
       listsState: scopedState.listsState,
       loadLists,
@@ -593,6 +682,8 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
       moveGameInList,
       removeGameFromList,
       scopeVersion: scopedState.scopeVersion,
+      setCompleted,
+      setListCoverGameIds,
       setWantToPlay,
       updateList,
       wantToPlayIds: scopedState.wantToPlayIds,
@@ -603,6 +694,8 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
       addGamesToList,
       createList,
       deleteList,
+      getCompletedIds,
+      getListCoverGameIds,
       loadListGames,
       loadLists,
       loadWantToPlayIds,
@@ -612,6 +705,8 @@ export function ListsProvider({ children, repository }: ListsProviderProps) {
       scopedState.scopeVersion,
       scopedState.wantToPlayIds,
       scopedState.wantToPlayMemberships,
+      setCompleted,
+      setListCoverGameIds,
       setWantToPlay,
       updateList,
     ],

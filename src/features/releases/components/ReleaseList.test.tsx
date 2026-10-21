@@ -138,7 +138,14 @@ describe('ReleaseList', () => {
     expect(outerCollection).not.toHaveAttribute('role');
     expect(lists).toHaveLength(1);
     expect(list).toHaveAttribute('aria-labelledby', heading.id);
-    expect(list).toHaveClass('grid', 'grid-cols-1', 'sm:grid-cols-2', 'lg:grid-cols-4');
+    expect(list).toHaveClass(
+      'grid',
+      'grid-cols-1',
+      'sm:grid-cols-2',
+      'md:grid-cols-3',
+      'lg:grid-cols-4',
+      'xl:grid-cols-5',
+    );
     expect(items).toHaveLength(2);
     for (const item of items) {
       expect(item.parentElement).toBe(list);

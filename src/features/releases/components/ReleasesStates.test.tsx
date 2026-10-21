@@ -9,7 +9,7 @@ import {
 } from '@/features/releases/components/ReleasesStates';
 
 describe('release list states', () => {
-  it('renders an accessible loading state with four copy-free skeleton cards', () => {
+  it('renders an accessible loading state with five copy-free skeleton cards', () => {
     render(<ReleasesLoading />);
 
     const loadingState = screen.getByRole('status');
@@ -17,7 +17,7 @@ describe('release list states', () => {
 
     expect(loadingState).toHaveAttribute('aria-live', 'polite');
     expect(loadingState).toHaveTextContent('Carregando jogos');
-    expect(skeletons).toHaveLength(4);
+    expect(skeletons).toHaveLength(5);
     for (const skeleton of skeletons) {
       expect(skeleton).toBeEmptyDOMElement();
     }

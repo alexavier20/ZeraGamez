@@ -6,6 +6,7 @@ import { isListsOperationCancelled, useLists } from '@/features/lists/context/Li
 import { normalizeCreateListInput } from '@/features/lists/model/lists';
 import { headerRoutes } from '@/shared/components/header/header.config';
 import { PageHeading } from '@/shared/components/page-heading/PageHeading';
+import { DataError } from '@/shared/supabase/data-error';
 
 type FormField = 'description' | 'name';
 
@@ -55,6 +56,14 @@ export function CreateListPage() {
       await navigate(headerRoutes.lists, { replace: true });
     } catch (error) {
       if (isListsOperationCancelled(error)) return;
+      if (
+        error instanceof DataError &&
+        (error.code === 'list_name_conflict' || error.code === 'list_name_reserved')
+      ) {
+        setMessage({ field: 'name', text: error.message });
+        queueMicrotask(() => nameInput.current?.focus());
+        return;
+      }
       setMessage({ text: creationErrorMessage });
       queueMicrotask(() => nameInput.current?.focus());
     } finally {
