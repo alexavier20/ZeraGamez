@@ -7,18 +7,23 @@ import { MobileBottomNav } from '@/shared/components/header/MobileBottomNav';
 import { MobileContextHeader } from '@/shared/components/header/MobileContextHeader';
 
 describe('Mobile Header', () => {
-  it('renderiza a marca e aciona notificações na variante padrão', async () => {
-    const user = userEvent.setup();
-    const onNotificationsClick = vi.fn();
+  it('renderiza marca e saudação junto ao avatar sem botão de notificações', () => {
     render(
       <MemoryRouter>
-        <MobileContextHeader onNotificationsClick={onNotificationsClick} variant="default" />
+        <MobileContextHeader
+          account={{ status: 'authenticated', user: { name: 'Alex', initials: 'AX' } }}
+          variant="default"
+        />
       </MemoryRouter>,
     );
 
     expect(screen.getByRole('link', { name: 'Zera GameZ' })).toHaveAttribute('href', '/');
-    await user.click(screen.getByRole('button', { name: 'Abrir notificações' }));
-    expect(onNotificationsClick).toHaveBeenCalledOnce();
+    expect(screen.getByRole('link', { name: 'Abrir perfil de Alex' })).toHaveAttribute(
+      'href',
+      '/perfil',
+    );
+    expect(screen.getByText('Olá, Alex')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /notificações/i })).not.toBeInTheDocument();
   });
 
   it('aciona voltar e compartilhar na variante de detalhes', async () => {

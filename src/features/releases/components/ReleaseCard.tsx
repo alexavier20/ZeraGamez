@@ -1,4 +1,4 @@
-import { BookmarkPlus, CircleCheck, Gamepad2, Plus } from 'lucide-react';
+import { BookmarkPlus, CircleCheck, Gamepad2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 
@@ -8,7 +8,6 @@ import { AddToListsModal } from '@/features/lists/components/AddToListsModal';
 import { isListsOperationCancelled, useLists } from '@/features/lists/context/ListsProvider';
 import {
   compactPlatformLabel,
-  formatReleaseDate,
   formatReleaseStatus,
   platformLabel,
   type ReleaseItem,
@@ -22,16 +21,15 @@ export type PendingReleaseActionType = 'open-add-to-lists' | 'toggle-want-to-pla
 export interface ReleaseCardProps {
   readonly item: ReleaseItem;
   readonly generatedAt: string;
+  readonly showActions?: boolean;
   readonly onPendingActionConsumed?: () => void;
   readonly pendingAction?: PendingReleaseActionType;
 }
 
 interface ReleasePresentation {
-  readonly date: string;
   readonly status: string;
   readonly desktopPlatforms: readonly ReleasePlatformChip[];
   readonly compactPlatforms: string;
-  readonly genre: string | undefined;
 }
 
 interface ReleasePlatformChip {
@@ -48,6 +46,7 @@ interface ReleaseCardLayoutProps {
   readonly onAddToLists: React.MouseEventHandler<HTMLButtonElement>;
   readonly onToggleWantToPlay: () => void;
   readonly presentation: ReleasePresentation;
+  readonly showActions: boolean;
   readonly wantToPlay: boolean;
   readonly wantToPlayDisabled: boolean;
 }
@@ -127,6 +126,7 @@ function ReleaseCardDesktop({
   onAddToLists,
   onToggleWantToPlay,
   presentation,
+  showActions,
   wantToPlay,
   wantToPlayDisabled,
 }: ReleaseCardLayoutProps) {
@@ -135,7 +135,7 @@ function ReleaseCardDesktop({
       <div className="relative">
         <Link
           aria-label={`Ver detalhes de ${item.name}`}
-          className="block aspect-[5/4] w-full rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="block aspect-[16/9] w-full overflow-hidden rounded-xl shadow-[0_8px_24px_#00000040] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           to={`/jogos/${String(item.id)}`}
         >
           {item.coverUrl ? (
@@ -158,67 +158,56 @@ function ReleaseCardDesktop({
         <span className="absolute bottom-2 left-2 rounded-md bg-app/85 px-2 py-1 text-[11px] font-semibold text-content-primary">
           {presentation.status}
         </span>
-        <div className="absolute right-2 top-2">
-          <WantToPlayButton
-            disabled={actionPending || wantToPlayDisabled}
-            gameName={item.name}
-            onToggle={onToggleWantToPlay}
-            selected={wantToPlay}
-          />
-        </div>
+        {showActions ? (
+          <div className="absolute right-2 top-2">
+            <WantToPlayButton
+              disabled={actionPending || wantToPlayDisabled}
+              gameName={item.name}
+              onToggle={onToggleWantToPlay}
+              selected={wantToPlay}
+            />
+          </div>
+        ) : null}
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="min-w-0">
-          <h3
-            className="truncate font-heading text-base font-semibold text-text-primary"
-            title={item.name}
+      <div className="flex min-w-0 flex-1 flex-col gap-3 pt-3">
+        <h3
+          className="truncate font-heading text-base font-semibold text-text-primary"
+          title={item.name}
+        >
+          <Link
+            className="rounded-sm hover:text-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            to={`/jogos/${String(item.id)}`}
           >
-            <Link
-              className="rounded-sm hover:text-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-              to={`/jogos/${String(item.id)}`}
-            >
-              {item.name}
-            </Link>
-          </h3>
-          <p className="mt-1 text-xs text-text-muted">{presentation.date}</p>
-        </div>
-
+            {item.name}
+          </Link>
+        </h3>
         <div className="flex min-w-0 items-center gap-1.5">
           {presentation.desktopPlatforms.map((platform) => (
             <span
               className={`${
                 platform.summary ? 'shrink-0' : 'min-w-0 shrink truncate'
-              } rounded-md border border-border-brand bg-bg-secondary px-2 py-1 text-[11px] font-semibold text-text-muted`}
+              } rounded-md bg-white/10 px-2 py-1 text-[11px] font-semibold text-text-muted`}
               key={platform.key}
               title={platform.summary ? undefined : platform.label}
             >
               {platform.label}
             </span>
           ))}
-          {presentation.genre ? (
-            <p
-              className="ml-auto min-w-[4rem] max-w-[40%] shrink truncate text-xs text-text-muted"
-              title={presentation.genre}
-            >
-              {presentation.genre}
-            </p>
-          ) : null}
         </div>
-      </div>
-
-      <div className="flex items-center gap-2 border-t border-border-brand pt-2">
-        <button
-          aria-label={`Adicionar ${item.name} à lista`}
-          className={`${disabledActionClassName} h-9 flex-1 gap-2 border border-border-brand bg-bg-secondary px-3 text-xs font-semibold text-content-primary hover:border-brand hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand`}
-          disabled={authLoading}
-          onClick={onAddToLists}
-          ref={addToListsButtonRef}
-          type="button"
-        >
-          <BookmarkPlus aria-hidden="true" size={15} />
-          Adicionar à lista
-        </button>
+        {showActions ? (
+          <button
+            aria-label={`Adicionar ${item.name} à lista`}
+            className={`${disabledActionClassName} mt-auto h-10 w-1/2 gap-2 border border-border-brand bg-bg-secondary px-3 text-xs font-semibold text-content-primary hover:border-brand hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand`}
+            disabled={authLoading}
+            onClick={onAddToLists}
+            ref={addToListsButtonRef}
+            type="button"
+          >
+            <BookmarkPlus aria-hidden="true" size={15} />
+            Adicionar à lista
+          </button>
+        ) : null}
       </div>
     </>
   );
@@ -232,28 +221,29 @@ function ReleaseCardMobile({
   onAddToLists,
   onToggleWantToPlay,
   presentation,
+  showActions,
   wantToPlay,
   wantToPlayDisabled,
 }: ReleaseCardLayoutProps) {
   return (
     <>
-      <div className="relative h-full">
+      <div className="relative">
         <Link
           aria-label={`Ver detalhes de ${item.name}`}
-          className="block h-full rounded-[10px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="block aspect-[16/9] w-full overflow-hidden rounded-[10px] shadow-[0_8px_24px_#00000040] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           to={`/jogos/${String(item.id)}`}
         >
           {item.coverUrl ? (
             <img
               alt={`Capa de ${item.name}`}
-              className="h-full w-[82px] rounded-[10px] object-cover transition-opacity hover:opacity-85"
+              className="size-full rounded-[10px] object-cover transition-opacity hover:opacity-85"
               loading="lazy"
               src={item.coverUrl}
             />
           ) : (
             <div
               aria-label={`Capa indisponível de ${item.name}`}
-              className="flex h-full w-[82px] items-center justify-center rounded-[10px] bg-gradient-to-br from-bg-secondary to-surface-hover text-text-muted"
+              className="flex size-full items-center justify-center rounded-[10px] bg-gradient-to-br from-bg-secondary to-surface-hover text-text-muted"
               role="img"
             >
               <Gamepad2 aria-hidden="true" size={24} />
@@ -262,20 +252,20 @@ function ReleaseCardMobile({
         </Link>
       </div>
 
-      <div className="flex min-w-0 flex-col justify-between py-0.5">
-        <div className="min-w-0">
-          <div className="flex min-w-0 items-start justify-between gap-2">
-            <h3
-              className="min-w-0 truncate font-heading text-sm font-semibold text-text-primary"
-              title={item.name}
+      <div className="flex min-w-0 flex-1 flex-col gap-2 pt-2.5">
+        <div className="flex min-w-0 items-start justify-between gap-2">
+          <h3
+            className="min-w-0 truncate font-heading text-sm font-semibold text-text-primary"
+            title={item.name}
+          >
+            <Link
+              className="rounded-sm hover:text-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              to={`/jogos/${String(item.id)}`}
             >
-              <Link
-                className="rounded-sm hover:text-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-                to={`/jogos/${String(item.id)}`}
-              >
-                {item.name}
-              </Link>
-            </h3>
+              {item.name}
+            </Link>
+          </h3>
+          {showActions ? (
             <div className="-mr-1 -mt-1">
               <WantToPlayButton
                 compact
@@ -285,38 +275,27 @@ function ReleaseCardMobile({
                 selected={wantToPlay}
               />
             </div>
-          </div>
-          <p
-            className="mt-1 truncate text-[11px] text-text-muted"
-            title={presentation.compactPlatforms}
-          >
-            {presentation.compactPlatforms}
-          </p>
-          {presentation.genre ? (
-            <p className="mt-1 truncate text-[11px] text-text-muted" title={presentation.genre}>
-              {presentation.genre}
-            </p>
           ) : null}
         </div>
-
-        <div className="flex items-center justify-between gap-2">
-          <span className="rounded-md bg-filter-active px-2 py-1 text-[10px] font-semibold text-filter-active-text">
-            {presentation.status}
-          </span>
-          <span className="truncate text-[11px] text-text-muted" title={presentation.date}>
-            {presentation.date}
-          </span>
+        <p
+          className="truncate text-[11px] text-text-muted"
+          title={presentation.compactPlatforms}
+        >
+          {presentation.compactPlatforms}
+        </p>
+        {showActions ? (
           <button
             aria-label={`Adicionar ${item.name} à lista`}
-            className={`${disabledActionClassName} size-7 shrink-0 border border-border-brand bg-bg-secondary hover:border-brand hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand`}
+            className={`${disabledActionClassName} mt-auto h-9 w-1/2 gap-2 border border-border-brand bg-bg-secondary px-3 text-xs font-semibold text-content-primary hover:border-brand hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand`}
             disabled={authLoading}
             onClick={onAddToLists}
             ref={addToListsButtonRef}
             type="button"
           >
-            <Plus aria-hidden="true" size={15} />
+            <BookmarkPlus aria-hidden="true" size={15} />
+            Adicionar à lista
           </button>
-        </div>
+        ) : null}
       </div>
     </>
   );
@@ -334,6 +313,7 @@ function toGameSnapshot(item: ReleaseItem): GameSnapshot {
 export function ReleaseCard({
   item,
   generatedAt,
+  showActions = true,
   onPendingActionConsumed,
   pendingAction,
 }: ReleaseCardProps): React.ReactElement {
@@ -363,11 +343,9 @@ export function ReleaseCard({
   const wantToPlayDisabled =
     authLoading || (authState.status === 'authenticated' && wantToPlayMembership !== 'ready');
   const presentation: ReleasePresentation = {
-    date: formatReleaseDate(item.releaseDate),
     status: formatReleaseStatus(item.releaseDate, generatedAt),
     desktopPlatforms: desktopPlatformChips(item.platforms),
     compactPlatforms: compactPlatformLabel(item.platforms),
-    genre: item.genres.at(0)?.name,
   };
 
   const requestAuthentication = useCallback(
@@ -492,7 +470,7 @@ export function ReleaseCard({
   return (
     <>
       <article
-        className="hidden h-[407px] rounded-2xl border border-border-brand bg-surface p-3 shadow-[0_8px_24px_#00000040] sm:flex sm:flex-col sm:gap-2 xl:h-[350px]"
+        className="hidden h-full flex-col sm:flex"
         data-testid={`release-card-desktop-${String(item.id)}`}
       >
         <ReleaseCardDesktop
@@ -503,12 +481,13 @@ export function ReleaseCard({
           onAddToLists={handleOpenAddToLists}
           onToggleWantToPlay={handleSetWantToPlay}
           presentation={presentation}
+          showActions={showActions}
           wantToPlay={wantToPlay}
           wantToPlayDisabled={wantToPlayDisabled}
         />
       </article>
       <article
-        className="grid h-[132px] grid-cols-[82px_minmax(0,1fr)] gap-3 rounded-[14px] border border-border-brand bg-surface p-2.5 sm:hidden"
+        className="flex h-full flex-col sm:hidden"
         data-testid={`release-card-mobile-${String(item.id)}`}
       >
         <ReleaseCardMobile
@@ -519,11 +498,12 @@ export function ReleaseCard({
           onAddToLists={handleOpenAddToLists}
           onToggleWantToPlay={handleSetWantToPlay}
           presentation={presentation}
+          showActions={showActions}
           wantToPlay={wantToPlay}
           wantToPlayDisabled={wantToPlayDisabled}
         />
       </article>
-      {toggleError === null ? null : (
+      {!showActions || toggleError === null ? null : (
         <p
           className="mt-2 rounded-lg border border-brand/50 bg-bg-secondary px-3 py-2 text-sm text-content-primary"
           role="alert"
@@ -531,7 +511,7 @@ export function ReleaseCard({
           {toggleError}
         </p>
       )}
-      {authState.status === 'authenticated' && wantToPlayMembership === 'error' ? (
+      {showActions && authState.status === 'authenticated' && wantToPlayMembership === 'error' ? (
         <div
           className="mt-2 rounded-lg border border-brand/50 bg-bg-secondary px-3 py-2 text-sm text-content-primary"
           role="alert"
@@ -546,7 +526,7 @@ export function ReleaseCard({
           </button>
         </div>
       ) : null}
-      {addToListsOpen ? (
+      {showActions && addToListsOpen ? (
         <AddToListsModal
           gameName={item.name}
           key={scopeVersion}

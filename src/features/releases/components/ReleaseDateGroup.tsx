@@ -61,11 +61,11 @@ export function ReleaseDateGroup({
 
       <ul
         aria-labelledby={headingId}
-        className="mt-3 grid list-none grid-cols-1 gap-3 p-0 sm:mt-4 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+        className="mt-3 grid list-none grid-cols-1 gap-x-3 gap-y-6 p-0 sm:mt-4 sm:grid-cols-2 sm:gap-x-4 sm:gap-y-8 xl:grid-cols-4"
       >
         {group.items.map((item) => (
           <li
-            className="sm:[content-visibility:auto] sm:[contain-intrinsic-size:407px] xl:[contain-intrinsic-size:350px]"
+            className="sm:[content-visibility:auto] sm:[contain-intrinsic-size:340px]"
             key={item.id}
           >
             <ReleaseCard

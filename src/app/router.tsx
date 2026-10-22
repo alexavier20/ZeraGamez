@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 
 import { AppLayout } from '@/app/AppLayout';
 import { createSupabaseAuthService, type AuthService } from '@/features/auth/api/auth-service';
+import { createSupabaseProfileRepository } from '@/features/auth/api/profile-repository';
 import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
 import { AuthProvider } from '@/features/auth/context/AuthProvider';
 import {
@@ -42,6 +43,7 @@ function getDefaultDependencies(): DefaultDependencies {
         ? null
         : createSupabaseAuthService(client, {
             isGoogleProviderEnabled: isGoogleAuthProviderEnabled,
+            profileRepository: createSupabaseProfileRepository(client),
           }),
     listsRepository: client === null ? null : createSupabaseListsRepository(client),
   };

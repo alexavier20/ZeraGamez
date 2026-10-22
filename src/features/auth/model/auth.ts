@@ -6,6 +6,11 @@ export interface AuthenticatedUser {
   readonly name: string;
 }
 
+export interface AuthProfile {
+  readonly avatarUrl: string | null;
+  readonly displayName: string | null;
+}
+
 interface AuthUserRecord {
   readonly id: string;
   readonly email?: string;
@@ -14,17 +19,27 @@ interface AuthUserRecord {
 
 const OTP_ERROR_MESSAGE = 'Digite um código numérico de 6 a 10 dígitos.';
 
-export function toAuthenticatedUser(user: AuthUserRecord): AuthenticatedUser {
+export function toAuthenticatedUser(
+  user: AuthUserRecord,
+  profile?: AuthProfile | null,
+): AuthenticatedUser {
   const email = user.email ?? '';
-  const fullName = readMetadataString(user.user_metadata, 'full_name');
-  const name = fullName ?? email;
+  const metadataName =
+    readMetadataString(user.user_metadata, 'display_name') ??
+    readMetadataString(user.user_metadata, 'full_name') ??
+    readMetadataString(user.user_metadata, 'name');
+  const profileName = profile?.displayName?.trim();
+  const name = (profileName === '' ? null : profileName) ?? metadataName ?? email;
 
   return {
     id: user.id,
     email,
     name,
-    initials: toInitials(fullName ?? email),
-    avatarUrl: readMetadataString(user.user_metadata, 'avatar_url'),
+    initials: toInitials(name),
+    avatarUrl:
+      profile?.avatarUrl ??
+      readMetadataString(user.user_metadata, 'avatar_url') ??
+      readMetadataString(user.user_metadata, 'picture'),
   };
 }
 

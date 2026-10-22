@@ -43,32 +43,24 @@ describe('Header controls', () => {
     expect(screen.queryByRole('button', { name: 'Abrir notificações' })).not.toBeInTheDocument();
   });
 
-  it('expõe as ações do usuário autenticado e as rotas de perfil e criar lista', async () => {
+  it('exibe o perfil autenticado sem notificações e mantém a saudação ao lado do avatar', async () => {
     const user = userEvent.setup();
-    const onNotificationsClick = vi.fn();
     const onProfileClick = vi.fn();
     render(
       <MemoryRouter>
         <HeaderActions
           account={{ status: 'authenticated', user: { name: 'Alex', initials: 'AB' } }}
-          onNotificationsClick={onNotificationsClick}
           onProfileClick={onProfileClick}
         />
       </MemoryRouter>,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Abrir notificações' }));
-    await user.click(screen.getByRole('link', { name: 'Abrir perfil de Alex' }));
+    const profileLink = screen.getByRole('link', { name: 'Abrir perfil de Alex' });
+    await user.click(profileLink);
 
-    expect(onNotificationsClick).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('button', { name: /notificações/i })).not.toBeInTheDocument();
+    expect(screen.getByText('Olá, Alex')).toBeInTheDocument();
     expect(onProfileClick).toHaveBeenCalledOnce();
-    expect(screen.getByRole('link', { name: 'Abrir perfil de Alex' })).toHaveAttribute(
-      'href',
-      '/perfil',
-    );
-    expect(screen.getByRole('link', { name: 'Criar lista' })).toHaveAttribute(
-      'href',
-      '/minhas-listas/nova',
-    );
+    expect(profileLink).toHaveAttribute('href', '/perfil');
   });
 });

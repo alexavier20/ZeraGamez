@@ -1,21 +1,17 @@
-import { Bell } from 'lucide-react';
 import { Link } from 'react-router';
 
-import { headerCopy, headerRoutes } from './header.config';
+import { UserAvatar } from '@/features/auth/components/UserAvatar';
+
+import { headerRoutes } from './header.config';
 
 import type { HeaderAccount } from './header.types';
 
 interface HeaderActionsProps {
   readonly account: HeaderAccount;
-  readonly onNotificationsClick?: () => void;
   readonly onProfileClick?: () => void;
 }
 
-export function HeaderActions({
-  account,
-  onNotificationsClick,
-  onProfileClick,
-}: Readonly<HeaderActionsProps>) {
+export function HeaderActions({ account, onProfileClick }: Readonly<HeaderActionsProps>) {
   if (account.status === 'anonymous') {
     return (
       <div className="flex shrink-0 items-center gap-3">
@@ -33,23 +29,23 @@ export function HeaderActions({
 
   return (
     <div className="flex shrink-0 items-center gap-3">
-      <button
-        aria-label={headerCopy.notificationsLabel}
-        className="grid size-10 place-items-center rounded-xl border border-header-border bg-header-overlay text-text-primary transition-colors hover:bg-header-field focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary"
-        onClick={onNotificationsClick}
-        type="button"
-      >
-        <Bell aria-hidden="true" size={19} />
-      </button>
       <Link
         aria-label={`Abrir perfil de ${user.name}`}
-        className="grid size-10 place-items-center rounded-full border border-white/25 bg-linear-to-br from-avatar-start to-avatar-end text-xs font-bold text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary"
+        className="rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary"
         onClick={onProfileClick}
         title={user.name}
         to={headerRoutes.profile}
       >
-        {user.initials}
+        <UserAvatar
+          avatarUrl={user.avatarUrl ?? null}
+          className="size-10 border border-white text-xs"
+          initials={user.initials}
+          name={user.name}
+        />
       </Link>
+      <span className="hidden max-w-40 truncate text-sm font-semibold text-content-primary xl:inline">
+        Olá, {user.name}
+      </span>
     </div>
   );
 }

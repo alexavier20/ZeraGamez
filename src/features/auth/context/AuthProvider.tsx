@@ -8,7 +8,7 @@ import {
   useState,
 } from 'react';
 
-import type { AuthService } from '@/features/auth/api/auth-service';
+import type { AuthService, ProfileUpdateInput } from '@/features/auth/api/auth-service';
 import type { AuthenticatedUser } from '@/features/auth/model/auth';
 
 export type AuthState =
@@ -25,6 +25,7 @@ export interface AuthContextValue {
   readonly verifyEmailCode: AuthService['verifyEmailCode'];
   readonly signInWithGoogle: AuthService['signInWithGoogle'];
   readonly signOut: AuthService['signOut'];
+  readonly updateProfile: (input: ProfileUpdateInput) => Promise<AuthenticatedUser>;
 }
 
 interface AuthProviderProps {
@@ -55,6 +56,7 @@ const defaultAuthContext: AuthContextValue = {
   verifyEmailCode: unavailableAction,
   signInWithGoogle: unavailableAction,
   signOut: unavailableAction,
+  updateProfile: unavailableAction,
 };
 
 const AuthContext = createContext<AuthContextValue>(defaultAuthContext);
@@ -129,6 +131,14 @@ export function AuthProvider({ children, service }: AuthProviderProps) {
     const currentService = serviceRef.current;
     return currentService === null ? unavailableAction() : currentService.signOut();
   }, []);
+  const updateProfile = useCallback(async (input: ProfileUpdateInput) => {
+    const currentService = serviceRef.current;
+    if (currentService?.updateProfile === undefined) return unavailableAction();
+
+    const user = await currentService.updateProfile(input);
+    setState(createState(user));
+    return user;
+  }, []);
 
   const beginLogoutNavigation = useCallback(() => {
     const logoutNavigation = logoutNavigationRef.current;
@@ -152,6 +162,7 @@ export function AuthProvider({ children, service }: AuthProviderProps) {
       signInWithGoogle,
       signOut,
       state,
+      updateProfile,
       verifyEmailCode,
     }),
     [
@@ -161,6 +172,7 @@ export function AuthProvider({ children, service }: AuthProviderProps) {
       signInWithGoogle,
       signOut,
       state,
+      updateProfile,
       verifyEmailCode,
     ],
   );

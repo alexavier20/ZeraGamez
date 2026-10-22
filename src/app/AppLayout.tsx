@@ -10,7 +10,14 @@ export function AppLayout() {
   const { state } = useAuth();
   const account: HeaderAccount =
     state.status === 'authenticated'
-      ? { status: 'authenticated', user: { name: state.user.name, initials: state.user.initials } }
+      ? {
+          status: 'authenticated',
+          user: {
+            name: state.user.name,
+            initials: state.user.initials,
+            avatarUrl: state.user.avatarUrl,
+          },
+        }
       : { status: 'anonymous' };
 
   return (

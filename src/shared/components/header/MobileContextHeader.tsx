@@ -1,12 +1,19 @@
-import { ArrowLeft, Bell, Ellipsis, Share2, X } from 'lucide-react';
+import { ArrowLeft, Ellipsis, Share2, X } from 'lucide-react';
+import { Link } from 'react-router';
 
-import { headerCopy } from './header.config';
+import { UserAvatar } from '@/features/auth/components/UserAvatar';
+
+import { headerRoutes } from './header.config';
 import { HeaderBrand } from './HeaderBrand';
 
-import type { HeaderContextAction } from './header.types';
+import type { HeaderAccount, HeaderContextAction } from './header.types';
 
 type MobileContextHeaderProps =
-  | Readonly<{ variant: 'default'; onNotificationsClick?: () => void }>
+  | Readonly<{
+      variant: 'default';
+      account?: HeaderAccount;
+      onProfileClick?: () => void;
+    }>
   | Readonly<{
       variant: 'detail';
       title: string;
@@ -50,14 +57,24 @@ export function MobileContextHeader(props: MobileContextHeaderProps) {
         data-testid="mobile-context-header"
       >
         <HeaderBrand compact />
-        <button
-          aria-label={headerCopy.notificationsLabel}
-          className="grid size-10 place-items-center rounded-lg text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary"
-          onClick={props.onNotificationsClick}
-          type="button"
-        >
-          <Bell aria-hidden="true" size={20} />
-        </button>
+        {props.account?.status === 'authenticated' ? (
+          <Link
+            aria-label={`Abrir perfil de ${props.account.user.name}`}
+            className="flex min-w-0 items-center gap-2 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary"
+            onClick={props.onProfileClick}
+            to={headerRoutes.profile}
+          >
+            <UserAvatar
+              avatarUrl={props.account.user.avatarUrl ?? null}
+              className="size-9 border border-white text-[11px]"
+              initials={props.account.user.initials}
+              name={props.account.user.name}
+            />
+            <span className="max-w-28 truncate text-xs font-semibold text-content-primary">
+              Olá, {props.account.user.name}
+            </span>
+          </Link>
+        ) : null}
       </div>
     );
   }

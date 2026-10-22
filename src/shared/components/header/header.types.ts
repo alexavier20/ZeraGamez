@@ -1,4 +1,5 @@
 export interface HeaderUser {
+  readonly avatarUrl?: string | null;
   readonly name: string;
   readonly initials: string;
 }
@@ -25,7 +26,6 @@ export type HeaderContextAction = Readonly<IconHeaderContextAction | TextHeaderC
 interface HeaderBaseProps {
   readonly account: HeaderAccount;
   readonly onSearch?: (query: string) => void;
-  readonly onNotificationsClick?: () => void;
   readonly onProfileClick?: () => void;
   readonly onTabletMenuClick?: () => void;
 }

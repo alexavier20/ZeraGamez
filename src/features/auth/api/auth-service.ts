@@ -2,6 +2,8 @@ import { DataError, toDataError } from '@/shared/supabase/data-error';
 
 import { toAuthenticatedUser, type AuthenticatedUser } from '../model/auth';
 
+import type { ProfileRepository } from './profile-repository';
+
 interface AuthUserRecord {
   readonly id: string;
   readonly email?: string;
@@ -29,6 +31,12 @@ interface SupabaseAuthPort {
     readonly options: { readonly shouldCreateUser: true };
   }): Promise<AuthResult>;
   signOut(): Promise<AuthResult>;
+  readonly updateUser?: (attributes: {
+    readonly data: Readonly<Record<string, unknown>>;
+  }) => Promise<{
+    readonly data: { readonly user: AuthUserRecord | null };
+    readonly error: unknown;
+  }>;
   verifyOtp(credentials: {
     readonly email: string;
     readonly token: string;
@@ -42,6 +50,12 @@ interface SupabaseClientPort {
 
 interface AuthServiceOptions {
   readonly isGoogleProviderEnabled?: () => Promise<boolean>;
+  readonly profileRepository?: ProfileRepository;
+}
+
+export interface ProfileUpdateInput {
+  readonly avatarFile?: File | null;
+  readonly displayName: string;
 }
 
 export interface AuthService {
@@ -51,6 +65,7 @@ export interface AuthService {
   verifyEmailCode(email: string, token: string): Promise<void>;
   signInWithGoogle(redirectTo: string): Promise<void>;
   signOut(): Promise<void>;
+  updateProfile?(input: ProfileUpdateInput): Promise<AuthenticatedUser>;
 }
 
 export function createSupabaseAuthService(
@@ -62,7 +77,9 @@ export function createSupabaseAuthService(
       const response = await callAuth(() => client.auth.getUser());
       throwIfAuthError(response.error);
 
-      return response.data.user === null ? null : toAuthenticatedUser(response.data.user);
+      if (response.data.user === null) return null;
+      const profile = await options.profileRepository?.getProfile(response.data.user.id);
+      return toAuthenticatedUser(response.data.user, profile);
     },
 
     onAuthStateChange(listener: (user: AuthenticatedUser | null) => void): () => void {
@@ -122,7 +139,60 @@ export function createSupabaseAuthService(
       const response = await callAuth(() => client.auth.signOut());
       throwIfAuthError(response.error);
     },
+
+    async updateProfile(input): Promise<AuthenticatedUser> {
+      const displayName = input.displayName.trim();
+      const updateUser = client.auth.updateUser;
+      if (displayName.length === 0 || displayName.length > 50) {
+        throw new DataError('unexpected');
+      }
+      if (updateUser === undefined) throw new DataError('configuration');
+
+      const currentResponse = await callAuth(() => client.auth.getUser());
+      throwIfAuthError(currentResponse.error);
+      if (currentResponse.data.user === null) throw new DataError('unauthenticated');
+
+      const currentUser = currentResponse.data.user;
+      const previousProfile = await options.profileRepository?.getProfile(currentUser.id);
+      let avatarUrl =
+        previousProfile?.avatarUrl ??
+        readUserMetadata(currentUser.user_metadata, 'avatar_url') ??
+        readUserMetadata(currentUser.user_metadata, 'picture');
+
+      if (input.avatarFile !== undefined && input.avatarFile !== null) {
+        if (options.profileRepository === undefined) throw new DataError('configuration');
+        avatarUrl = await options.profileRepository.uploadAvatar(currentUser.id, input.avatarFile);
+      }
+
+      await options.profileRepository?.saveProfile(currentUser.id, displayName, avatarUrl);
+
+      const response = await callAuth(() =>
+        updateUser.call(client.auth, {
+          data: { display_name: displayName, avatar_url: avatarUrl },
+        }),
+      );
+      throwIfAuthError(response.error);
+
+      const updatedUser = response.data.user ?? {
+        ...currentUser,
+        user_metadata: {
+          ...currentUser.user_metadata,
+          display_name: displayName,
+          avatar_url: avatarUrl,
+        },
+      };
+
+      return toAuthenticatedUser(updatedUser, { displayName, avatarUrl });
+    },
   };
+}
+
+function readUserMetadata(
+  metadata: Record<string, unknown> | undefined,
+  key: string,
+): string | null {
+  const value = metadata?.[key];
+  return typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
 }
 
 function isGoogleProviderDisabledError(error: unknown): boolean {

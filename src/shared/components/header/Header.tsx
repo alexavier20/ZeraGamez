@@ -33,7 +33,11 @@ function renderMobileHeader(props: HeaderProps) {
   }
 
   return (
-    <MobileContextHeader onNotificationsClick={props.onNotificationsClick} variant="default" />
+    <MobileContextHeader
+      account={props.account}
+      onProfileClick={props.onProfileClick}
+      variant="default"
+    />
   );
 }
 
@@ -50,7 +54,6 @@ export function Header(props: HeaderProps) {
           <GlobalSearch className="min-w-48 flex-1" onSearch={props.onSearch} />
           <HeaderActions
             account={props.account}
-            onNotificationsClick={props.onNotificationsClick}
             onProfileClick={props.onProfileClick}
           />
         </div>

@@ -13,7 +13,6 @@ export const headerCopy = {
   searchLabel: 'Buscar jogos',
   searchPlaceholder: 'Buscar jogos...',
   searchButtonLabel: 'Executar busca',
-  notificationsLabel: 'Abrir notificações',
   tabletMenuLabel: 'Abrir menu',
   mobileNavigationLabel: 'Navegação móvel',
   desktopNavigationLabel: 'Navegação principal',

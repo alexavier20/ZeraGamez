@@ -9,7 +9,7 @@ import {
 import { Link } from 'react-router';
 
 import { useAuth } from '@/features/auth/context/AuthProvider';
-import { ReleaseCard } from '@/features/releases/components/ReleaseCard';
+import { HomeReleaseCard } from '@/features/releases/components/HomeReleaseCard';
 import { useReleases } from '@/features/releases/hooks/use-releases';
 import { todayInSaoPaulo } from '@/features/releases/model/release-calendar';
 import { headerRoutes } from '@/shared/components/header/header.config';
@@ -118,11 +118,11 @@ function DailyReleasesSection() {
           role="status"
         >
           {dailyReleaseSkeletons.map((index) => (
-            <div
-              aria-hidden="true"
-              className="h-56 animate-pulse rounded-2xl border border-border-brand bg-surface"
-              key={index}
-            />
+            <div aria-hidden="true" className="min-w-0" key={index}>
+              <div className="aspect-square animate-pulse rounded-xl bg-surface" />
+              <div className="mt-3 h-4 w-3/4 animate-pulse rounded bg-surface" />
+              <div className="mt-2 h-5 w-1/3 animate-pulse rounded bg-surface" />
+            </div>
           ))}
         </div>
       ) : state.status === 'error' ? (
@@ -150,7 +150,7 @@ function DailyReleasesSection() {
         <ul className="grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {state.response.data.slice(0, 5).map((item) => (
             <li key={item.id}>
-              <ReleaseCard generatedAt={state.response.meta.generatedAt} item={item} />
+              <HomeReleaseCard item={item} />
             </li>
           ))}
         </ul>
