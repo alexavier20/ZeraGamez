@@ -41,7 +41,7 @@ export async function listUpcomingReleases(
   dependencies: ListUpcomingReleasesDependencies,
 ): Promise<ListUpcomingReleasesResult> {
   const result = await dependencies.repository.findUpcoming(query);
-  const data = consolidateReleases(result.candidates, query.limit);
+  const data = consolidateReleases(result.candidates, query.limit, query.offset ?? 0);
 
   return {
     data,

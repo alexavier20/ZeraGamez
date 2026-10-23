@@ -63,9 +63,9 @@ pelo Git, ou baixe as variáveis Development com a CLI da Vercel.
 - npm run dev:vite inicia somente o Vite para trabalho visual, sem `/api`.
 
 GET /api/releases aceita from e to no formato YYYY-MM-DD, limit entre 1 e 100,
-platforms e genres como listas de IDs separadas por vírgulas. Sem parâmetros, a
-consulta cobre hoje em America/Sao_Paulo até 90 dias depois e retorna até 50
-jogos consolidados.
+offset para continuar resultados, platforms e genres como listas de IDs
+separadas por vírgulas. Sem parâmetros, a consulta cobre hoje em
+America/Sao_Paulo até 90 dias depois e retorna até 50 jogos consolidados.
 
 ## Configuração do Supabase
 

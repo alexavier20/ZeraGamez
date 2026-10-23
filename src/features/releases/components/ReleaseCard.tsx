@@ -1,5 +1,5 @@
 import { BookmarkPlus, CircleCheck, Gamepad2 } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 
 import { useAuth } from '@/features/auth/context/AuthProvider';
@@ -7,7 +7,6 @@ import { savePendingAuthIntent } from '@/features/auth/model/pending-auth-intent
 import { AddToListsModal } from '@/features/lists/components/AddToListsModal';
 import { isListsOperationCancelled, useLists } from '@/features/lists/context/ListsProvider';
 import {
-  compactPlatformLabel,
   formatReleaseStatus,
   platformLabel,
   type ReleaseItem,
@@ -28,14 +27,12 @@ export interface ReleaseCardProps {
 
 interface ReleasePresentation {
   readonly status: string;
-  readonly desktopPlatforms: readonly ReleasePlatformChip[];
-  readonly compactPlatforms: string;
+  readonly platforms: readonly ReleasePlatformChip[];
 }
 
 interface ReleasePlatformChip {
   readonly key: string;
   readonly label: string;
-  readonly summary: boolean;
 }
 
 interface ReleaseCardLayoutProps {
@@ -50,9 +47,6 @@ interface ReleaseCardLayoutProps {
   readonly wantToPlay: boolean;
   readonly wantToPlayDisabled: boolean;
 }
-
-const disabledActionClassName =
-  'inline-flex items-center justify-center rounded-lg text-text-muted transition-colors disabled:opacity-100';
 
 interface WantToPlayButtonProps {
   readonly compact?: boolean;
@@ -98,24 +92,169 @@ function WantToPlayButton({
   );
 }
 
-function desktopPlatformChips(platforms: ReleaseItem['platforms']): ReleasePlatformChip[] {
-  const chips = platforms.slice(0, 2).map((platform, index) => ({
+interface AddToListsButtonProps {
+  readonly buttonRef: React.RefObject<HTMLButtonElement | null>;
+  readonly disabled: boolean;
+  readonly gameName: string;
+  readonly onClick: React.MouseEventHandler<HTMLButtonElement>;
+}
+
+function AddToListsButton({ buttonRef, disabled, gameName, onClick }: AddToListsButtonProps) {
+  return (
+    <button
+      aria-label={`Adicionar ${gameName} à lista`}
+      className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg border border-border-brand bg-app/85 text-content-primary transition-colors hover:border-brand hover:bg-app focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-60"
+      disabled={disabled}
+      onClick={onClick}
+      ref={buttonRef}
+      title={`Adicionar ${gameName} à lista`}
+      type="button"
+    >
+      <BookmarkPlus aria-hidden="true" size={15} />
+    </button>
+  );
+}
+
+const platformChipClassName =
+  'max-w-[120px] shrink-0 truncate rounded-md bg-white/10 px-2 py-1 text-[11px] font-semibold text-text-muted';
+const platformSummaryClassName =
+  'shrink-0 rounded-md bg-white/10 px-2 py-1 text-[11px] font-semibold text-text-muted';
+
+function PlatformChips({
+  gameName,
+  platforms,
+}: {
+  readonly gameName: string;
+  readonly platforms: readonly ReleasePlatformChip[];
+}) {
+  const rowRef = useRef<HTMLDivElement>(null);
+  const measurementRef = useRef<HTMLDivElement>(null);
+  const [visibleCount, setVisibleCount] = useState(platforms.length);
+
+  useLayoutEffect(() => {
+    const row = rowRef.current;
+    const measurement = measurementRef.current;
+    if (!row || !measurement) return;
+
+    const recalculate = () => {
+      const availableWidth = row.clientWidth;
+      const platformNodes = Array.from(
+        measurement.querySelectorAll<HTMLElement>('[data-platform-measure]'),
+      );
+      const summaryNodes = Array.from(
+        measurement.querySelectorAll<HTMLElement>('[data-platform-summary-measure]'),
+      );
+      const platformWidths = platformNodes.map((node) => node.getBoundingClientRect().width);
+      const summaryWidths = new Map(
+        summaryNodes.map((node) => [
+          Number(node.dataset.platformSummaryMeasure),
+          node.getBoundingClientRect().width,
+        ] as const),
+      );
+
+      if (platforms.length === 0) {
+        setVisibleCount(0);
+        return;
+      }
+
+      if (availableWidth === 0 || platformWidths.some((width) => width === 0)) {
+        setVisibleCount(0);
+        return;
+      }
+
+      const gap = 6;
+      for (let count = platforms.length; count >= 0; count -= 1) {
+        const remaining = platforms.length - count;
+        const summaryWidth = remaining > 0 ? (summaryWidths.get(remaining) ?? 0) : 0;
+        const chipCount = count + (remaining > 0 ? 1 : 0);
+        const usedWidth =
+          platformWidths.slice(0, count).reduce((total, width) => total + width, 0) +
+          summaryWidth +
+          Math.max(0, chipCount - 1) * gap;
+
+        if (usedWidth <= availableWidth) {
+          setVisibleCount(count);
+          return;
+        }
+      }
+
+      setVisibleCount(0);
+    };
+
+    recalculate();
+    const observer =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(recalculate);
+    observer?.observe(row);
+    observer?.observe(measurement);
+    window.addEventListener('resize', recalculate);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', recalculate);
+    };
+  }, [platforms]);
+
+  const remaining = platforms.length - visibleCount;
+
+  return (
+    <div className="relative min-w-0">
+      <div
+        aria-label={`Plataformas de ${gameName}`}
+        className="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap"
+        role="group"
+        ref={rowRef}
+      >
+        {platforms.slice(0, visibleCount).map((platform) => (
+          <span className={platformChipClassName} key={platform.key} title={platform.label}>
+            {platform.label}
+          </span>
+        ))}
+        {remaining > 0 ? (
+          <span
+            aria-label={`${String(remaining)} plataformas adicionais`}
+            className={platformSummaryClassName}
+          >
+            +{String(remaining)}
+          </span>
+        ) : null}
+      </div>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute left-0 top-0 invisible flex w-max items-center gap-1.5 whitespace-nowrap"
+        ref={measurementRef}
+      >
+        {platforms.map((platform, index) => (
+          <span
+            className={platformChipClassName}
+            data-platform-measure={index}
+            key={platform.key}
+            title={platform.label}
+          >
+            {platform.label}
+          </span>
+        ))}
+        {platforms.map((_, index) => {
+          const count = index + 1;
+          return (
+            <span
+              className={platformSummaryClassName}
+              data-platform-summary-measure={count}
+              key={`summary-${String(count)}`}
+            >
+              +{String(count)}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function platformChips(platforms: ReleaseItem['platforms']): ReleasePlatformChip[] {
+  return platforms.map((platform, index) => ({
     key: `platform-${String(platform.id)}-${String(index)}`,
     label: platformLabel(platform),
-    summary: false,
   }));
-  const remaining = platforms.length - chips.length;
-
-  return remaining > 0
-    ? [
-        ...chips,
-        {
-          key: `platform-summary-${String(platforms.length)}`,
-          label: `+${String(remaining)}`,
-          summary: true,
-        },
-      ]
-    : chips;
 }
 
 function ReleaseCardDesktop({
@@ -159,12 +298,18 @@ function ReleaseCardDesktop({
           {presentation.status}
         </span>
         {showActions ? (
-          <div className="absolute right-2 top-2">
+          <div className="absolute right-2 top-2 flex items-center gap-1.5">
             <WantToPlayButton
               disabled={actionPending || wantToPlayDisabled}
               gameName={item.name}
               onToggle={onToggleWantToPlay}
               selected={wantToPlay}
+            />
+            <AddToListsButton
+              buttonRef={addToListsButtonRef}
+              disabled={authLoading}
+              gameName={item.name}
+              onClick={onAddToLists}
             />
           </div>
         ) : null}
@@ -182,32 +327,7 @@ function ReleaseCardDesktop({
             {item.name}
           </Link>
         </h3>
-        <div className="flex min-w-0 items-center gap-1.5">
-          {presentation.desktopPlatforms.map((platform) => (
-            <span
-              className={`${
-                platform.summary ? 'shrink-0' : 'min-w-0 shrink truncate'
-              } rounded-md bg-white/10 px-2 py-1 text-[11px] font-semibold text-text-muted`}
-              key={platform.key}
-              title={platform.summary ? undefined : platform.label}
-            >
-              {platform.label}
-            </span>
-          ))}
-        </div>
-        {showActions ? (
-          <button
-            aria-label={`Adicionar ${item.name} à lista`}
-            className={`${disabledActionClassName} mt-auto h-10 w-1/2 gap-2 border border-border-brand bg-bg-secondary px-3 text-xs font-semibold text-content-primary hover:border-brand hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand`}
-            disabled={authLoading}
-            onClick={onAddToLists}
-            ref={addToListsButtonRef}
-            type="button"
-          >
-            <BookmarkPlus aria-hidden="true" size={15} />
-            Adicionar à lista
-          </button>
-        ) : null}
+        <PlatformChips gameName={item.name} platforms={presentation.platforms} />
       </div>
     </>
   );
@@ -250,6 +370,23 @@ function ReleaseCardMobile({
             </div>
           )}
         </Link>
+        {showActions ? (
+          <div className="absolute right-2 top-2 flex items-center gap-1.5">
+            <WantToPlayButton
+              compact
+              disabled={actionPending || wantToPlayDisabled}
+              gameName={item.name}
+              onToggle={onToggleWantToPlay}
+              selected={wantToPlay}
+            />
+            <AddToListsButton
+              buttonRef={addToListsButtonRef}
+              disabled={authLoading}
+              gameName={item.name}
+              onClick={onAddToLists}
+            />
+          </div>
+        ) : null}
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-2 pt-2.5">
@@ -265,37 +402,8 @@ function ReleaseCardMobile({
               {item.name}
             </Link>
           </h3>
-          {showActions ? (
-            <div className="-mr-1 -mt-1">
-              <WantToPlayButton
-                compact
-                disabled={actionPending || wantToPlayDisabled}
-                gameName={item.name}
-                onToggle={onToggleWantToPlay}
-                selected={wantToPlay}
-              />
-            </div>
-          ) : null}
         </div>
-        <p
-          className="truncate text-[11px] text-text-muted"
-          title={presentation.compactPlatforms}
-        >
-          {presentation.compactPlatforms}
-        </p>
-        {showActions ? (
-          <button
-            aria-label={`Adicionar ${item.name} à lista`}
-            className={`${disabledActionClassName} mt-auto h-9 w-1/2 gap-2 border border-border-brand bg-bg-secondary px-3 text-xs font-semibold text-content-primary hover:border-brand hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand`}
-            disabled={authLoading}
-            onClick={onAddToLists}
-            ref={addToListsButtonRef}
-            type="button"
-          >
-            <BookmarkPlus aria-hidden="true" size={15} />
-            Adicionar à lista
-          </button>
-        ) : null}
+        <PlatformChips gameName={item.name} platforms={presentation.platforms} />
       </div>
     </>
   );
@@ -344,8 +452,7 @@ export function ReleaseCard({
     authLoading || (authState.status === 'authenticated' && wantToPlayMembership !== 'ready');
   const presentation: ReleasePresentation = {
     status: formatReleaseStatus(item.releaseDate, generatedAt),
-    desktopPlatforms: desktopPlatformChips(item.platforms),
-    compactPlatforms: compactPlatformLabel(item.platforms),
+    platforms: platformChips(item.platforms),
   };
 
   const requestAuthentication = useCallback(

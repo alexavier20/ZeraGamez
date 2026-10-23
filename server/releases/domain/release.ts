@@ -39,7 +39,11 @@ function preferCandidate(current: CandidateRelease | undefined, next: CandidateR
   return next.releaseDate < current.releaseDate ? next : current;
 }
 
-export function consolidateReleases(candidates: readonly CandidateRelease[], limit: number) {
+export function consolidateReleases(
+  candidates: readonly CandidateRelease[],
+  limit: number,
+  offset = 0,
+) {
   const byGameAndPlatform = new Map<string, CandidateRelease>();
 
   for (const candidate of candidates) {
@@ -82,7 +86,9 @@ export function consolidateReleases(candidates: readonly CandidateRelease[], lim
   return releases
     .sort(
       (left, right) =>
-        left.releaseDate.localeCompare(right.releaseDate) || compareName(left, right),
+        left.releaseDate.localeCompare(right.releaseDate) ||
+        compareName(left, right) ||
+        left.id - right.id,
     )
-    .slice(0, limit);
+    .slice(offset, offset + limit);
 }

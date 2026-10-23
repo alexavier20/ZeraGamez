@@ -90,7 +90,7 @@ function unixSeconds(date: string) {
   return Math.floor(Date.parse(date + 'T00:00:00.000Z') / 1_000);
 }
 
-function buildQuery(query: ReleaseQuery) {
+function buildQuery(query: ReleaseQuery, offset = 0) {
   const filters = [
     'date >= ' + String(unixSeconds(query.from)),
     'date < ' + String(unixSeconds(addDays(query.to, 1))),
@@ -108,6 +108,7 @@ function buildQuery(query: ReleaseQuery) {
     'where ' + filters.join(' & ') + ';',
     'sort date asc;',
     'limit 500;',
+    ...(offset > 0 ? ['offset ' + String(offset) + ';'] : []),
   ].join('\n');
 }
 
@@ -132,57 +133,76 @@ export class IgdbReleaseRepository implements ReleaseRepository {
   }
 
   async findUpcoming(query: ReleaseQuery): Promise<ReleaseRepositoryResult> {
-    let requestResult = await this.request(query);
-    if (requestResult.response.status === 401) {
-      this.options.tokenProvider.invalidate(requestResult.tokenLease);
-      requestResult = await this.request(query);
-    }
+    const candidates: CandidateRelease[] = [];
+    const seenReleaseDateIds = new Set<number>();
+    let offset = 0;
 
-    const { response, timeoutSignal } = requestResult;
-    if (!response.ok) throw new ServiceUnavailableError('IGDB indisponivel.');
-
-    let payload: unknown;
-    try {
-      payload = await response.json();
-    } catch (error) {
-      if (isTimeoutError(error) || isTimeoutError(timeoutSignal.reason)) {
-        throw new UpstreamTimeoutError('IGDB excedeu o timeout.');
+    while (true) {
+      let requestResult = await this.request(query, offset);
+      if (requestResult.response.status === 401) {
+        this.options.tokenProvider.invalidate(requestResult.tokenLease);
+        requestResult = await this.request(query, offset);
       }
-      if (error instanceof SyntaxError) {
-        throw new InvalidUpstreamResponseError('Resposta IGDB invalida.');
+
+      const { response, timeoutSignal } = requestResult;
+      if (!response.ok) throw new ServiceUnavailableError('IGDB indisponivel.');
+
+      let payload: unknown;
+      try {
+        payload = await response.json();
+      } catch (error) {
+        if (isTimeoutError(error) || isTimeoutError(timeoutSignal.reason)) {
+          throw new UpstreamTimeoutError('IGDB excedeu o timeout.');
+        }
+        if (error instanceof SyntaxError) {
+          throw new InvalidUpstreamResponseError('Resposta IGDB invalida.');
+        }
+        throw new ServiceUnavailableError('IGDB indisponivel.');
       }
-      throw new ServiceUnavailableError('IGDB indisponivel.');
+
+      const result = igdbReleasesSchema.safeParse(payload);
+      if (!result.success) throw new InvalidUpstreamResponseError('Resposta IGDB invalida.');
+
+      let newReleaseDates = 0;
+      for (const entry of result.data) {
+        if (seenReleaseDateIds.has(entry.id)) continue;
+        seenReleaseDateIds.add(entry.id);
+        newReleaseDates += 1;
+        candidates.push({
+          game: {
+            id: entry.game.id,
+            slug: entry.game.slug,
+            name: entry.game.name,
+            coverUrl: entry.game.cover
+              ? 'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/' +
+                encodeURIComponent(entry.game.cover.image_id) +
+                '.jpg'
+              : null,
+            genres: entry.game.genres ?? [],
+          },
+          platform: {
+            id: entry.platform.id,
+            name: entry.platform.name,
+            abbreviation: entry.platform.abbreviation ?? null,
+          },
+          releaseDate: entry.date,
+          region: entry.release_region.region,
+        });
+      }
+
+      if (result.data.length < 500) {
+        return { candidates, sourceTruncated: false };
+      }
+
+      // Wider ranges are split by the caller. A single day cannot be split,
+      // so read its remaining release-date records with IGDB offset paging.
+      if (query.from !== query.to) return { candidates, sourceTruncated: true };
+      if (newReleaseDates === 0) return { candidates, sourceTruncated: true };
+      offset += 500;
     }
-
-    const result = igdbReleasesSchema.safeParse(payload);
-    if (!result.success) throw new InvalidUpstreamResponseError('Resposta IGDB invalida.');
-
-    return {
-      candidates: result.data.map((entry): CandidateRelease => ({
-        game: {
-          id: entry.game.id,
-          slug: entry.game.slug,
-          name: entry.game.name,
-          coverUrl: entry.game.cover
-            ? 'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/' +
-              encodeURIComponent(entry.game.cover.image_id) +
-              '.jpg'
-            : null,
-          genres: entry.game.genres ?? [],
-        },
-        platform: {
-          id: entry.platform.id,
-          name: entry.platform.name,
-          abbreviation: entry.platform.abbreviation ?? null,
-        },
-        releaseDate: entry.date,
-        region: entry.release_region.region,
-      })),
-      sourceTruncated: result.data.length === 500,
-    };
   }
 
-  private async request(query: ReleaseQuery): Promise<IgdbRequestResult> {
+  private async request(query: ReleaseQuery, offset: number): Promise<IgdbRequestResult> {
     const tokenLease = await this.options.tokenProvider.getToken();
     const timeoutSignal = AbortSignal.timeout(this.options.timeoutMs ?? 10_000);
     try {
@@ -193,7 +213,7 @@ export class IgdbReleaseRepository implements ReleaseRepository {
           Authorization: 'Bearer ' + tokenLease.token,
           'Client-ID': this.options.clientId,
         },
-        body: buildQuery(query),
+        body: buildQuery(query, offset),
         signal: timeoutSignal,
       });
       return { response, timeoutSignal, tokenLease };

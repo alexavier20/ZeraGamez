@@ -4,13 +4,14 @@ export interface ReleaseQuery {
   from: string;
   to: string;
   limit: number;
+  offset?: number;
   platformIds: number[];
   genreIds: number[];
 }
 
 export class InvalidQueryError extends Error {}
 
-const allowedKeys = new Set(['from', 'to', 'limit', 'platforms', 'genres']);
+const allowedKeys = new Set(['from', 'to', 'limit', 'offset', 'platforms', 'genres']);
 
 function parseCivilDate(value: string) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
@@ -64,10 +65,20 @@ export function parseReleasesQuery(params: URLSearchParams, clock: Clock): Relea
   const limit = Number(limitValue);
   if (limit < 1 || limit > 100) throw new InvalidQueryError('Limite inválido.');
 
+  const offsetValue = params.get('offset');
+  const offset = offsetValue === null ? 0 : Number(offsetValue);
+  if (
+    offsetValue !== null &&
+    (!/^\d+$/.test(offsetValue) || !Number.isSafeInteger(offset) || offset < 0)
+  ) {
+    throw new InvalidQueryError('Deslocamento inválido.');
+  }
+
   return {
     from,
     to,
     limit,
+    ...(offset > 0 ? { offset } : {}),
     platformIds: parseIdList(params.get('platforms')),
     genreIds: parseIdList(params.get('genres')),
   };

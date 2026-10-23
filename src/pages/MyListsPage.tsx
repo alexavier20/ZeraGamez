@@ -56,7 +56,7 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
   }, [settingsOpen]);
 
   return (
-    <article className="relative rounded-2xl border border-white/10 bg-surface shadow-lg shadow-black/10 transition-colors hover:border-brand/45">
+    <article className="relative rounded-2xl bg-surface shadow-lg shadow-black/10 transition-shadow duration-200 hover:ring-1 hover:ring-brand/50">
       <button
         aria-haspopup="dialog"
         aria-label={`Abrir detalhes da lista ${list.name}`}
@@ -156,7 +156,7 @@ function LoadingLists() {
       {[0, 1, 2].map((item) => (
         <div
           aria-hidden="true"
-          className="h-56 animate-pulse rounded-2xl border border-white/10 bg-surface"
+          className="h-56 animate-pulse rounded-2xl bg-surface"
           key={item}
         />
       ))}

@@ -91,6 +91,14 @@ function normalizeError(error: unknown): { status: number; code: ApiErrorCode } 
   return { status: 0, code: 'INTERNAL_ERROR' };
 }
 
+function nextReleaseOffsetWindow(window: ReleaseWindow): ReleaseWindow {
+  return {
+    from: window.from,
+    to: window.to,
+    offset: (window.offset ?? 0) + PAGE_LIMIT,
+  };
+}
+
 export function useReleases(
   filters: ReleasesFilters = {},
   dependencies: ReleasesDependencies = defaultDependencies,
@@ -148,6 +156,20 @@ export function useReleases(
         if (isReleaseWindowIncomplete(page)) {
           const halves = splitReleaseWindow(window);
           if (!halves) {
+            if (
+              window.from === window.to &&
+              !page.meta.sourceTruncated &&
+              page.meta.count >= page.meta.limit
+            ) {
+              if (page.data.length > 0) {
+                responseRef.current = mergeReleaseResponses(responseRef.current, page);
+                setState({ status: 'success', response: responseRef.current });
+              }
+              pendingWindowsRef.current.unshift(nextReleaseOffsetWindow(window));
+              requestWindow = null;
+              continue;
+            }
+
             failedWindowRef.current = window;
             const error = { status: 0, code: 'INTERNAL_ERROR' } as const;
             if ((responseRef.current?.data.length ?? 0) === 0) {
@@ -249,6 +271,20 @@ export function useReleases(
           if (isReleaseWindowIncomplete(page)) {
             const halves = splitReleaseWindow(initialWindow);
             if (!halves) {
+              if (
+                initialWindow.from === initialWindow.to &&
+                !page.meta.sourceTruncated &&
+                page.meta.count >= page.meta.limit
+              ) {
+                responseRef.current = mergeReleaseResponses(null, page);
+                setState({ status: 'success', response: responseRef.current });
+                pendingWindowsRef.current.unshift(nextReleaseOffsetWindow(initialWindow));
+                activeControllerRef.current = null;
+                inFlightRef.current = false;
+                await consumePendingWindow(session);
+                return;
+              }
+
               failedWindowRef.current = initialWindow;
               const error = { status: 0, code: 'INTERNAL_ERROR' } as const;
               setState({ status: 'error', error });

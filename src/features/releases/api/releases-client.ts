@@ -9,6 +9,7 @@ export interface ReleasesClientQuery {
   from?: string;
   to?: string;
   limit?: number;
+  offset?: number;
   platformIds?: number[];
   genreIds?: number[];
 }
@@ -43,6 +44,9 @@ export async function fetchReleases(
   if (query.from) params.set('from', query.from);
   if (query.to) params.set('to', query.to);
   if (query.limit !== undefined) params.set('limit', String(query.limit));
+  if (query.offset !== undefined && query.offset > 0) {
+    params.set('offset', String(query.offset));
+  }
   if (query.platformIds && query.platformIds.length > 0) {
     params.set('platforms', query.platformIds.join(','));
   }

@@ -229,7 +229,9 @@ export function ReleasesPage() {
               pendingAction={pendingAction}
               response={state.response}
             />
-            {selectedDate === null ? (
+            {selectedDate === null ||
+            pagination.status === 'loading' ||
+            pagination.status === 'error' ? (
               <ReleaseLoadMore
                 enabled={!calendarOpen}
                 onLoadMore={loadMore}

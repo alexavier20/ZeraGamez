@@ -615,11 +615,9 @@ function ListDetailsDialog({
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="font-heading text-lg font-semibold text-content-primary">Jogos</h3>
-              <p className="mt-1 text-xs text-text-muted">
-                {coverSelectionLoading
-                  ? 'Carregando capas escolhidas…'
-                  : `${String(selectedCoverIds.length)}/3 capas escolhidas. Se nenhuma for escolhida, usamos os últimos jogos adicionados.`}
-              </p>
+              {coverSelectionLoading ? (
+                <p className="mt-1 text-xs text-text-muted">Carregando capas escolhidas…</p>
+              ) : null}
               {coverSelectionError ? (
                 <button
                   className="mt-1 text-xs font-semibold text-red-200 underline underline-offset-2"
@@ -814,7 +812,7 @@ function ListDetailsDialog({
                   );
                   const itemClassName =
                     gamesView === 'grid'
-                      ? `relative flex w-full min-w-0 flex-col overflow-hidden rounded-md border border-white/5 bg-[#262626] shadow-md shadow-black/20 transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-[1.02] hover:border-brand/50 hover:shadow-xl hover:shadow-black/35 ${canReorder ? 'cursor-grab active:cursor-grabbing' : ''} ${draggedGameId === game.igdbId ? 'scale-[0.98] opacity-40' : ''} ${isDropTarget ? 'scale-[1.03] border-brand bg-brand/10 shadow-xl ring-2 ring-brand' : ''} ${swappedGameIds.has(game.igdbId) ? 'scale-[1.02] border-brand/70 bg-brand/15 shadow-lg ring-2 ring-brand/70' : ''}`
+                      ? `relative flex w-full min-w-0 flex-col overflow-hidden rounded-md transition-transform duration-200 ease-out hover:-translate-y-1 hover:scale-[1.02] ${canReorder ? 'cursor-grab active:cursor-grabbing' : ''} ${draggedGameId === game.igdbId ? 'scale-[0.98] opacity-40' : ''} ${isDropTarget ? 'scale-[1.03] ring-2 ring-brand' : ''} ${swappedGameIds.has(game.igdbId) ? 'scale-[1.02] ring-2 ring-brand/70' : ''}`
                       : `grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-b border-white/5 px-4 py-3 transition-colors last:border-b-0 hover:bg-surface-hover/70 sm:grid-cols-[minmax(0,1fr)_minmax(9rem,auto)_auto] ${canReorder ? 'cursor-grab active:cursor-grabbing' : ''} ${draggedGameId === game.igdbId ? 'opacity-50' : ''} ${isDropTarget ? 'bg-brand/10 ring-1 ring-inset ring-brand' : ''} ${swappedGameIds.has(game.igdbId) ? 'bg-brand/15 ring-1 ring-inset ring-brand/70' : ''}`;
 
                   return (
@@ -868,7 +866,7 @@ function ListDetailsDialog({
                               )}
                             </div>
                             <div className="min-w-0 flex-1 px-3 py-2.5">
-                              <span className="line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-content-primary">
+                              <span className="line-clamp-2 min-h-10 text-left text-sm font-semibold leading-5 text-content-primary">
                                 {game.name}
                               </span>
                             </div>

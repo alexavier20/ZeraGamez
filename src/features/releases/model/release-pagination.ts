@@ -10,6 +10,7 @@ export const HORIZON_DAYS = 730;
 export interface ReleaseWindow {
   readonly from: string;
   readonly to: string;
+  readonly offset?: number;
 }
 
 const DAY_MS = 86_400_000;

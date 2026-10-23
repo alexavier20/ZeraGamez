@@ -80,7 +80,6 @@ function HeroArtwork() {
           </div>
         ))}
       </div>
-      <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-surface/80" />
     </div>
   );
 }
@@ -167,7 +166,7 @@ export function HomePage() {
     <main className="pb-28 sm:pb-16">
       <section
         aria-labelledby="home-title"
-        className="relative isolate w-full overflow-hidden bg-surface shadow-[0_24px_80px_#0000004d]"
+        className="relative isolate mx-auto mt-6 w-[calc(100%-2rem)] max-w-[1376px] overflow-hidden rounded-2xl bg-app shadow-[0_24px_80px_#0000004d] sm:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]"
       >
         <div
           aria-hidden="true"
@@ -177,31 +176,43 @@ export function HomePage() {
           aria-hidden="true"
           className="absolute -bottom-44 right-[20%] size-[360px] rounded-full bg-[#4d1830]/20 blur-[100px]"
         />
+        <div
+          aria-hidden="true"
+          className="absolute inset-y-0 left-0 z-0 hidden w-[45%] overflow-hidden lg:block"
+        >
+          <img
+            alt=""
+            className="h-full w-full object-fill"
+            src="/assets/images/home-banner-background.png"
+          />
+          <img
+            alt=""
+            className="absolute left-[6%] top-[12%] w-[60%] max-w-[360px] object-contain"
+            src="/assets/images/home-banner-logo.png"
+          />
+        </div>
 
         <div className="relative mx-auto grid w-full max-w-[1440px] items-center gap-1 px-6 py-4 sm:px-10 sm:py-6 lg:min-h-[320px] lg:grid-cols-[0.9fr_1.1fr] lg:gap-4 lg:px-10 lg:py-0 xl:px-[76px]">
-          <div className="relative z-20 max-w-[580px] pb-1 lg:py-3">
-            <div className="mt-4 flex items-center gap-3">
+          <div className="relative z-20 max-w-[580px] pb-1 lg:flex lg:min-h-[320px] lg:flex-col lg:justify-end lg:pb-8">
+            <h1 className="sr-only" id="home-title">
+              Zera GameZ
+            </h1>
+            <div
+              aria-hidden="true"
+              className="relative mb-5 aspect-[73/27] w-full overflow-hidden lg:hidden"
+            >
               <img
                 alt=""
-                aria-hidden="true"
-                className="h-9 w-12 shrink-0 object-contain sm:h-10 sm:w-[54px]"
-                height={40}
-                src="/assets/images/zera-gamez-z-icon-white-header.png"
-                width={54}
+                className="absolute inset-0 size-full object-fill"
+                src="/assets/images/home-banner-background.png"
               />
-              <h1
-                className="font-heading text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-[1.75rem]"
-                id="home-title"
-              >
-                Zera GameZ
-              </h1>
+              <img
+                alt=""
+                className="absolute left-[6%] top-[12%] w-[60%] max-w-[360px] object-contain"
+                src="/assets/images/home-banner-logo.png"
+              />
             </div>
-            <p className="mt-4 max-w-[520px] font-heading text-[1.5rem] font-bold leading-[1.12] tracking-tight text-content-primary sm:text-[1.75rem] lg:text-[2rem]">
-              Sua próxima aventura começa
-              <br />
-              <span className="text-brand-bright">por aqui.</span>
-            </p>
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <Link
                 className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-brand px-4 py-2 text-xs font-bold text-white shadow-[0_8px_28px_#e7001240] transition hover:bg-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                 to={headerRoutes.releases}
