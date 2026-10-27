@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { toDataError } from '@/shared/supabase/data-error';
+import { DataError, toDataError } from '@/shared/supabase/data-error';
 
 import { civilDateSchema } from '../../../../shared/contracts/releases';
 import { normalizeCreateListInput, type CreateListInput } from '@/features/lists/model/lists';
@@ -26,6 +26,7 @@ export interface TierListsRepository {
     tier: TierLabel | null,
     position: number,
   ): Promise<void>;
+  updateList(tierListId: number, input: CreateListInput): Promise<void>;
 }
 
 const databaseIdSchema = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
@@ -167,6 +168,22 @@ export function createSupabaseTierListsRepository(client: SupabaseClient): TierL
         .eq('igdb_id', igdbId);
 
       if (error !== null) throw toDataError(error);
+    },
+
+    async updateList(tierListId, input) {
+      const normalized = normalizeCreateListInput(input);
+      const { data, error } = await client
+        .from('tier_lists')
+        .update({
+          name: normalized.name,
+          description: normalized.description || null,
+        })
+        .eq('id', tierListId)
+        .select('id')
+        .maybeSingle();
+
+      if (error !== null) throw toDataError(error);
+      if (data === null) throw new DataError('permission');
     },
   };
 }

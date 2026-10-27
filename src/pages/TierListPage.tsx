@@ -1,9 +1,19 @@
-import { ArrowLeft, Gamepad2, LoaderCircle, Plus, Search, TriangleAlert } from 'lucide-react';
-import { useEffect, useMemo, useState, type DragEvent } from 'react';
+import {
+  ArrowLeft,
+  Gamepad2,
+  LoaderCircle,
+  Pencil,
+  Plus,
+  Search,
+  TriangleAlert,
+} from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type DragEvent, type SyntheticEvent } from 'react';
 import { Link, useParams } from 'react-router';
+import { ZodError } from 'zod';
 
 import { useAuth } from '@/features/auth/context/AuthProvider';
 import { searchGames } from '@/features/games/api/game-search-client';
+import { normalizeCreateListInput } from '@/features/lists/model/lists';
 import { formatReleaseDate } from '@/features/releases/model/release-presentation';
 import {
   createSupabaseTierListsRepository,
@@ -16,6 +26,7 @@ import {
   type TierListItem,
 } from '@/features/tier-lists/model/tier-lists';
 import { getSupabaseClient } from '@/shared/supabase/client';
+import { DataError } from '@/shared/supabase/data-error';
 
 import type { GameSearchResult } from '../../shared/contracts/game-search';
 
@@ -46,19 +57,24 @@ function nextPosition(items: readonly TierListItem[]): number {
 
 function TierGameTile({
   disabled,
+  dragging,
   game,
+  onDragEnd,
   onDragStart,
 }: Readonly<{
   disabled: boolean;
+  dragging: boolean;
   game: TierListItem;
+  onDragEnd: () => void;
   onDragStart: (event: DragEvent<HTMLButtonElement>, gameId: number) => void;
 }>) {
   return (
     <button
       aria-label={`Arraste ${game.name} para um tier`}
-      className="group flex w-[76px] shrink-0 flex-col items-center gap-1 rounded-lg p-1 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-grabbing disabled:opacity-50"
+      className={`group flex w-[76px] shrink-0 flex-col items-center gap-1 rounded-lg p-1 text-center transition-[opacity,transform] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${dragging ? 'scale-95 cursor-grabbing opacity-40' : 'cursor-grab active:cursor-grabbing'} disabled:cursor-not-allowed disabled:opacity-50`}
       disabled={disabled}
       draggable={!disabled}
+      onDragEnd={onDragEnd}
       onDragStart={(event) => onDragStart(event, game.igdbId)}
       title={game.name}
       type="button"
@@ -98,14 +114,34 @@ function handleGameDrop(
   if (Number.isSafeInteger(gameId) && gameId > 0) onMove(gameId, tier);
 }
 
+function autoScrollPage(pointerY: number) {
+  const edgeSize = Math.min(96, Math.max(52, window.innerHeight * 0.14));
+  const maxScrollStep = 16;
+
+  if (pointerY < edgeSize) {
+    const intensity = 1 - pointerY / edgeSize;
+    window.scrollBy(0, -Math.ceil(maxScrollStep * intensity));
+  } else if (pointerY > window.innerHeight - edgeSize) {
+    const distanceFromBottom = window.innerHeight - pointerY;
+    const intensity = 1 - distanceFromBottom / edgeSize;
+    window.scrollBy(0, Math.ceil(maxScrollStep * intensity));
+  }
+}
+
 function TierRow({
   disabled,
+  draggedGameId,
   items,
+  onDragEnd,
+  onDragStart,
   onMove,
   tier,
 }: Readonly<{
   disabled: boolean;
+  draggedGameId: number | null;
   items: readonly TierListItem[];
+  onDragEnd: () => void;
+  onDragStart: (event: DragEvent<HTMLButtonElement>, gameId: number) => void;
   onMove: (gameId: number, tier: TierLabel | null) => void;
   tier: TierLabel;
 }>) {
@@ -125,7 +161,10 @@ function TierRow({
           event.preventDefault();
           event.dataTransfer.dropEffect = 'move';
         }}
-        onDrop={(event) => handleGameDrop(event, tier, onMove)}
+        onDrop={(event) => {
+          handleGameDrop(event, tier, onMove);
+          onDragEnd();
+        }}
         role="region"
       >
         {items.length === 0 ? (
@@ -134,9 +173,11 @@ function TierRow({
           items.map((game) => (
             <TierGameTile
               disabled={disabled}
+              dragging={draggedGameId === game.igdbId}
               game={game}
               key={game.igdbId}
-              onDragStart={startGameDrag}
+              onDragEnd={onDragEnd}
+              onDragStart={onDragStart}
             />
           ))
         )}
@@ -159,6 +200,7 @@ function TierListEditor({
   const [searchState, setSearchState] = useState<SearchState>({ status: 'idle' });
   const [addingGameId, setAddingGameId] = useState<number | null>(null);
   const [movingGameId, setMovingGameId] = useState<number | null>(null);
+  const [draggedGameId, setDraggedGameId] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -233,6 +275,13 @@ function TierListEditor({
     }
   };
 
+  const startDraggingGame = (event: DragEvent<HTMLButtonElement>, gameId: number) => {
+    startGameDrag(event, gameId);
+    setDraggedGameId(gameId);
+  };
+
+  const stopDraggingGame = () => setDraggedGameId(null);
+
   const queryIsLongEnough = query.trim().length >= 2;
   const searchContent =
     searchState.status === 'loading' ? (
@@ -305,7 +354,13 @@ function TierListEditor({
   const disabled = addingGameId !== null || movingGameId !== null;
 
   return (
-    <div className="mt-7 space-y-7">
+    <div
+      className="mt-7 space-y-7"
+      onDragOver={(event) => {
+        if (draggedGameId !== null) autoScrollPage(event.clientY);
+      }}
+      style={{ overflowAnchor: draggedGameId === null ? 'auto' : 'none' }}
+    >
       <div className="space-y-2">
         <label className="sr-only" htmlFor="tier-list-game-search">
           Buscar jogos para adicionar à Tier List
@@ -361,7 +416,10 @@ function TierListEditor({
             event.preventDefault();
             event.dataTransfer.dropEffect = 'move';
           }}
-          onDrop={(event) => handleGameDrop(event, null, moveGame)}
+          onDrop={(event) => {
+            handleGameDrop(event, null, moveGame);
+            stopDraggingGame();
+          }}
           role="region"
         >
           {unrankedItems.length === 0 ? (
@@ -372,9 +430,11 @@ function TierListEditor({
             unrankedItems.map((game) => (
               <TierGameTile
                 disabled={disabled}
+                dragging={draggedGameId === game.igdbId}
                 game={game}
                 key={game.igdbId}
-                onDragStart={startGameDrag}
+                onDragEnd={stopDraggingGame}
+                onDragStart={startDraggingGame}
               />
             ))
           )}
@@ -385,10 +445,13 @@ function TierListEditor({
         {tierLabels.map((tier) => (
           <TierRow
             disabled={disabled}
+            draggedGameId={draggedGameId}
             items={items
               .filter((item) => item.tier === tier)
               .sort((left, right) => left.position - right.position)}
             key={tier}
+            onDragEnd={stopDraggingGame}
+            onDragStart={startDraggingGame}
             onMove={moveGame}
             tier={tier}
           />
@@ -423,6 +486,13 @@ export function TierListPage() {
   );
   const [pageState, setPageState] = useState<PageState>({ status: 'loading' });
   const [gameCount, setGameCount] = useState(0);
+  const [editingMetadata, setEditingMetadata] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editError, setEditError] = useState<string | null>(null);
+  const [savingMetadata, setSavingMetadata] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const savingRef = useRef(false);
   const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
@@ -438,6 +508,10 @@ export function TierListPage() {
       .then((list) => {
         if (!active) return;
         setGameCount(list?.gameCount ?? 0);
+        setEditName(list?.name ?? '');
+        setEditDescription(list?.description ?? '');
+        setEditingMetadata(false);
+        setEditError(null);
         setPageState(list === null ? { status: 'not-found' } : { status: 'ready', list });
       })
       .catch(() => {
@@ -448,6 +522,55 @@ export function TierListPage() {
       active = false;
     };
   }, [repository, retryKey, tierListId, userId]);
+
+  useEffect(() => {
+    if (editingMetadata) nameInputRef.current?.focus();
+  }, [editingMetadata]);
+
+  const saveMetadata = async (event: SyntheticEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (savingRef.current || repository === null || pageState.status !== 'ready') return;
+
+    let normalized;
+    try {
+      normalized = normalizeCreateListInput({ name: editName, description: editDescription });
+    } catch (error) {
+      setEditError(
+        error instanceof ZodError
+          ? (error.issues[0]?.message ?? 'Confira os dados da lista.')
+          : 'Confira os dados da lista.',
+      );
+      return;
+    }
+
+    savingRef.current = true;
+    setSavingMetadata(true);
+    setEditError(null);
+    try {
+      await repository.updateList(pageState.list.id, normalized);
+      const description = normalized.description || null;
+      setPageState((current) =>
+        current.status === 'ready'
+          ? {
+              ...current,
+              list: { ...current.list, name: normalized.name, description },
+            }
+          : current,
+      );
+      setEditName(normalized.name);
+      setEditDescription(normalized.description);
+      setEditingMetadata(false);
+    } catch (error) {
+      setEditError(
+        error instanceof DataError && error.code === 'list_name_conflict'
+          ? error.message
+          : 'Não foi possível salvar as alterações. Tente novamente.',
+      );
+    } finally {
+      savingRef.current = false;
+      setSavingMetadata(false);
+    }
+  };
 
   return (
     <main className="mx-auto min-h-[calc(100dvh-4.5rem)] max-w-[1440px] px-4 pb-28 pt-7 sm:px-5 sm:pb-12 lg:px-8 lg:pt-9">
@@ -483,7 +606,7 @@ export function TierListPage() {
         </div>
       ) : (
         <>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="font-heading text-xs font-bold uppercase tracking-[0.2em] text-brand-bright">
                 Tier List
@@ -495,10 +618,101 @@ export function TierListPage() {
                 <p className="mt-2 text-sm text-text-muted">{pageState.list.description}</p>
               )}
             </div>
-            <span className="text-sm text-text-muted">
-              {String(gameCount)} {gameCount === 1 ? 'jogo' : 'jogos'}
-            </span>
+            <div className="flex items-center justify-between gap-3 sm:justify-end">
+              <span className="text-sm text-text-muted">
+                {String(gameCount)} {gameCount === 1 ? 'jogo' : 'jogos'}
+              </span>
+              {editingMetadata ? null : (
+                <button
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-border-brand bg-bg-secondary px-3 text-sm font-bold text-content-primary transition hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                  disabled={repository === null || savingMetadata}
+                  onClick={() => {
+                    setEditError(null);
+                    setEditingMetadata(true);
+                  }}
+                  type="button"
+                >
+                  <Pencil aria-hidden="true" size={15} />
+                  Editar
+                </button>
+              )}
+            </div>
           </div>
+          {editingMetadata ? (
+            <form
+              className="mt-6 space-y-4 rounded-2xl border border-white/10 bg-surface p-5 sm:p-6"
+              onSubmit={(event) => {
+                void saveMetadata(event);
+              }}
+            >
+              <div>
+                <label
+                  className="mb-2 block text-sm font-bold text-content-primary"
+                  htmlFor="tier-list-edit-name"
+                >
+                  Nome da lista
+                </label>
+                <input
+                  className="min-h-11 w-full rounded-xl border border-white/15 bg-bg-secondary px-4 text-content-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/30"
+                  disabled={savingMetadata}
+                  id="tier-list-edit-name"
+                  maxLength={80}
+                  onChange={(event) => setEditName(event.target.value)}
+                  ref={nameInputRef}
+                  value={editName}
+                />
+              </div>
+              <div>
+                <label
+                  className="mb-2 block text-sm font-bold text-content-primary"
+                  htmlFor="tier-list-edit-description"
+                >
+                  Descrição
+                </label>
+                <textarea
+                  className="min-h-24 w-full resize-y rounded-xl border border-white/15 bg-bg-secondary px-4 py-3 text-content-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/30"
+                  disabled={savingMetadata}
+                  id="tier-list-edit-description"
+                  maxLength={500}
+                  onChange={(event) => setEditDescription(event.target.value)}
+                  value={editDescription}
+                />
+              </div>
+              {editError === null ? null : (
+                <p
+                  className="rounded-xl border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-100"
+                  role="alert"
+                >
+                  {editError}
+                </p>
+              )}
+              <div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">
+                <button
+                  className="min-h-10 rounded-xl border border-border-brand px-4 text-sm font-semibold text-content-primary disabled:opacity-60"
+                  disabled={savingMetadata}
+                  onClick={() => {
+                    setEditName(pageState.list.name);
+                    setEditDescription(pageState.list.description ?? '');
+                    setEditError(null);
+                    setEditingMetadata(false);
+                  }}
+                  type="button"
+                >
+                  Cancelar
+                </button>
+                <button
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={savingMetadata}
+                  type="submit"
+                >
+                  {savingMetadata ? (
+                    <LoaderCircle aria-hidden="true" className="animate-spin" size={16} />
+                  ) : null}
+                  {savingMetadata ? 'Salvando…' : 'Salvar alterações'}
+                </button>
+              </div>
+            </form>
+          ) : null}
           {repository === null || userId === null ? (
             <p className="mt-6 text-sm text-red-100" role="alert">
               O serviço de Tier Lists não está disponível.
