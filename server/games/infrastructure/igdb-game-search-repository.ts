@@ -38,6 +38,7 @@ const igdbGameSchema = z.object({
   id: z.number().int().positive(),
   name: z.string().trim().min(1).max(200),
   first_release_date: igdbDateSchema.nullable().optional(),
+  hypes: z.number().int().nonnegative().nullable().optional(),
   cover: z
     .object({ image_id: z.string().regex(/^[A-Za-z0-9_-]{1,200}$/) })
     .nullable()
@@ -45,8 +46,8 @@ const igdbGameSchema = z.object({
   platforms: z.array(z.object({ name: z.string().trim().min(1) })).optional(),
 });
 
-const igdbGamesSchema = z.array(igdbGameSchema).max(12);
-
+const igdbGamesSchema = z.array(igdbGameSchema).max(30);
+const GAME_SEARCH_LIMIT = 30;
 interface IgdbGameSearchRepositoryOptions {
   clientId: string;
   fetcher: typeof fetch;
@@ -86,10 +87,59 @@ export class IgdbGameSearchRepository implements GameSearchRepository {
   }
 
   async search(query: string): Promise<readonly GameSearchResult[]> {
-    let requestResult = await this.request(query);
+    const safeQuery = escapeApicalypseString(query);
+    const body = [
+      'search "' + safeQuery + '";',
+      'fields id,name,first_release_date,cover.image_id,platforms.name;',
+      'where version_parent = null;',
+      `limit ${String(GAME_SEARCH_LIMIT)};`,
+    ].join(' ');
+    return this.fetchGames(body);
+  }
+
+  async listMostAnticipated(): Promise<readonly GameSearchResult[]> {
+    return this.listUpcomingByHype(6);
+  }
+
+  async listTopHyped(): Promise<readonly GameSearchResult[]> {
+    return this.listUpcomingByHype(10);
+  }
+
+  private async listUpcomingByHype(limit: number): Promise<readonly GameSearchResult[]> {
+    const now = Math.floor(Date.now() / 1_000);
+    const body = [
+      'fields id,name,first_release_date,hypes,cover.image_id,platforms.name;',
+      `where first_release_date > ${String(now)} & version_parent = null;`,
+      'sort hypes desc;',
+      `limit ${String(limit)};`,
+    ].join(' ');
+    const games = await this.fetchRawGames(body);
+    return Object.freeze(
+      games
+        .filter((game) => (game.hypes ?? 0) > 0)
+        .slice(0, limit)
+        .map(toGameSearchResult),
+    );
+  }
+
+  private async fetchGames(body: string): Promise<readonly GameSearchResult[]> {
+    const games = await this.fetchRawGames(body);
+    return Object.freeze(games.map(toGameSearchResult));
+  }
+
+  private async fetchRawGames(body: string): Promise<readonly z.infer<typeof igdbGameSchema>[]> {
+    const payload = await this.fetchJson(body);
+    const result = igdbGamesSchema.safeParse(payload);
+    if (!result.success) throw new InvalidUpstreamResponseError('Resposta IGDB inválida.');
+
+    return Object.freeze(result.data);
+  }
+
+  private async fetchJson(body: string): Promise<unknown> {
+    let requestResult = await this.request(body);
     if (requestResult.response.status === 401) {
       this.options.tokenProvider.invalidate(requestResult.tokenLease);
-      requestResult = await this.request(query);
+      requestResult = await this.request(body);
     }
 
     const { response, timeoutSignal } = requestResult;
@@ -108,22 +158,12 @@ export class IgdbGameSearchRepository implements GameSearchRepository {
       throw new ServiceUnavailableError('IGDB indisponível.');
     }
 
-    const result = igdbGamesSchema.safeParse(payload);
-    if (!result.success) throw new InvalidUpstreamResponseError('Resposta IGDB inválida.');
-
-    return Object.freeze(result.data.map(toGameSearchResult));
+    return payload;
   }
 
-  private async request(query: string): Promise<IgdbRequestResult> {
+  private async request(body: string): Promise<IgdbRequestResult> {
     const tokenLease = await this.options.tokenProvider.getToken();
     const timeoutSignal = AbortSignal.timeout(this.options.timeoutMs ?? 10_000);
-    const safeQuery = escapeApicalypseString(query);
-    const body = [
-      'search "' + safeQuery + '";',
-      'fields id,name,first_release_date,cover.image_id,platforms.name;',
-      'where version_parent = null;',
-      'limit 12;',
-    ].join(' ');
 
     try {
       const response = await this.options.fetcher('https://api.igdb.com/v4/games', {

@@ -9,6 +9,7 @@ import {
 import { Link } from 'react-router';
 
 import { useAuth } from '@/features/auth/context/AuthProvider';
+import { MostAnticipatedSection } from '@/features/games/components/MostAnticipatedSection';
 import { HomeReleaseCard } from '@/features/releases/components/HomeReleaseCard';
 import { useReleases } from '@/features/releases/hooks/use-releases';
 import { todayInSaoPaulo } from '@/features/releases/model/release-calendar';
@@ -238,6 +239,7 @@ export function HomePage() {
       </section>
 
       <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8">
+        <MostAnticipatedSection />
         <DailyReleasesSection />
 
         <section aria-labelledby="features-title" className="pt-12 sm:pt-16 lg:pt-[72px]">

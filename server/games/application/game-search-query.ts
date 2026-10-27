@@ -3,6 +3,11 @@ const MAX_QUERY_LENGTH = 80;
 
 export class InvalidGameSearchQueryError extends Error {}
 
+export type GameSearchRequest =
+  | { readonly type: 'search'; readonly query: string }
+  | { readonly type: 'anticipated' }
+  | { readonly type: 'top-hyped' };
+
 function hasControlCharacters(value: string): boolean {
   for (const character of value) {
     const codePoint = character.codePointAt(0) ?? 0;
@@ -29,4 +34,18 @@ export function parseGameSearchQuery(params: URLSearchParams): string {
   }
 
   return query;
+}
+
+export function parseGameSearchRequest(params: URLSearchParams): GameSearchRequest {
+  const keys = [...params.keys()];
+  if (keys.length === 1 && keys[0] === 'mode' && params.get('mode') === 'anticipated') {
+    return { type: 'anticipated' };
+  }
+  if (keys.length === 1 && keys[0] === 'mode' && params.get('mode') === 'top-hyped') {
+    return { type: 'top-hyped' };
+  }
+  if (keys.length === 1 && keys[0] === 'q') {
+    return { type: 'search', query: parseGameSearchQuery(params) };
+  }
+  throw new InvalidGameSearchQueryError('Parâmetro inválido.');
 }

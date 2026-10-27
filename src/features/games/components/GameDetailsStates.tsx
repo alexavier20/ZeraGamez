@@ -1,5 +1,5 @@
-import { AlertTriangle, Gamepad2, LoaderCircle, RotateCw } from 'lucide-react';
-import { Link } from 'react-router';
+import { AlertTriangle, ArrowLeft, Gamepad2, LoaderCircle, RotateCw } from 'lucide-react';
+import { useNavigate } from 'react-router';
 
 interface GameDetailsErrorProps {
   readonly onRetry: () => void;
@@ -46,6 +46,8 @@ export function GameDetailsError({ onRetry }: GameDetailsErrorProps) {
 }
 
 export function GameDetailsNotFound() {
+  const navigate = useNavigate();
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="flex min-h-64 flex-col items-center justify-center gap-4 text-center">
@@ -56,12 +58,21 @@ export function GameDetailsNotFound() {
             Esse jogo não está mais disponível na IGDB.
           </p>
         </div>
-        <Link
-          className="text-sm font-semibold text-content-primary underline decoration-brand underline-offset-4 hover:text-brand-bright focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
-          to="/lancamentos"
+        <button
+          className="inline-flex items-center gap-2 text-sm font-semibold text-content-primary underline decoration-brand underline-offset-4 hover:text-brand-bright focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
+          onClick={() => {
+            const historyIndex = window.history.state?.idx;
+            if (typeof historyIndex === 'number' && historyIndex > 0) {
+              void navigate(-1);
+            } else {
+              void navigate('/lancamentos');
+            }
+          }}
+          type="button"
         >
-          Voltar para lançamentos
-        </Link>
+          <ArrowLeft aria-hidden="true" size={16} />
+          Voltar
+        </button>
       </div>
     </div>
   );

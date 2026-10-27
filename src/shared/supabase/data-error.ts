@@ -39,6 +39,7 @@ export function toDataError(error: unknown): DataError {
     if (
       error.code === '23505' &&
       (error.constraint === 'lists_user_name_unique' ||
+        error.constraint === 'tier_lists_user_name_unique' ||
         error.message === 'A list with this name already exists for the user')
     ) {
       return new DataError('list_name_conflict', { cause: error });

@@ -2,7 +2,7 @@ import { Gamepad2, LoaderCircle, Search } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type SubmitEventHandler } from 'react';
 import { Link } from 'react-router';
 
-import { searchGames } from '@/features/games/api/game-search-client';
+import { getMostAnticipatedGames, searchGames } from '@/features/games/api/game-search-client';
 
 import { headerCopy } from './header.config';
 
@@ -48,27 +48,38 @@ export function GlobalSearch({ className = '', onSearch }: Readonly<GlobalSearch
   const [isOpen, setIsOpen] = useState(false);
   const [searchState, setSearchState] = useState<SearchState>({ status: 'idle' });
   const normalizedQuery = query.trim();
-  const showSuggestions = isOpen && normalizedQuery.length >= MIN_SEARCH_LENGTH;
+  const showSuggestions =
+    isOpen && (normalizedQuery.length === 0 || normalizedQuery.length >= MIN_SEARCH_LENGTH);
 
   useEffect(() => {
-    if (normalizedQuery.length < MIN_SEARCH_LENGTH) return;
+    if (!isOpen || (normalizedQuery.length > 0 && normalizedQuery.length < MIN_SEARCH_LENGTH)) {
+      return;
+    }
 
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => {
-      void searchGames(normalizedQuery, { signal: controller.signal })
+    const loadGames = () => {
+      const request =
+        normalizedQuery.length === 0
+          ? getMostAnticipatedGames({ signal: controller.signal })
+          : searchGames(normalizedQuery, { signal: controller.signal });
+      void request
         .then((games) => {
           if (!controller.signal.aborted) setSearchState({ status: 'success', games });
         })
         .catch(() => {
           if (!controller.signal.aborted) setSearchState({ status: 'error' });
         });
-    }, SEARCH_DEBOUNCE_MS);
+    };
+    setSearchState({ status: 'loading' });
+    const timeoutId =
+      normalizedQuery.length === 0 ? undefined : window.setTimeout(loadGames, SEARCH_DEBOUNCE_MS);
+    if (timeoutId === undefined) loadGames();
 
     return () => {
-      window.clearTimeout(timeoutId);
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [normalizedQuery]);
+  }, [isOpen, normalizedQuery]);
 
   useEffect(() => {
     const closeOnOutsidePointer = (event: PointerEvent) => {
@@ -124,7 +135,7 @@ export function GlobalSearch({ className = '', onSearch }: Readonly<GlobalSearch
             );
           }}
           onFocus={() => {
-            if (normalizedQuery.length >= MIN_SEARCH_LENGTH) setIsOpen(true);
+            setIsOpen(true);
           }}
           onKeyDown={(event) => {
             if (event.key === 'Escape') setIsOpen(false);
@@ -144,16 +155,23 @@ export function GlobalSearch({ className = '', onSearch }: Readonly<GlobalSearch
           aria-live="polite"
         >
           {searchState.status === 'loading' ? (
-            <div className="flex items-center gap-2 px-4 py-3 text-sm text-text-muted" role="status">
+            <div
+              className="flex items-center gap-2 px-4 py-3 text-sm text-text-muted"
+              role="status"
+            >
               <LoaderCircle aria-hidden="true" className="animate-spin text-brand" size={16} />
-              Buscando jogos…
+              {normalizedQuery.length === 0 ? 'Carregando jogos…' : 'Buscando jogos…'}
             </div>
           ) : searchState.status === 'error' ? (
             <p className="px-4 py-3 text-sm text-text-muted" role="status">
               Não foi possível buscar jogos. Tente novamente.
             </p>
           ) : searchState.status === 'success' && searchState.games.length === 0 ? (
-            <p className="px-4 py-3 text-sm text-text-muted">Nenhum jogo encontrado.</p>
+            <p className="px-4 py-3 text-sm text-text-muted">
+              {normalizedQuery.length === 0
+                ? 'Nenhum lançamento futuro encontrado.'
+                : 'Nenhum jogo encontrado.'}
+            </p>
           ) : searchState.status === 'success' ? (
             <ul aria-label="Resultados da busca" className="max-h-80 overflow-y-auto p-1.5">
               {searchState.games.map((game) => (

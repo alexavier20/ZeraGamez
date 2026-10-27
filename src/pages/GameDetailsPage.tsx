@@ -1,6 +1,6 @@
 import { ArrowLeft, CalendarDays, Check, CircleCheck, Gamepad2, Star, Trophy } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 
 import { useAuth } from '@/features/auth/context/AuthProvider';
 import {
@@ -392,18 +392,28 @@ function GameGallery({ game }: { readonly game: GameDetails }) {
 }
 
 function GameDetailsContent({ game }: { readonly game: GameDetails }) {
+  const navigate = useNavigate();
+
   return (
     <main
       aria-label={`Detalhes de ${game.name}`}
       className="mx-auto max-w-7xl px-4 pb-28 pt-5 sm:px-6 sm:pb-12 sm:pt-7 lg:px-8 lg:pt-9"
     >
-      <Link
+      <button
         className="mb-5 inline-flex items-center gap-2 rounded-md text-sm font-semibold text-text-muted transition-colors hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
-        to="/lancamentos"
+        onClick={() => {
+          const historyIndex = window.history.state?.idx;
+          if (typeof historyIndex === 'number' && historyIndex > 0) {
+            void navigate(-1);
+          } else {
+            void navigate('/lancamentos');
+          }
+        }}
+        type="button"
       >
         <ArrowLeft aria-hidden="true" size={17} />
-        Voltar para lançamentos
-      </Link>
+        Voltar
+      </button>
 
       <GameHero game={game} />
 

@@ -6,6 +6,7 @@ import { AddGamesToListModal } from '@/features/lists/components/AddGamesToListM
 import { DeleteListModal } from '@/features/lists/components/DeleteListModal';
 import { ListDetailsModal } from '@/features/lists/components/ListDetailsModal';
 import { isListsOperationCancelled, useLists } from '@/features/lists/context/ListsProvider';
+import { TierListsSection } from '@/features/tier-lists/components/TierListsSection';
 import { headerRoutes } from '@/shared/components/header/header.config';
 import { PageHeading } from '@/shared/components/page-heading/PageHeading';
 
@@ -154,11 +155,7 @@ function LoadingLists() {
     >
       <span className="sr-only">Carregando suas listas</span>
       {[0, 1, 2].map((item) => (
-        <div
-          aria-hidden="true"
-          className="h-56 animate-pulse rounded-2xl bg-surface"
-          key={item}
-        />
+        <div aria-hidden="true" className="h-56 animate-pulse rounded-2xl bg-surface" key={item} />
       ))}
     </div>
   );
@@ -353,6 +350,7 @@ export function MyListsPage() {
           </div>
         )}
       </section>
+      <TierListsSection />
       {activeList === null || selectedList === null ? null : selectedList.mode === 'add-games' ? (
         <AddGamesToListModal list={activeList} onClose={returnToDetails} onSave={saveGames} />
       ) : (

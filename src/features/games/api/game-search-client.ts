@@ -26,13 +26,12 @@ function isAbortError(error: unknown): error is { name: 'AbortError' } {
   );
 }
 
-export async function searchGames(
-  query: string,
-  options: GameSearchClientOptions = {},
+async function fetchGames(
+  params: URLSearchParams,
+  options: GameSearchClientOptions,
 ): Promise<readonly GameSearchResult[]> {
   let response: Response;
   try {
-    const params = new URLSearchParams({ q: query.trim() });
     response = await (options.fetcher ?? fetch)(`/api/game-search?${params.toString()}`, {
       headers: { Accept: 'application/json' },
       signal: options.signal,
@@ -70,4 +69,23 @@ export async function searchGames(
     throw new GameSearchClientError(502, 'INVALID_UPSTREAM_RESPONSE', 'Resposta inválida.');
   }
   return parsedResponse.data.data;
+}
+
+export function searchGames(
+  query: string,
+  options: GameSearchClientOptions = {},
+): Promise<readonly GameSearchResult[]> {
+  return fetchGames(new URLSearchParams({ q: query.trim() }), options);
+}
+
+export function getMostAnticipatedGames(
+  options: GameSearchClientOptions = {},
+): Promise<readonly GameSearchResult[]> {
+  return fetchGames(new URLSearchParams({ mode: 'anticipated' }), options);
+}
+
+export function getTopHypedGames(
+  options: GameSearchClientOptions = {},
+): Promise<readonly GameSearchResult[]> {
+  return fetchGames(new URLSearchParams({ mode: 'top-hyped' }), options);
 }

@@ -2,10 +2,13 @@ import { useRef, useState, type SyntheticEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ZodError } from 'zod';
 
+import { useAuth } from '@/features/auth/context/AuthProvider';
 import { isListsOperationCancelled, useLists } from '@/features/lists/context/ListsProvider';
 import { normalizeCreateListInput } from '@/features/lists/model/lists';
+import { createSupabaseTierListsRepository } from '@/features/tier-lists/api/tier-lists-repository';
 import { headerRoutes } from '@/shared/components/header/header.config';
 import { PageHeading } from '@/shared/components/page-heading/PageHeading';
+import { getSupabaseClient } from '@/shared/supabase/client';
 import { DataError } from '@/shared/supabase/data-error';
 
 type FormField = 'description' | 'name';
@@ -19,9 +22,11 @@ const creationErrorMessage = 'Não foi possível criar a lista. Tente novamente.
 
 export function CreateListPage() {
   const lists = useLists();
+  const { state: authState } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [listType, setListType] = useState<'standard' | 'tier'>('standard');
   const [message, setMessage] = useState<FormMessage | null>(null);
   const [pending, setPending] = useState(false);
   const nameInput = useRef<HTMLInputElement>(null);
@@ -52,6 +57,19 @@ export function CreateListPage() {
     setMessage(null);
     setPending(true);
     try {
+      if (listType === 'tier') {
+        const client = getSupabaseClient();
+        if (authState.status !== 'authenticated') throw new DataError('unauthenticated');
+        if (client === null) throw new DataError('configuration');
+
+        const tierList = await createSupabaseTierListsRepository(client).createList(
+          authState.user.id,
+          normalized,
+        );
+        await navigate(`/minhas-listas/tier/${String(tierList.id)}`, { replace: true });
+        return;
+      }
+
       await lists.createList(normalized);
       await navigate(headerRoutes.lists, { replace: true });
     } catch (error) {
@@ -111,6 +129,27 @@ export function CreateListPage() {
               {nameError.text}
             </p>
           )}
+        </div>
+
+        <div>
+          <label
+            className="mb-2 block text-sm font-bold text-content-primary"
+            htmlFor="create-list-type"
+          >
+            Tipo da lista
+          </label>
+          <select
+            className="min-h-12 w-full rounded-xl border border-white/15 bg-app px-4 text-content-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/30"
+            disabled={pending}
+            id="create-list-type"
+            onChange={(event) => {
+              setListType(event.target.value === 'tier' ? 'tier' : 'standard');
+            }}
+            value={listType}
+          >
+            <option value="standard">Padrão</option>
+            <option value="tier">Tier List</option>
+          </select>
         </div>
 
         <div>

@@ -13,7 +13,7 @@ export const gameSearchResultSchema = z.object({
 });
 
 export const gameSearchResponseSchema = z.object({
-  data: z.array(gameSearchResultSchema).max(12),
+  data: z.array(gameSearchResultSchema).max(30),
 });
 
 export type GameSearchResult = z.infer<typeof gameSearchResultSchema>;

@@ -67,6 +67,17 @@ offset para continuar resultados, platforms e genres como listas de IDs
 separadas por vírgulas. Sem parâmetros, a consulta cobre hoje em
 America/Sao_Paulo até 90 dias depois e retorna até 50 jogos consolidados.
 
+## Busca de jogos da IGDB
+
+`GET /api/game-search?q=nome` busca jogos por nome. A busca global também pode
+solicitar `GET /api/game-search?mode=anticipated`, que retorna até seis jogos
+com lançamento futuro ordenados pelo campo `hypes` da IGDB. A página “Tô no
+Hype” usa `GET /api/game-search?mode=top-hyped`, que retorna os dez primeiros
+do mesmo ranking, em ordem decrescente de hype.
+A tela inicial usa a lista na seção “Mais Hypados”, com a contagem de dias para
+o lançamento. O menu global também a mostra quando o campo de busca recebe foco
+sem texto; ao digitar, volta às sugestões por nome.
+
 ## Configuração do Supabase
 
 1. Crie um projeto no Supabase e aplique a migration

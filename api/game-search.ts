@@ -1,8 +1,12 @@
 import {
   InvalidGameSearchQueryError,
-  parseGameSearchQuery,
+  parseGameSearchRequest,
 } from '../server/games/application/game-search-query';
-import { searchGames } from '../server/games/application/search-games';
+import {
+  listMostAnticipatedGames,
+  listTopHypedGames,
+  searchGames,
+} from '../server/games/application/search-games';
 import { IgdbGameSearchRepository } from '../server/games/infrastructure/igdb-game-search-repository';
 import { readIgdbEnvironment } from '../server/releases/infrastructure/env';
 import { TwitchTokenProvider } from '../server/releases/infrastructure/twitch-token-provider';
@@ -11,7 +15,10 @@ import {
   ServiceUnavailableError,
   UpstreamTimeoutError,
 } from '../server/releases/infrastructure/upstream-errors';
-import { gameSearchResponseSchema } from '../shared/contracts/game-search';
+import {
+  gameSearchResponseSchema,
+  type GameSearchResult,
+} from '../shared/contracts/game-search';
 import { apiErrorResponseSchema, type ApiErrorCode } from '../shared/contracts/releases';
 
 const successHeaders = {
@@ -27,6 +34,8 @@ const errorHeaders = {
 
 export interface GameSearchHandlerDependencies {
   search(query: string): ReturnType<typeof searchGames>;
+  listMostAnticipated(): ReturnType<typeof listMostAnticipatedGames>;
+  listTopHyped(): ReturnType<typeof listTopHypedGames>;
 }
 
 function json(payload: unknown, status: number, headers: Record<string, string>) {
@@ -49,8 +58,15 @@ export async function handleGameSearchRequest(
   }
 
   try {
-    const query = parseGameSearchQuery(new URL(request.url).searchParams);
-    const games = await dependencies.search(query);
+    const searchRequest = parseGameSearchRequest(new URL(request.url).searchParams);
+    let games: readonly GameSearchResult[];
+    if (searchRequest.type === 'anticipated') {
+      games = await dependencies.listMostAnticipated();
+    } else if (searchRequest.type === 'top-hyped') {
+      games = await dependencies.listTopHyped();
+    } else {
+      games = await dependencies.search(searchRequest.query);
+    }
     const payload = gameSearchResponseSchema.parse({ data: games });
     return json(payload, 200, successHeaders);
   } catch (error) {
@@ -93,6 +109,8 @@ function getProductionRepository() {
 
 const productionDependencies: GameSearchHandlerDependencies = {
   search: (query) => searchGames(query, getProductionRepository()),
+  listMostAnticipated: () => listMostAnticipatedGames(getProductionRepository()),
+  listTopHyped: () => listTopHypedGames(getProductionRepository()),
 };
 
 export default {
