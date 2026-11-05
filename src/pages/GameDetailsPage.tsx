@@ -1,4 +1,13 @@
-import { ArrowLeft, CalendarDays, Check, CircleCheck, Gamepad2, Star, Trophy } from 'lucide-react';
+import {
+  ArrowLeft,
+  CalendarDays,
+  Check,
+  CircleCheck,
+  Gamepad2,
+  Star,
+  Trophy,
+  X,
+} from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 
@@ -234,7 +243,7 @@ function GameHero({ game }: { readonly game: GameDetails }) {
         aria-hidden="true"
         className="absolute inset-0 bg-gradient-to-r from-app via-app/95 to-app/65"
       />
-      <div className="relative grid gap-7 p-5 sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-8 sm:p-8 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-10 lg:p-10">
+      <div className="relative grid gap-6 p-4 sm:grid-cols-[160px_minmax(0,1fr)] sm:gap-6 sm:p-6 lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-8 lg:p-8">
         <div className="mx-auto w-40 sm:mx-0 sm:w-full">
           {game.coverUrl ? (
             <img
@@ -253,7 +262,7 @@ function GameHero({ game }: { readonly game: GameDetails }) {
           <p className="font-heading text-xs font-bold uppercase tracking-[0.22em] text-brand-bright">
             Detalhes do jogo
           </p>
-          <h1 className="mt-2 break-words font-heading text-3xl font-bold leading-tight text-text-primary sm:text-4xl lg:text-5xl">
+          <h1 className="mt-2 break-words font-heading text-2xl font-bold leading-tight text-text-primary sm:text-3xl lg:text-4xl">
             {game.name}
           </h1>
 
@@ -357,8 +366,44 @@ function GameHero({ game }: { readonly game: GameDetails }) {
 
 function GameGallery({ game }: { readonly game: GameDetails }) {
   const images = game.screenshots.length > 0 ? game.screenshots : game.artworks;
-  if (images.length === 0) return null;
   const visibleImages = images.slice(0, 6);
+  const [selectedImage, setSelectedImage] = useState<number | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const closeImage = useCallback(() => setSelectedImage(null), []);
+  const expandedImage =
+    selectedImage === null ? null : (visibleImages[selectedImage] ?? null);
+  const expandedImageUrl =
+    expandedImage?.replace('/t_screenshot_med/', '/t_1080p/') ?? null;
+  const expandedImageIndex = selectedImage ?? 0;
+
+  useEffect(() => {
+    if (expandedImageUrl === null) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const returnFocusTo =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    document.body.style.overflow = 'hidden';
+    closeButtonRef.current?.focus();
+
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeImage();
+      } else if (event.key === 'Tab') {
+        event.preventDefault();
+        closeButtonRef.current?.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      if (returnFocusTo?.isConnected) returnFocusTo.focus();
+    };
+  }, [closeImage, expandedImageUrl]);
+
+  if (images.length === 0) return null;
 
   return (
     <section aria-labelledby="game-gallery-heading" className="mt-10">
@@ -378,15 +423,56 @@ function GameGallery({ game }: { readonly game: GameDetails }) {
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {visibleImages.map((image, index) => (
-          <img
-            alt={`${game.name} — imagem ${String(index + 1)}`}
-            className="aspect-video w-full rounded-xl border border-white/10 bg-surface object-cover"
+          <button
+            aria-label={`Ampliar imagem ${String(index + 1)} de ${game.name}`}
+            className="group relative block aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             key={image}
-            loading="lazy"
-            src={image}
-          />
+            onClick={() => setSelectedImage(index)}
+            type="button"
+          >
+            <img
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 size-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+              loading="lazy"
+              src={image}
+            />
+          </button>
         ))}
       </div>
+      {expandedImageUrl === null ? null : (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <button
+            aria-label="Fechar imagem ampliada"
+            className="absolute inset-0 size-full bg-black/90 backdrop-blur-sm"
+            onClick={closeImage}
+            tabIndex={-1}
+            type="button"
+          />
+          <div
+            aria-label={`Imagem ampliada de ${game.name}`}
+            aria-modal="true"
+            className="relative z-10 flex max-h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] items-center justify-center outline-none"
+            role="dialog"
+            tabIndex={-1}
+          >
+            <button
+              aria-label="Fechar imagem ampliada"
+              className="absolute top-2 right-2 z-10 flex size-10 items-center justify-center rounded-xl border border-white/20 bg-black/70 text-white transition hover:bg-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              onClick={closeImage}
+              ref={closeButtonRef}
+              type="button"
+            >
+              <X aria-hidden="true" size={20} />
+            </button>
+            <img
+              alt={`${game.name} — imagem ${String(expandedImageIndex + 1)}`}
+              className="max-h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] rounded-xl border border-white/15 object-contain shadow-2xl"
+              src={expandedImageUrl}
+            />
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -397,7 +483,7 @@ function GameDetailsContent({ game }: { readonly game: GameDetails }) {
   return (
     <main
       aria-label={`Detalhes de ${game.name}`}
-      className="mx-auto max-w-7xl px-4 pb-28 pt-5 sm:px-6 sm:pb-12 sm:pt-7 lg:px-8 lg:pt-9"
+      className="site-container pb-28 pt-5 sm:pb-12 sm:pt-6 lg:pt-7"
     >
       <button
         className="mb-5 inline-flex items-center gap-2 rounded-md text-sm font-semibold text-text-muted transition-colors hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"

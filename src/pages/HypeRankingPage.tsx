@@ -5,6 +5,7 @@ import { Link } from 'react-router';
 import { getTopHypedGames } from '@/features/games/api/game-search-client';
 import { MyHypesSection } from '@/features/games/components/MyHypesSection';
 import { formatReleaseDate } from '@/features/releases/model/release-presentation';
+import { Skeleton } from '@/shared/components/LoadingSkeletons';
 import { PageHeading } from '@/shared/components/page-heading/PageHeading';
 
 import type { GameSearchResult } from '../../shared/contracts/game-search';
@@ -96,16 +97,18 @@ export function HypeRankingPage() {
         if (!controller.signal.aborted) setState({ status: 'error' });
       });
 
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+    };
   }, [retryKey]);
 
   const games = state.status === 'success' ? state.games.slice(0, 10) : [];
 
   return (
-    <main className="mx-auto min-h-[calc(100dvh-4.5rem)] max-w-[1440px] px-4 pb-28 pt-7 sm:px-5 sm:pb-12 lg:px-8 lg:pt-9">
+    <main className="site-container min-h-[calc(100dvh-3.5rem)] pb-28 pt-5 sm:pb-12 sm:pt-6 lg:pt-7">
       <PageHeading subtitle="Top 10 Hypados" title="Tô no Hype" />
 
-      <section aria-label="Ranking dos jogos mais hypados" className="mt-8">
+      <section aria-label="Ranking dos jogos mais hypados" className="mt-6">
         {state.status === 'loading' ? (
           <div
             aria-label="Carregando ranking dos jogos mais hypados"
@@ -118,9 +121,16 @@ export function HypeRankingPage() {
                   {column.map((item) => (
                     <li
                       aria-hidden="true"
-                      className="h-[60px] animate-pulse rounded-xl bg-surface"
+                      className="flex min-h-[60px] items-center gap-2 rounded-xl border border-white/10 p-2 sm:gap-3"
                       key={item}
-                    />
+                    >
+                      <Skeleton className="h-8 w-8 shrink-0 sm:w-10" />
+                      <Skeleton className="size-10 shrink-0 rounded-lg sm:size-12" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-3 w-1/2" />
+                      </div>
+                    </li>
                   ))}
                 </ol>
               ),
@@ -134,7 +144,9 @@ export function HypeRankingPage() {
             <p className="text-sm text-red-100">Não foi possível carregar o ranking agora.</p>
             <button
               className="mt-4 rounded-xl border border-red-200/30 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-500/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-              onClick={() => setRetryKey((value) => value + 1)}
+              onClick={() => {
+                setRetryKey((value) => value + 1);
+              }}
               type="button"
             >
               Tentar novamente

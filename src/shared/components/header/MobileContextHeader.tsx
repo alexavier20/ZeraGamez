@@ -53,7 +53,7 @@ export function MobileContextHeader(props: MobileContextHeaderProps) {
   if (props.variant === 'default') {
     return (
       <div
-        className="flex h-[62px] items-center justify-between px-4"
+        className="flex h-[62px] items-center justify-between"
         data-testid="mobile-context-header"
       >
         <HeaderBrand compact />
@@ -70,7 +70,7 @@ export function MobileContextHeader(props: MobileContextHeaderProps) {
               initials={props.account.user.initials}
               name={props.account.user.name}
             />
-            <span className="max-w-28 truncate text-xs font-semibold text-content-primary">
+            <span className="max-w-28 truncate text-sm font-semibold text-content-primary">
               Olá, {props.account.user.name}
             </span>
           </Link>
@@ -102,7 +102,7 @@ export function MobileContextHeader(props: MobileContextHeaderProps) {
 
   return (
     <div
-      className="grid h-[58px] grid-cols-[4rem_1fr_4rem] items-center px-4 text-text-primary"
+      className="grid h-[58px] grid-cols-[4rem_1fr_4rem] items-center text-text-primary"
       data-testid="mobile-context-header"
     >
       {leadingAction}

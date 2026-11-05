@@ -1,9 +1,10 @@
-import { Gamepad2 } from 'lucide-react';
+import { ArrowRight, Gamepad2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 
 import { getMostAnticipatedGames } from '@/features/games/api/game-search-client';
-import { todayInSaoPaulo } from '@/features/releases/model/release-calendar';
+import { getReleaseCountdown } from '@/features/games/model/release-countdown';
+import { headerRoutes } from '@/shared/components/header/header.config';
 
 import type { GameSearchResult } from '../../../../shared/contracts/game-search';
 
@@ -13,8 +14,6 @@ type SectionState =
   | { readonly status: 'success'; readonly games: readonly GameSearchResult[] };
 
 const skeletons = [0, 1, 2, 3, 4, 5] as const;
-const DAY_MS = 86_400_000;
-
 const releaseDateFormatter = new Intl.DateTimeFormat('pt-BR', {
   day: 'numeric',
   month: 'long',
@@ -26,22 +25,25 @@ function formatReleaseDate(value: string): string {
   return releaseDateFormatter.format(new Date(`${value}T00:00:00.000Z`));
 }
 
-function daysUntilRelease(releaseDate: string, today: string): number {
-  const releaseDay = Date.parse(`${releaseDate}T00:00:00.000Z`);
-  const currentDay = Date.parse(`${today}T00:00:00.000Z`);
-  return Math.max(0, Math.round((releaseDay - currentDay) / DAY_MS));
-}
-
-function AnticipatedGameCard({ game, today }: Readonly<{ game: GameSearchResult; today: string }>) {
+function AnticipatedGameCard({ game, now }: Readonly<{ game: GameSearchResult; now: number }>) {
   if (game.releaseDate === null) return null;
 
-  const days = daysUntilRelease(game.releaseDate, today);
+  const countdown = getReleaseCountdown(game.releaseDate, now);
+  const daysUnit = countdown.days === 1 ? 'dia' : 'dias';
+  const hoursUnit = countdown.hours === 1 ? 'hora' : 'horas';
+  const minutesUnit = countdown.minutes === 1 ? 'minuto' : 'minutos';
+  const remainingDaysLabel = `Faltam ${String(countdown.days)} ${daysUnit}`;
+  const countdownUnits = [
+    { label: 'Dias', value: countdown.days },
+    { label: 'Horas', value: countdown.hours },
+    { label: 'Minutos', value: countdown.minutes },
+  ];
 
   return (
     <li>
       <Link
-        aria-label={`Abrir ${game.name}. Faltam ${String(days)} dias para o lançamento.`}
-        className="group relative flex min-h-[204px] flex-col justify-between overflow-hidden rounded-xl border border-white/10 bg-surface p-4 shadow-[0_10px_28px_#00000050] transition hover:-translate-y-0.5 hover:border-brand/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:min-h-[220px] sm:p-5"
+        aria-label={`Abrir ${game.name}. ${remainingDaysLabel}, ${String(countdown.hours)} ${hoursUnit} e ${String(countdown.minutes)} ${minutesUnit} para o lançamento.`}
+        className="group relative flex min-h-[176px] flex-col justify-between overflow-hidden rounded-lg border border-white/10 bg-surface p-4 shadow-[0_8px_22px_#00000050] transition hover:-translate-y-0.5 hover:border-brand/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
         to={`/jogos/${String(game.id)}`}
       >
         {game.coverUrl ? (
@@ -63,30 +65,29 @@ function AnticipatedGameCard({ game, today }: Readonly<{ game: GameSearchResult;
         />
 
         <span className="relative block max-w-[90%]">
-          <span className="block line-clamp-2 font-heading text-lg font-bold leading-tight text-white sm:text-xl">
+          <span className="block line-clamp-2 font-heading text-base font-bold leading-tight text-white">
             {game.name}
           </span>
-          <span className="mt-1 block text-sm font-medium text-white/90 underline decoration-white/50 underline-offset-2">
+          <span className="mt-1 block text-xs font-medium text-white/90">
             {formatReleaseDate(game.releaseDate)}
           </span>
         </span>
 
         <span className="relative mt-5 block">
-          <span aria-hidden="true" className="flex flex-wrap gap-1.5">
-            {String(days)
-              .padStart(2, '0')
-              .split('')
-              .map((digit, index) => (
-                <span
-                  className="grid size-10 place-items-center rounded-md border border-white/10 bg-black/45 font-heading text-2xl font-semibold tabular-nums text-white shadow-inner sm:size-12 sm:text-3xl"
-                  key={`${String(index)}-${digit}`}
-                >
-                  {digit}
+          <span aria-hidden="true" className="mx-auto grid w-full max-w-[216px] grid-cols-3 gap-1">
+            {countdownUnits.map(({ label, value }) => (
+              <span
+                className="grid h-11 place-content-center justify-items-center gap-1 rounded-md border border-white/10 bg-black/45 px-1 text-center shadow-inner"
+                key={label}
+              >
+                <span className="block font-heading text-sm font-semibold leading-none tabular-nums text-white">
+                  {String(value).padStart(2, '0')}
                 </span>
-              ))}
-          </span>
-          <span className="mt-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-white/80">
-            Faltam {String(days)} {days === 1 ? 'dia' : 'dias'}
+                <span className="block text-[9px] leading-none uppercase tracking-wide text-white/70">
+                  {label}
+                </span>
+              </span>
+            ))}
           </span>
         </span>
       </Link>
@@ -97,11 +98,19 @@ function AnticipatedGameCard({ game, today }: Readonly<{ game: GameSearchResult;
 export function MostAnticipatedSection() {
   const [retryKey, setRetryKey] = useState(0);
   const [state, setState] = useState<SectionState>({ status: 'loading' });
-  const today = todayInSaoPaulo();
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setNow(Date.now());
+    }, 60_000);
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
-    setState({ status: 'loading' });
 
     void getMostAnticipatedGames({ signal: controller.signal })
       .then((games) => {
@@ -111,7 +120,9 @@ export function MostAnticipatedSection() {
         if (!controller.signal.aborted) setState({ status: 'error' });
       });
 
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+    };
   }, [retryKey]);
 
   const games =
@@ -119,39 +130,60 @@ export function MostAnticipatedSection() {
       ? state.games
           .filter((game) => game.releaseDate)
           .slice(0, 6)
-          .sort((left, right) =>
-            (left.releaseDate ?? '').localeCompare(right.releaseDate ?? ''),
-          )
+          .sort((left, right) => (left.releaseDate ?? '').localeCompare(right.releaseDate ?? ''))
       : [];
 
   return (
-    <section aria-labelledby="most-anticipated-title" className="pt-10 sm:pt-12">
-      <div className="mb-5 flex items-end justify-between sm:mb-6">
+    <section aria-labelledby="most-anticipated-title" className="pt-14 sm:pt-16">
+      <div className="mb-6 flex items-end justify-between">
         <div>
           <p className="font-heading text-xs font-bold uppercase tracking-[0.2em] text-brand-bright">
             No radar da comunidade
           </p>
           <h2
-            className="mt-1 font-heading text-2xl font-bold text-text-primary sm:text-3xl"
+            className="mt-1 font-heading text-xl font-bold text-text-primary sm:text-2xl"
             id="most-anticipated-title"
           >
             Mais Hypados
           </h2>
         </div>
+        <Link
+          className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-lg border border-white/15 px-3 py-1.5 text-xs font-bold text-content-primary transition hover:border-brand/50 hover:bg-brand/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          to={headerRoutes.hype}
+        >
+          Ver mais
+          <ArrowRight aria-hidden="true" size={16} />
+        </Link>
       </div>
 
       {state.status === 'loading' ? (
         <ul
           aria-label="Carregando jogos mais hypados"
-          className="grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 xl:grid-cols-3"
+          className="grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2 lg:grid-cols-3"
           role="status"
         >
           {skeletons.map((index) => (
             <li
               aria-hidden="true"
-              className="min-h-[204px] animate-pulse rounded-xl bg-surface sm:min-h-[220px]"
+              className="flex min-h-[176px] animate-pulse flex-col justify-between rounded-lg border border-white/10 bg-surface p-4 motion-reduce:animate-none"
               key={index}
-            />
+            >
+              <div>
+                <div className="h-5 w-3/4 rounded bg-white/10" />
+                <div className="mt-1 h-4 w-1/2 rounded bg-white/10" />
+              </div>
+              <div className="mx-auto mt-5 grid w-full max-w-[216px] grid-cols-3 gap-1">
+                {[0, 1, 2].map((unit) => (
+                  <div
+                    className="grid h-11 place-content-center justify-items-center gap-1 rounded-md border border-white/10 bg-black/20"
+                    key={unit}
+                  >
+                    <div className="h-3.5 w-5 rounded bg-white/10" />
+                    <div className="h-2 w-7 rounded bg-white/10" />
+                  </div>
+                ))}
+              </div>
+            </li>
           ))}
         </ul>
       ) : state.status === 'error' ? (
@@ -162,7 +194,9 @@ export function MostAnticipatedSection() {
           <p className="text-sm text-red-100">Não foi possível carregar os jogos mais hypados.</p>
           <button
             className="mt-3 rounded-lg border border-red-200/30 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-500/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-            onClick={() => setRetryKey((value) => value + 1)}
+            onClick={() => {
+              setRetryKey((value) => value + 1);
+            }}
             type="button"
           >
             Tentar novamente
@@ -176,9 +210,9 @@ export function MostAnticipatedSection() {
           Ainda não há jogos futuros com hype registrado.
         </p>
       ) : (
-        <ul className="grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2 lg:grid-cols-3">
           {games.map((game) => (
-            <AnticipatedGameCard game={game} key={game.id} today={today} />
+            <AnticipatedGameCard game={game} key={game.id} now={now} />
           ))}
         </ul>
       )}

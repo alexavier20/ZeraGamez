@@ -15,11 +15,10 @@ import {
   ServiceUnavailableError,
   UpstreamTimeoutError,
 } from '../server/releases/infrastructure/upstream-errors';
-import {
-  gameSearchResponseSchema,
-  type GameSearchResult,
-} from '../shared/contracts/game-search';
+import { gameSearchResponseSchema, type GameSearchResult } from '../shared/contracts/game-search';
 import { apiErrorResponseSchema, type ApiErrorCode } from '../shared/contracts/releases';
+
+import type { SteamRankingMetric } from '../shared/contracts/steam-rankings';
 
 const successHeaders = {
   'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',
@@ -33,9 +32,11 @@ const errorHeaders = {
 };
 
 export interface GameSearchHandlerDependencies {
+  listRecentReviewed?: () => Promise<readonly GameSearchResult[]>;
   search(query: string): ReturnType<typeof searchGames>;
   listMostAnticipated(): ReturnType<typeof listMostAnticipatedGames>;
   listTopHyped(): ReturnType<typeof listTopHypedGames>;
+  listSteamRanking(metric: SteamRankingMetric): Promise<readonly GameSearchResult[]>;
 }
 
 function json(payload: unknown, status: number, headers: Record<string, string>) {
@@ -60,7 +61,11 @@ export async function handleGameSearchRequest(
   try {
     const searchRequest = parseGameSearchRequest(new URL(request.url).searchParams);
     let games: readonly GameSearchResult[];
-    if (searchRequest.type === 'anticipated') {
+    if (searchRequest.type === 'recent-reviewed') {
+      games = await (dependencies.listRecentReviewed?.() ?? Promise.resolve([]));
+    } else if (searchRequest.type === 'steam-ranking') {
+      games = await dependencies.listSteamRanking(searchRequest.metric);
+    } else if (searchRequest.type === 'anticipated') {
       games = await dependencies.listMostAnticipated();
     } else if (searchRequest.type === 'top-hyped') {
       games = await dependencies.listTopHyped();
@@ -108,9 +113,11 @@ function getProductionRepository() {
 }
 
 const productionDependencies: GameSearchHandlerDependencies = {
+  listRecentReviewed: () => getProductionRepository().listRecentReviewed(),
   search: (query) => searchGames(query, getProductionRepository()),
   listMostAnticipated: () => listMostAnticipatedGames(getProductionRepository()),
   listTopHyped: () => listTopHypedGames(getProductionRepository()),
+  listSteamRanking: (metric) => getProductionRepository().listSteamRanking(metric),
 };
 
 export default {

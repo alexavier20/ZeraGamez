@@ -1,4 +1,4 @@
-import { LoaderCircle, SearchX, TriangleAlert } from 'lucide-react';
+import { SearchX, TriangleAlert } from 'lucide-react';
 
 import type { LucideIcon } from 'lucide-react';
 import type * as React from 'react';
@@ -11,7 +11,7 @@ interface StatePanelProps {
   readonly title: string;
 }
 
-const skeletonIndexes = [0, 1, 2, 3, 4] as const;
+const skeletonIndexes = Array.from({ length: 12 }, (_, index) => index);
 
 function StatePanel({
   action,
@@ -38,16 +38,24 @@ function StatePanel({
 
 export function ReleasesLoading(): React.ReactElement {
   return (
-    <div className="mt-7 space-y-4">
-      <StatePanel icon={LoaderCircle} role="status" title="Carregando jogos" />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+    <div className="mt-7" role="status" aria-live="polite" aria-label="Carregando jogos">
+      <div className="grid grid-cols-1 gap-x-3 gap-y-6 sm:grid-cols-2 sm:gap-x-4 sm:gap-y-8 xl:grid-cols-4">
         {skeletonIndexes.map((index) => (
           <div
             aria-hidden="true"
-            className="h-56 animate-pulse rounded-2xl border border-border-brand bg-surface"
+            className="animate-pulse motion-reduce:animate-none"
             data-testid="release-card-skeleton"
             key={index}
-          />
+          >
+            <div className="aspect-[16/9] w-full rounded-xl bg-surface" />
+            <div className="flex flex-col gap-3 pt-3">
+              <div className="h-5 w-3/4 rounded bg-surface" />
+              <div className="flex gap-2">
+                <div className="h-5 w-10 rounded bg-surface" />
+                <div className="h-5 w-14 rounded bg-surface" />
+              </div>
+            </div>
+          </div>
         ))}
       </div>
     </div>

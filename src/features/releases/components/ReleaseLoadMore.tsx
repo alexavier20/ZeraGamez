@@ -1,5 +1,6 @@
-import { LoaderCircle } from 'lucide-react';
 import { useEffect, useRef } from 'react';
+
+import { LoadingPreview, Skeleton } from '@/shared/components/LoadingSkeletons';
 
 import type { ReleasesPagination } from '@/features/releases/hooks/use-releases';
 import type * as React from 'react';
@@ -46,14 +47,20 @@ export function ReleaseLoadMore({
 
   if (pagination.status === 'loading') {
     return (
-      <div
-        aria-live="polite"
-        className="mt-7 flex items-center justify-center gap-2 text-sm text-text-muted"
-        role="status"
-      >
-        <LoaderCircle aria-hidden="true" className="animate-spin" size={18} />
-        Carregando mais lançamentos…
-      </div>
+      <LoadingPreview label="Carregando mais lançamentos…" className="mt-7">
+        <div className="grid grid-cols-1 gap-x-3 gap-y-6 sm:grid-cols-2 sm:gap-x-4 sm:gap-y-8 xl:grid-cols-4">
+          {[0, 1, 2, 3].map((index) => (
+            <div key={index}>
+              <Skeleton className="aspect-video rounded-xl" />
+              <Skeleton className="mt-3 h-5 w-3/4" />
+              <div className="mt-3 flex gap-2">
+                <Skeleton className="h-5 w-10" />
+                <Skeleton className="h-5 w-14" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </LoadingPreview>
     );
   }
 

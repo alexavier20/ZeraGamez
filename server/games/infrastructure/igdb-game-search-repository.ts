@@ -11,6 +11,7 @@ import {
   UpstreamTimeoutError,
 } from '../../releases/infrastructure/upstream-errors';
 
+import type { SteamRankingMetric } from '../../../shared/contracts/steam-rankings';
 import type {
   AccessTokenLease,
   AccessTokenProvider,
@@ -38,6 +39,7 @@ const igdbGameSchema = z.object({
   id: z.number().int().positive(),
   name: z.string().trim().min(1).max(200),
   first_release_date: igdbDateSchema.nullable().optional(),
+  aggregated_rating: z.number().min(0).max(100).optional(),
   hypes: z.number().int().nonnegative().nullable().optional(),
   cover: z
     .object({ image_id: z.string().regex(/^[A-Za-z0-9_-]{1,200}$/) })
@@ -48,6 +50,12 @@ const igdbGameSchema = z.object({
 
 const igdbGamesSchema = z.array(igdbGameSchema).max(30);
 const GAME_SEARCH_LIMIT = 30;
+// Use IGDB's type IDs: display names differ from API names, including a typo in reviews.
+const steamPopularityTypeIds: Record<SteamRankingMetric, number> = {
+  'peak-players': 5,
+  'positive-reviews': 6,
+  'top-sellers': 9,
+};
 interface IgdbGameSearchRepositoryOptions {
   clientId: string;
   fetcher: typeof fetch;
@@ -75,6 +83,7 @@ function toGameSearchResult(game: z.infer<typeof igdbGameSchema>): GameSearchRes
     name: game.name,
     coverUrl: game.cover ? imageUrl(game.cover.image_id) : null,
     releaseDate: game.first_release_date ?? null,
+    ...(game.aggregated_rating !== undefined ? { criticScore: game.aggregated_rating } : {}),
     platforms: [...new Set((game.platforms ?? []).map(({ name }) => name))],
   });
 }
@@ -101,8 +110,54 @@ export class IgdbGameSearchRepository implements GameSearchRepository {
     return this.listUpcomingByHype(6);
   }
 
+  async listRecentReviewed(): Promise<readonly GameSearchResult[]> {
+    const now = Math.floor(Date.now() / 1000);
+    return this.fetchGames(
+      'fields id,name,first_release_date,aggregated_rating,cover.image_id,platforms.name; where first_release_date <= ' +
+        String(now) +
+        ' & aggregated_rating != null & version_parent = null; sort first_release_date desc; limit 20;',
+    );
+  }
+
   async listTopHyped(): Promise<readonly GameSearchResult[]> {
     return this.listUpcomingByHype(10);
+  }
+
+  async listSteamRanking(metric: SteamRankingMetric): Promise<readonly GameSearchResult[]> {
+    const primitives = z
+      .array(
+        z.object({
+          game_id: z.number().int().positive(),
+          value: z.number().nonnegative(),
+        }),
+      )
+      .max(30)
+      .safeParse(
+        await this.fetchJson(
+          `fields game_id,value; where popularity_type = ${String(steamPopularityTypeIds[metric])}; sort value desc; limit 30;`,
+          'popularity_primitives',
+        ),
+      );
+    if (!primitives.success) throw new InvalidUpstreamResponseError('Ranking IGDB inválido.');
+    const ids = [...new Set(primitives.data.map((entry) => entry.game_id))];
+    if (ids.length === 0) return [];
+    const games = await this.fetchGames(
+      `fields id,name,first_release_date,cover.image_id,platforms.name; where id = (${ids.join(',')}); limit 30;`,
+    );
+    const byId = new Map(games.map((game) => [game.id, game]));
+    return ids
+      .flatMap((id) => {
+        const game = byId.get(id);
+        return game
+          ? [
+              {
+                ...game,
+                steamRankingValue: primitives.data.find((entry) => entry.game_id === id)?.value,
+              },
+            ]
+          : [];
+      })
+      .slice(0, 5);
   }
 
   private async listUpcomingByHype(limit: number): Promise<readonly GameSearchResult[]> {
@@ -135,11 +190,11 @@ export class IgdbGameSearchRepository implements GameSearchRepository {
     return Object.freeze(result.data);
   }
 
-  private async fetchJson(body: string): Promise<unknown> {
-    let requestResult = await this.request(body);
+  private async fetchJson(body: string, endpoint = 'games'): Promise<unknown> {
+    let requestResult = await this.request(body, endpoint);
     if (requestResult.response.status === 401) {
       this.options.tokenProvider.invalidate(requestResult.tokenLease);
-      requestResult = await this.request(body);
+      requestResult = await this.request(body, endpoint);
     }
 
     const { response, timeoutSignal } = requestResult;
@@ -161,12 +216,12 @@ export class IgdbGameSearchRepository implements GameSearchRepository {
     return payload;
   }
 
-  private async request(body: string): Promise<IgdbRequestResult> {
+  private async request(body: string, endpoint: string): Promise<IgdbRequestResult> {
     const tokenLease = await this.options.tokenProvider.getToken();
     const timeoutSignal = AbortSignal.timeout(this.options.timeoutMs ?? 10_000);
 
     try {
-      const response = await this.options.fetcher('https://api.igdb.com/v4/games', {
+      const response = await this.options.fetcher(`https://api.igdb.com/v4/${endpoint}`, {
         method: 'POST',
         headers: {
           Accept: 'application/json',

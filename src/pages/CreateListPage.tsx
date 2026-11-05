@@ -94,7 +94,7 @@ export function CreateListPage() {
   const submissionError = message !== null && message.field === undefined ? message : null;
 
   return (
-    <main className="mx-auto min-h-[calc(100dvh-4.5rem)] max-w-2xl px-4 pt-7 pb-28 sm:px-5 sm:pb-12 lg:pt-9">
+    <main className="site-container min-h-[calc(100dvh-3.5rem)] max-w-2xl pb-28 pt-5 sm:pb-12 sm:pt-6 lg:pt-7">
       <PageHeading title="Criar lista" subtitle="Dê um nome e uma descrição para sua coleção" />
 
       <form

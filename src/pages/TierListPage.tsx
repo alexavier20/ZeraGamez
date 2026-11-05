@@ -25,6 +25,7 @@ import {
   type TierListDetails,
   type TierListItem,
 } from '@/features/tier-lists/model/tier-lists';
+import { GameRowsLoading, TierBoardLoading } from '@/shared/components/LoadingSkeletons';
 import { getSupabaseClient } from '@/shared/supabase/client';
 import { DataError } from '@/shared/supabase/data-error';
 
@@ -75,7 +76,9 @@ function TierGameTile({
       disabled={disabled}
       draggable={!disabled}
       onDragEnd={onDragEnd}
-      onDragStart={(event) => onDragStart(event, game.igdbId)}
+      onDragStart={(event) => {
+        onDragStart(event, game.igdbId);
+      }}
       title={game.name}
       type="button"
     >
@@ -280,15 +283,14 @@ function TierListEditor({
     setDraggedGameId(gameId);
   };
 
-  const stopDraggingGame = () => setDraggedGameId(null);
+  const stopDraggingGame = () => {
+    setDraggedGameId(null);
+  };
 
   const queryIsLongEnough = query.trim().length >= 2;
   const searchContent =
     searchState.status === 'loading' ? (
-      <div className="flex items-center gap-2 px-4 py-3 text-sm text-text-muted" role="status">
-        <LoaderCircle aria-hidden="true" className="animate-spin text-brand" size={16} />
-        Buscando jogos…
-      </div>
+      <GameRowsLoading />
     ) : searchState.status === 'error' ? (
       <p className="px-4 py-3 text-sm text-brand-bright" role="alert">
         Não foi possível buscar jogos. Tente novamente.
@@ -573,7 +575,7 @@ export function TierListPage() {
   };
 
   return (
-    <main className="mx-auto min-h-[calc(100dvh-4.5rem)] max-w-[1440px] px-4 pb-28 pt-7 sm:px-5 sm:pb-12 lg:px-8 lg:pt-9">
+    <main className="site-container min-h-[calc(100dvh-3.5rem)] pb-28 pt-5 sm:pb-12 sm:pt-6 lg:pt-7">
       <Link
         className="mb-5 inline-flex items-center gap-2 rounded-md text-sm font-semibold text-text-muted transition-colors hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
         to="/minhas-listas"
@@ -583,9 +585,7 @@ export function TierListPage() {
       </Link>
 
       {pageState.status === 'loading' ? (
-        <p className="py-16 text-center text-sm text-text-muted" role="status">
-          Carregando Tier List…
-        </p>
+        <TierBoardLoading />
       ) : pageState.status === 'not-found' ? (
         <div className="py-16 text-center">
           <TriangleAlert aria-hidden="true" className="mx-auto text-brand-bright" size={32} />
@@ -598,7 +598,9 @@ export function TierListPage() {
           </p>
           <button
             className="mt-4 rounded-xl border border-white/15 px-4 py-2 text-sm font-bold text-content-primary"
-            onClick={() => setRetryKey((value) => value + 1)}
+            onClick={() => {
+              setRetryKey((value) => value + 1);
+            }}
             type="button"
           >
             Tentar novamente
@@ -608,10 +610,7 @@ export function TierListPage() {
         <>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="font-heading text-xs font-bold uppercase tracking-[0.2em] text-brand-bright">
-                Tier List
-              </p>
-              <h1 className="mt-1 break-words font-heading text-3xl font-bold text-content-primary sm:text-4xl">
+              <h1 className="break-words font-heading text-3xl font-bold text-content-primary sm:text-4xl">
                 {pageState.list.name}
               </h1>
               {pageState.list.description === null ? null : (
@@ -657,7 +656,9 @@ export function TierListPage() {
                   disabled={savingMetadata}
                   id="tier-list-edit-name"
                   maxLength={80}
-                  onChange={(event) => setEditName(event.target.value)}
+                  onChange={(event) => {
+                    setEditName(event.target.value);
+                  }}
                   ref={nameInputRef}
                   value={editName}
                 />
@@ -674,7 +675,9 @@ export function TierListPage() {
                   disabled={savingMetadata}
                   id="tier-list-edit-description"
                   maxLength={500}
-                  onChange={(event) => setEditDescription(event.target.value)}
+                  onChange={(event) => {
+                    setEditDescription(event.target.value);
+                  }}
                   value={editDescription}
                 />
               </div>
@@ -721,7 +724,9 @@ export function TierListPage() {
             <TierListEditor
               key={`${String(pageState.list.id)}:${String(retryKey)}`}
               list={pageState.list}
-              onGameAdded={() => setGameCount((count) => count + 1)}
+              onGameAdded={() => {
+                setGameCount((count) => count + 1);
+              }}
               repository={repository}
             />
           )}

@@ -20,7 +20,7 @@ export function MobileBottomNav({ onProfileClick }: Readonly<MobileBottomNavProp
   return (
     <nav
       aria-label={headerCopy.mobileNavigationLabel}
-      className="fixed inset-x-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-50 grid h-[68px] grid-cols-4 rounded-2xl border border-header-border bg-bg-secondary/95 px-2 shadow-2xl backdrop-blur sm:hidden"
+      className="fixed inset-x-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-50 grid h-[68px] grid-cols-5 rounded-2xl border border-header-border bg-bg-secondary/95 px-2 shadow-2xl backdrop-blur sm:hidden"
       data-testid="mobile-bottom-nav"
     >
       {mobileNavItems.map((item) => {
@@ -28,9 +28,9 @@ export function MobileBottomNav({ onProfileClick }: Readonly<MobileBottomNavProp
         return (
           <NavLink
             className={({ isActive }) =>
-              `flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl text-[11px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand ${
+              `flex min-w-0 flex-col items-center justify-center gap-2 rounded-xl text-[11px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand ${
                 isActive
-                  ? 'font-semibold text-brand-bright'
+                  ? 'font-semibold text-brand-bright underline decoration-1 underline-offset-2'
                   : 'text-text-muted hover:text-text-primary'
               }`
             }

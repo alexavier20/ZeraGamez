@@ -23,14 +23,14 @@ export function HomeReleaseCard({ item }: HomeReleaseCardProps) {
         {item.coverUrl ? (
           <img
             alt={`Capa de ${item.name}`}
-            className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            className="aspect-[2/3] w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
             loading="lazy"
             src={item.coverUrl}
           />
         ) : (
           <span
             aria-label={`Capa indisponível de ${item.name}`}
-            className="flex aspect-square w-full items-center justify-center bg-gradient-to-br from-bg-secondary to-surface-hover text-text-muted"
+            className="flex aspect-[2/3] w-full items-center justify-center bg-gradient-to-br from-bg-secondary to-surface-hover text-text-muted"
             role="img"
           >
             <Gamepad2 aria-hidden="true" size={36} />
@@ -39,7 +39,10 @@ export function HomeReleaseCard({ item }: HomeReleaseCardProps) {
       </Link>
 
       <div className="mt-2.5 min-w-0">
-        <h3 className="truncate text-sm font-semibold text-text-primary" title={item.name}>
+        <h3
+          className="line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-text-primary"
+          title={item.name}
+        >
           <Link
             className="rounded-sm hover:text-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             to={`/jogos/${String(item.id)}`}

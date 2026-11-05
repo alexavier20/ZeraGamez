@@ -328,14 +328,10 @@ describe('Zera GameZ', () => {
     expect(filters).toHaveClass('mt-[18px]', 'sm:mt-[22px]', 'lg:mt-7');
 
     expect(main).toHaveClass(
-      'mx-auto',
-      'max-w-[1440px]',
-      'px-4',
-      'pt-[22px]',
-      'sm:px-5',
-      'sm:pt-7',
-      'lg:px-8',
-      'lg:pt-9',
+      'site-container',
+      'pt-5',
+      'sm:pt-6',
+      'lg:pt-7',
     );
     expect(releasesLink).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'Explorar' })).toHaveAttribute('aria-current', 'page');

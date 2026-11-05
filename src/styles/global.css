@@ -34,10 +34,11 @@
 @layer base {
   html {
     color-scheme: dark;
+    font-size: 15px;
   }
 
   body {
-    min-width: 20rem;
+    min-width: 320px;
     min-height: 100vh;
     margin: 0;
     background: var(--color-app);
@@ -55,5 +56,18 @@
 
   #root {
     min-height: 100vh;
+  }
+}
+
+@layer components {
+  .release-card-strip {
+    scrollbar-width: thin;
+    scrollbar-color: #ffffff40 transparent;
+  }
+
+  .site-container {
+    width: calc(100% - 2rem);
+    max-width: 1100px;
+    margin-inline: auto;
   }
 }

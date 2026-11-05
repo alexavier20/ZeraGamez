@@ -9,7 +9,7 @@ interface HeaderBrandProps {
 export function HeaderBrand({ compact = false }: Readonly<HeaderBrandProps>) {
   return (
     <Link
-      className="flex shrink-0 items-center gap-2.5 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-text-primary"
+      className="flex shrink-0 items-center gap-2.5 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-text-primary lg:mr-3"
       to={headerRoutes.home}
     >
       <img
@@ -19,7 +19,7 @@ export function HeaderBrand({ compact = false }: Readonly<HeaderBrandProps>) {
         src="/assets/images/zera-gamez-z-icon-white-header.png"
         width={compact ? 32 : 54}
       />
-      <span className="font-heading text-lg font-bold text-text-primary">{headerCopy.brand}</span>
+      <span className="font-heading text-base font-bold text-text-primary">{headerCopy.brand}</span>
     </Link>
   );
 }

@@ -12,12 +12,13 @@ import {
 import { ListsProvider } from '@/features/lists/context/ListsProvider';
 import { CreateListPage } from '@/pages/CreateListPage';
 import { GameDetailsPage } from '@/pages/GameDetailsPage';
-import { HypeRankingPage } from '@/pages/HypeRankingPage';
 import { HomePage } from '@/pages/HomePage';
+import { HypeRankingPage } from '@/pages/HypeRankingPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { MyListsPage } from '@/pages/MyListsPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { ReleasesPage } from '@/pages/ReleasesPage';
+import { ReviewsPage } from '@/pages/ReviewsPage';
 import { TierListPage } from '@/pages/TierListPage';
 import { headerRoutes } from '@/shared/components/header/header.config';
 import { isGoogleAuthProviderEnabled } from '@/shared/supabase/auth-settings';
@@ -71,6 +72,7 @@ export function AppRouter({ authService, listsRepository }: AppRouterProps) {
               <Route path="/jogos/:gameId" element={<GameDetailsPage />} />
               <Route path="/entrar" element={<LoginPage />} />
               <Route element={<ProtectedRoute />}>
+                <Route path={headerRoutes.reviews} element={<ReviewsPage />} />
                 <Route path={headerRoutes.lists} element={<MyListsPage />} />
                 <Route path={headerRoutes.createList} element={<CreateListPage />} />
                 <Route path="/minhas-listas/tier/:tierListId" element={<TierListPage />} />

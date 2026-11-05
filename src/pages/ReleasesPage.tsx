@@ -181,7 +181,7 @@ export function ReleasesPage() {
   return (
     <main
       aria-label="Lançamentos"
-      className="mx-auto min-h-[calc(100dvh-4.5rem)] max-w-[1440px] px-4 pt-[22px] pb-28 sm:px-5 sm:pt-7 sm:pb-12 lg:px-8 lg:pt-9"
+      className="site-container min-h-[calc(100dvh-3.5rem)] pb-28 pt-5 sm:pb-12 sm:pt-6 lg:pt-7"
     >
       <div className="lg:flex lg:items-end lg:justify-between">
         <PageHeading title="Próximos lançamentos" subtitle={releaseSubtitle(selectedDate, state)} />

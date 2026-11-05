@@ -6,6 +6,7 @@ import { UserAvatar } from '@/features/auth/components/UserAvatar';
 import { useAuth } from '@/features/auth/context/AuthProvider';
 import { clearPendingAuthIntent } from '@/features/auth/model/pending-auth-intent';
 import { headerRoutes } from '@/shared/components/header/header.config';
+import { ProfileLoading } from '@/shared/components/LoadingSkeletons';
 
 import type { AuthContextValue } from '@/features/auth/context/AuthProvider';
 import type { AuthenticatedUser } from '@/features/auth/model/auth';
@@ -119,7 +120,7 @@ function ProfileSettings({ auth, user }: ProfileSettingsProps) {
   };
 
   return (
-    <main className="mx-auto min-h-[calc(100dvh-4.5rem)] max-w-xl px-4 pt-8 pb-28 sm:px-5 sm:pb-12 lg:pt-10">
+    <main className="site-container min-h-[calc(100dvh-3.5rem)] max-w-xl pb-28 pt-5 sm:pb-12 sm:pt-6 lg:pt-7">
       <button
         className="mb-4 inline-flex min-h-9 items-center gap-2 rounded-lg text-sm font-semibold text-text-muted transition-colors hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary"
         onClick={handleBack}
@@ -301,7 +302,7 @@ export function ProfilePage() {
   const { state } = auth;
 
   if (state.status !== 'authenticated') {
-    return <p role="status">Carregando perfil</p>;
+    return <ProfileLoading />;
   }
 
   return <ProfileSettings auth={auth} key={state.user.id} user={state.user} />;

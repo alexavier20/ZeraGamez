@@ -164,7 +164,7 @@ export function LoginPage() {
   };
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-app px-4 py-10 text-text-primary">
+    <main className="flex min-h-[calc(100dvh-62px)] items-center justify-center bg-app px-4 pt-8 pb-28 text-text-primary sm:min-h-[calc(100dvh-52px)] sm:pb-12 lg:py-10">
       <section className="w-full max-w-md rounded-2xl border border-white/10 bg-surface p-6 shadow-2xl sm:p-8">
         <p className="font-heading text-sm font-bold uppercase tracking-[0.2em] text-brand-bright">
           Zera GameZ

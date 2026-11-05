@@ -4,8 +4,10 @@ import { Link } from 'react-router';
 
 import { useAuth } from '@/features/auth/context/AuthProvider';
 import { createSupabaseTierListsRepository } from '@/features/tier-lists/api/tier-lists-repository';
-import type { TierListSummary } from '@/features/tier-lists/model/tier-lists';
+import { ListCardsLoading } from '@/shared/components/LoadingSkeletons';
 import { getSupabaseClient } from '@/shared/supabase/client';
+
+import type { TierListSummary } from '@/features/tier-lists/model/tier-lists';
 
 type TierListsState =
   | { readonly status: 'loading' }
@@ -60,19 +62,17 @@ export function TierListsSection() {
       </h2>
 
       {authState.status === 'loading' || (repository !== null && state.status === 'loading') ? (
-        <div
-          aria-label="Carregando suas Tier Lists"
-          className="h-36 animate-pulse rounded-2xl bg-surface"
-          role="status"
-        />
-      ) : state.status === 'error' || repository === null ? (
+        <ListCardsLoading tiers />
+      ) : state.status !== 'success' || repository === null ? (
         <div className="rounded-2xl border border-red-400/30 bg-red-500/10 p-5 text-center">
           <p className="text-sm text-red-100" role="alert">
             Não foi possível carregar suas Tier Lists.
           </p>
           <button
             className="mt-3 rounded-xl border border-red-200/30 px-4 py-2 text-sm font-bold text-white"
-            onClick={() => setRetryKey((value) => value + 1)}
+            onClick={() => {
+              setRetryKey((value) => value + 1);
+            }}
             type="button"
           >
             Tentar novamente
@@ -89,7 +89,7 @@ export function TierListsSection() {
           </Link>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {state.lists.map((list) => (
             <Link
               className="group overflow-hidden rounded-2xl bg-surface shadow-lg shadow-black/10 transition hover:ring-1 hover:ring-brand/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
@@ -99,7 +99,7 @@ export function TierListsSection() {
               <div aria-hidden="true" className="grid aspect-[3/1] grid-cols-5 overflow-hidden">
                 {sampleTiers.map((tier) => (
                   <span
-                    className={`${tier.color} grid place-items-center font-heading text-lg font-bold text-black/75`}
+                    className={`${tier.color} grid place-items-center font-heading text-sm font-bold text-black/75`}
                     key={tier.label}
                   >
                     {tier.label}
@@ -108,15 +108,15 @@ export function TierListsSection() {
               </div>
               <div className="flex items-start justify-between gap-3 p-4">
                 <div className="min-w-0">
-                  <h3 className="truncate font-heading text-lg font-bold text-content-primary">
+                  <h3 className="truncate font-heading text-sm font-bold text-content-primary">
                     {list.name}
                   </h3>
                   {list.description === null || list.description.length === 0 ? null : (
-                    <p className="mt-1 line-clamp-2 text-sm leading-5 text-text-muted">
+                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-text-muted">
                       {list.description}
                     </p>
                   )}
-                  <p className="mt-2 text-xs text-text-muted">
+                  <p className="mt-2 text-[10px] text-text-muted">
                     {String(list.gameCount)} {list.gameCount === 1 ? 'jogo' : 'jogos'}
                   </p>
                 </div>

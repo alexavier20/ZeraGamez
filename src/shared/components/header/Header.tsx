@@ -44,14 +44,14 @@ function renderMobileHeader(props: HeaderProps) {
 export function Header(props: HeaderProps) {
   return (
     <header className="border-b border-header-border bg-brand text-text-primary">
-      <div className="mx-auto max-w-[1440px]">
+      <div className="mx-auto w-[calc(100%-2rem)] max-w-[1100px]">
         <div
-          className="hidden h-16 items-center gap-6 px-6 lg:flex"
+          className="hidden h-[52px] items-center gap-4 lg:flex"
           data-testid="header-desktop"
         >
           <HeaderBrand />
           <DesktopNavigation />
-          <GlobalSearch className="min-w-48 flex-1" onSearch={props.onSearch} />
+          <GlobalSearch className="w-80 shrink-0" onSearch={props.onSearch} />
           <HeaderActions
             account={props.account}
             onProfileClick={props.onProfileClick}
@@ -59,7 +59,7 @@ export function Header(props: HeaderProps) {
         </div>
 
         <div
-          className="hidden h-[60px] items-center gap-4 px-5 sm:flex lg:hidden"
+          className="hidden h-[52px] items-center gap-3 sm:flex lg:hidden"
           data-testid="header-tablet"
         >
           <HeaderBrand compact />

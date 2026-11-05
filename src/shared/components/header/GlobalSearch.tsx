@@ -1,8 +1,9 @@
-import { Gamepad2, LoaderCircle, Search } from 'lucide-react';
+import { Gamepad2, Search } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type SubmitEventHandler } from 'react';
 import { Link } from 'react-router';
 
 import { getMostAnticipatedGames, searchGames } from '@/features/games/api/game-search-client';
+import { GameRowsLoading } from '@/shared/components/LoadingSkeletons';
 
 import { headerCopy } from './header.config';
 
@@ -87,7 +88,9 @@ export function GlobalSearch({ className = '', onSearch }: Readonly<GlobalSearch
     };
 
     document.addEventListener('pointerdown', closeOnOutsidePointer);
-    return () => document.removeEventListener('pointerdown', closeOnOutsidePointer);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsidePointer);
+    };
   }, []);
 
   const handleSubmit: SubmitEventHandler<HTMLFormElement> = (event) => {
@@ -103,7 +106,7 @@ export function GlobalSearch({ className = '', onSearch }: Readonly<GlobalSearch
   return (
     <div className={`relative min-w-0 ${className}`} ref={containerRef}>
       <form
-        className="flex h-10 w-full items-center gap-2 rounded-xl border-0 bg-brand px-3.5"
+        className="flex h-8 w-full items-center gap-1.5 rounded-lg border-0 bg-brand px-2.5"
         onSubmit={handleSubmit}
         role="search"
       >
@@ -112,10 +115,10 @@ export function GlobalSearch({ className = '', onSearch }: Readonly<GlobalSearch
         </label>
         <button
           aria-label={headerCopy.searchButtonLabel}
-          className="grid size-8 shrink-0 place-items-center rounded-lg text-gray-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-200"
+          className="grid size-7 shrink-0 place-items-center rounded-md text-gray-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-200"
           type="submit"
         >
-          <Search aria-hidden="true" size={18} />
+          <Search aria-hidden="true" size={16} />
         </button>
         <input
           aria-autocomplete="list"
@@ -155,13 +158,9 @@ export function GlobalSearch({ className = '', onSearch }: Readonly<GlobalSearch
           aria-live="polite"
         >
           {searchState.status === 'loading' ? (
-            <div
-              className="flex items-center gap-2 px-4 py-3 text-sm text-text-muted"
-              role="status"
-            >
-              <LoaderCircle aria-hidden="true" className="animate-spin text-brand" size={16} />
-              {normalizedQuery.length === 0 ? 'Carregando jogos…' : 'Buscando jogos…'}
-            </div>
+            <GameRowsLoading
+              label={normalizedQuery.length === 0 ? 'Carregando jogos…' : 'Buscando jogos…'}
+            />
           ) : searchState.status === 'error' ? (
             <p className="px-4 py-3 text-sm text-text-muted" role="status">
               Não foi possível buscar jogos. Tente novamente.
@@ -179,7 +178,9 @@ export function GlobalSearch({ className = '', onSearch }: Readonly<GlobalSearch
                   <Link
                     aria-label={`Abrir detalhes de ${game.name}`}
                     className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand"
-                    onClick={() => setIsOpen(false)}
+                    onClick={() => {
+                      setIsOpen(false);
+                    }}
                     to={`/jogos/${game.id}`}
                   >
                     {game.coverUrl === null ? (

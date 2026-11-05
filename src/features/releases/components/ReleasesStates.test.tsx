@@ -9,17 +9,22 @@ import {
 } from '@/features/releases/components/ReleasesStates';
 
 describe('release list states', () => {
-  it('renders an accessible loading state with five copy-free skeleton cards', () => {
+  it('renders an accessible loading state with twelve pulsing card previews without visible loading copy', () => {
     render(<ReleasesLoading />);
 
     const loadingState = screen.getByRole('status');
     const skeletons = screen.getAllByTestId('release-card-skeleton');
 
     expect(loadingState).toHaveAttribute('aria-live', 'polite');
-    expect(loadingState).toHaveTextContent('Carregando jogos');
-    expect(skeletons).toHaveLength(5);
+    expect(loadingState).toHaveAccessibleName('Carregando jogos');
+    expect(screen.queryByText('Carregando jogos')).not.toBeInTheDocument();
+    expect(skeletons).toHaveLength(12);
+    expect(loadingState.querySelector('svg')).toBeNull();
     for (const skeleton of skeletons) {
-      expect(skeleton).toBeEmptyDOMElement();
+      expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+      expect(skeleton).toHaveClass('animate-pulse');
+      expect(skeleton).toHaveTextContent('');
+      expect(skeleton.firstElementChild).toHaveClass('aspect-[16/9]');
     }
   });
 

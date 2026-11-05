@@ -68,8 +68,9 @@ describe('ProfilePage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Perfil' })).toBeInTheDocument();
     expect(screen.getByText('alex@example.com')).toBeInTheDocument();
-    expect(screen.getByText('AX')).toHaveAttribute('aria-label', 'Avatar de Alex Xavier');
-    expect(screen.queryByRole('img', { name: 'Avatar de Alex Xavier' })).not.toBeInTheDocument();
+    const avatar = screen.getByRole('img', { name: 'Avatar de Alex Xavier' });
+    expect(avatar).toHaveTextContent('AX');
+    expect(avatar.querySelector('img')).toBeNull();
   });
 
   it('shows the account avatar when available', async () => {
@@ -79,10 +80,9 @@ describe('ProfilePage', () => {
     };
     renderProfile(createAuthService(vi.fn().mockResolvedValue(undefined), userWithAvatar));
 
-    expect(await screen.findByRole('img', { name: 'Avatar de Alex Xavier' })).toHaveAttribute(
-      'src',
-      userWithAvatar.avatarUrl,
-    );
+    expect(
+      (await screen.findByRole('img', { name: 'Avatar de Alex Xavier' })).querySelector('img'),
+    ).toHaveAttribute('src', userWithAvatar.avatarUrl);
     expect(screen.queryByText('AX')).not.toBeInTheDocument();
   });
 

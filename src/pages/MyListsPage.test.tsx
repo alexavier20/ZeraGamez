@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
@@ -138,7 +138,11 @@ describe('MyListsPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Não foi possível carregar suas listas. Tente novamente.',
     );
-    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    await user.click(
+      within(screen.getByRole('region', { name: 'Suas listas' })).getByRole('button', {
+        name: 'Tentar novamente',
+      }),
+    );
 
     expect(await screen.findByRole('heading', { name: 'RPGs' })).toBeInTheDocument();
     expect(listSummaries).toHaveBeenCalledTimes(2);

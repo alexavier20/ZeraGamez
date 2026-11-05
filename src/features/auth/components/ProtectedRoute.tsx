@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation } from 'react-router';
 
 import { useAuth } from '@/features/auth/context/AuthProvider';
 import { savePendingAuthIntent } from '@/features/auth/model/pending-auth-intent';
+import { ProtectedPageLoading } from '@/shared/components/LoadingSkeletons';
 
 interface ProtectedRouteProps {
   readonly children?: ReactNode;
@@ -53,5 +54,5 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate replace to="/entrar" />;
   }
 
-  return <p role="status">Verificando sua sessão</p>;
+  return <ProtectedPageLoading pathname={pathname} />;
 }

@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 
 import { searchGames } from '@/features/games/api/game-search-client';
 import { isListsOperationCancelled } from '@/features/lists/context/ListsProvider';
+import { GameRowsLoading } from '@/shared/components/LoadingSkeletons';
 
 import type { GameSearchResult } from '../../../../shared/contracts/game-search';
 import type { GameSnapshot, UserListSummary } from '@/features/lists/model/lists';
@@ -215,10 +216,7 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
         </p>
       ) : null
     ) : searchState.status === 'loading' ? (
-      <div className="flex items-center gap-2 px-4 py-3 text-sm text-text-muted" role="status">
-        <LoaderCircle aria-hidden="true" className="animate-spin text-brand" size={16} />
-        Buscando jogos…
-      </div>
+      <GameRowsLoading />
     ) : searchState.status === 'error' ? (
       <p className="px-4 py-3 text-sm text-brand-bright" role="alert">
         Não foi possível buscar jogos. Tente novamente.

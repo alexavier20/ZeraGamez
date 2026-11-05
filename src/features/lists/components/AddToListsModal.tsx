@@ -1,9 +1,10 @@
-import { Check, ChevronLeft, ChevronRight, Library, LoaderCircle, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Library, X } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router';
 
 import { isListsOperationCancelled, type ListsState } from '@/features/lists/context/ListsProvider';
+import { ListSelectionLoading } from '@/shared/components/LoadingSkeletons';
 
 import type { UserListSummary } from '@/features/lists/model/lists';
 import type * as React from 'react';
@@ -217,13 +218,7 @@ function AddToListsDialog({
 
   const content =
     listsState.status === 'idle' || listsState.status === 'loading' ? (
-      <div
-        className="flex h-[236px] flex-col items-center justify-center gap-3 text-text-muted sm:h-[230px]"
-        role="status"
-      >
-        <LoaderCircle aria-hidden="true" className="animate-spin text-brand" size={34} />
-        <span className="text-sm">Carregando suas listas…</span>
-      </div>
+      <ListSelectionLoading />
     ) : listsState.status === 'error' ? (
       <div className="flex h-[236px] flex-col items-center justify-center gap-4 sm:h-[230px]">
         <p className="max-w-[320px] text-center text-sm text-text-muted" role="alert">

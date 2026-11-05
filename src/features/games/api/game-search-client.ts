@@ -4,6 +4,8 @@ import {
 } from '../../../../shared/contracts/game-search';
 import { apiErrorResponseSchema, type ApiErrorCode } from '../../../../shared/contracts/releases';
 
+import type { SteamRankingMetric } from '../../../../shared/contracts/steam-rankings';
+
 interface GameSearchClientOptions {
   readonly fetcher?: typeof fetch;
   readonly signal?: AbortSignal;
@@ -88,4 +90,12 @@ export function getTopHypedGames(
   options: GameSearchClientOptions = {},
 ): Promise<readonly GameSearchResult[]> {
   return fetchGames(new URLSearchParams({ mode: 'top-hyped' }), options);
+}
+
+export function getSteamRanking(metric: SteamRankingMetric, options: GameSearchClientOptions = {}) {
+  return fetchGames(new URLSearchParams({ mode: 'steam-ranking', metric }), options);
+}
+
+export function getRecentReviewedGames(options: GameSearchClientOptions = {}) {
+  return fetchGames(new URLSearchParams({ mode: 'recent-reviewed' }), options);
 }

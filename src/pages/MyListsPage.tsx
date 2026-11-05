@@ -1,4 +1,4 @@
-import { Plus, Settings } from 'lucide-react';
+import { Pin, Plus, Settings } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 
@@ -8,6 +8,7 @@ import { ListDetailsModal } from '@/features/lists/components/ListDetailsModal';
 import { isListsOperationCancelled, useLists } from '@/features/lists/context/ListsProvider';
 import { TierListsSection } from '@/features/tier-lists/components/TierListsSection';
 import { headerRoutes } from '@/shared/components/header/header.config';
+import { ListCardsLoading } from '@/shared/components/LoadingSkeletons';
 import { PageHeading } from '@/shared/components/page-heading/PageHeading';
 
 import type { CreateListInput, UserListSummary } from '@/features/lists/model/lists';
@@ -32,6 +33,8 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
   const covers = list.covers
     .filter((cover): cover is string => typeof cover === 'string' && cover.length > 0)
     .slice(0, 3);
+  const coverColumnClass =
+    covers.length === 1 ? 'grid-cols-1' : covers.length === 2 ? 'grid-cols-2' : 'grid-cols-3';
 
   useEffect(() => {
     if (!settingsOpen) return;
@@ -68,7 +71,9 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
         type="button"
       >
         {covers.length > 0 ? (
-          <div className="grid aspect-[3/1] grid-cols-3 overflow-hidden bg-surface-raised">
+          <div
+            className={`grid aspect-[3/1] overflow-hidden bg-surface-raised ${coverColumnClass}`}
+          >
             {covers.map((cover, index) => (
               <img
                 alt={`Capa de ${list.name} ${String(index + 1)}`}
@@ -86,13 +91,22 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
         )}
         <div className="space-y-2 p-4">
           <div className="flex items-start justify-between gap-4">
-            <h2 className="font-heading text-lg font-bold text-content-primary">{list.name}</h2>
-            <span className="shrink-0 rounded-full bg-brand/15 px-2.5 py-1 text-xs font-semibold text-brand-light">
+            <h2
+              className={`flex min-w-0 items-center gap-2 font-heading text-sm font-bold ${
+                list.systemKey === null ? 'text-content-primary' : 'text-brand-bright'
+              }`}
+            >
+              {list.systemKey === null ? null : (
+                <Pin aria-hidden="true" className="shrink-0 text-brand-bright" size={16} />
+              )}
+              <span className="truncate">{list.name}</span>
+            </h2>
+            <span className="shrink-0 rounded-full bg-brand/15 px-2 py-1 text-[10px] font-semibold text-brand-light">
               {gameCountLabel(list.gameCount)}
             </span>
           </div>
           {list.description === null || list.description.length === 0 ? null : (
-            <p className="text-sm leading-6 text-text-muted">{list.description}</p>
+            <p className="text-xs leading-5 text-text-muted">{list.description}</p>
           )}
         </div>
       </button>
@@ -146,21 +160,6 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
   );
 }
 
-function LoadingLists() {
-  return (
-    <div
-      aria-label="Carregando suas listas"
-      className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-      role="status"
-    >
-      <span className="sr-only">Carregando suas listas</span>
-      {[0, 1, 2].map((item) => (
-        <div aria-hidden="true" className="h-56 animate-pulse rounded-2xl bg-surface" key={item} />
-      ))}
-    </div>
-  );
-}
-
 export function MyListsPage() {
   const lists = useLists();
   const { addGamesToList, deleteList, listsState, loadLists, scopeVersion, updateList } = lists;
@@ -190,6 +189,7 @@ export function MyListsPage() {
     listsState.status === 'success'
       ? listsState.lists.filter((list) => list.systemKey === null)
       : [];
+  const displayedLists = [...systemLists, ...userLists];
 
   const closeModal = useCallback(() => {
     setSelectedList(null);
@@ -252,7 +252,7 @@ export function MyListsPage() {
   }, [listsState.status, loadLists]);
 
   return (
-    <main className="mx-auto min-h-[calc(100dvh-4.5rem)] max-w-[1440px] px-4 pt-7 pb-28 sm:px-5 sm:pb-12 lg:px-8 lg:pt-9">
+    <main className="site-container min-h-[calc(100dvh-3.5rem)] pb-28 pt-5 sm:pb-12 sm:pt-6 lg:pt-7">
       <div className="flex items-start justify-between gap-4">
         <PageHeading title="Minhas listas" subtitle="Organize os jogos do seu jeito" />
         <Link
@@ -266,7 +266,7 @@ export function MyListsPage() {
 
       <section aria-label="Suas listas" className="mt-8">
         {listsState.status === 'idle' || listsState.status === 'loading' ? (
-          <LoadingLists />
+          <ListCardsLoading />
         ) : listsState.status === 'error' ? (
           <div className="rounded-2xl border border-red-400/30 bg-red-500/10 p-6 text-center">
             <p className="text-sm text-red-100" role="alert">
@@ -281,72 +281,34 @@ export function MyListsPage() {
             </button>
           </div>
         ) : (
-          <div className="space-y-10">
-            <section aria-labelledby="system-lists-heading">
-              <h2
-                className="mb-4 font-heading text-2xl font-bold text-text-primary"
-                id="system-lists-heading"
-              >
-                Listas do sistema
-              </h2>
-              {systemLists.length === 0 ? (
-                <p className="rounded-2xl border border-dashed border-white/15 bg-surface px-5 py-6 text-sm text-text-muted">
-                  As listas automáticas aparecerão aqui quando você adicionar jogos.
-                </p>
-              ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {systemLists.map((list) => (
-                    <ListSummary
-                      key={list.id}
-                      list={list}
-                      onDelete={(selected) => {
-                        setDeleteErrorMessage(null);
-                        setDeleteTarget({ list: selected, scopeVersion });
-                      }}
-                      onSelect={(selected) => {
-                        setSelectedList({ list: selected, mode: 'details', scopeVersion });
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <section aria-labelledby="user-lists-heading">
-              <h2
-                className="mb-4 font-heading text-2xl font-bold text-text-primary"
-                id="user-lists-heading"
-              >
-                Minhas Listas
-              </h2>
-              {userLists.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-white/20 bg-surface p-8 text-center">
-                  <p className="text-text-muted">Você ainda não criou nenhuma lista.</p>
-                  <Link
-                    className="mt-5 inline-flex rounded-xl bg-brand px-4 py-2.5 text-sm font-bold text-white"
-                    to={headerRoutes.createList}
-                  >
-                    Criar minha primeira lista
-                  </Link>
-                </div>
-              ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {userLists.map((list) => (
-                    <ListSummary
-                      key={list.id}
-                      list={list}
-                      onDelete={(selected) => {
-                        setDeleteErrorMessage(null);
-                        setDeleteTarget({ list: selected, scopeVersion });
-                      }}
-                      onSelect={(selected) => {
-                        setSelectedList({ list: selected, mode: 'details', scopeVersion });
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
+          <div>
+            {displayedLists.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-white/20 bg-surface p-8 text-center">
+                <p className="text-text-muted">Você ainda não criou nenhuma lista.</p>
+                <Link
+                  className="mt-5 inline-flex rounded-xl bg-brand px-4 py-2.5 text-sm font-bold text-white"
+                  to={headerRoutes.createList}
+                >
+                  Criar minha primeira lista
+                </Link>
+              </div>
+            ) : (
+              <div className="grid gap-x-3 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
+                {displayedLists.map((list) => (
+                  <ListSummary
+                    key={list.id}
+                    list={list}
+                    onDelete={(selected) => {
+                      setDeleteErrorMessage(null);
+                      setDeleteTarget({ list: selected, scopeVersion });
+                    }}
+                    onSelect={(selected) => {
+                      setSelectedList({ list: selected, mode: 'details', scopeVersion });
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </section>

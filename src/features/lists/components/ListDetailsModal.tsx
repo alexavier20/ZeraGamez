@@ -25,6 +25,7 @@ import { ZodError } from 'zod';
 
 import { isListsOperationCancelled } from '@/features/lists/context/ListsProvider';
 import { normalizeCreateListInput } from '@/features/lists/model/lists';
+import { ListGamesLoading, Skeleton } from '@/shared/components/LoadingSkeletons';
 import { DataError } from '@/shared/supabase/data-error';
 
 import type { ListGame, UserListSummary, CreateListInput } from '@/features/lists/model/lists';
@@ -616,7 +617,15 @@ function ListDetailsDialog({
             <div>
               <h3 className="font-heading text-lg font-semibold text-content-primary">Jogos</h3>
               {coverSelectionLoading ? (
-                <p className="mt-1 text-xs text-text-muted">Carregando capas escolhidas…</p>
+                <div
+                  className="mt-1 flex gap-2"
+                  role="status"
+                  aria-label="Carregando capas escolhidas"
+                >
+                  {[0, 1, 2].map((index) => (
+                    <Skeleton className="h-10 w-8" key={index} />
+                  ))}
+                </div>
               ) : null}
               {coverSelectionError ? (
                 <button
@@ -679,13 +688,7 @@ function ListDetailsDialog({
           </div>
 
           {gamesState.status === 'loading' ? (
-            <div
-              className="flex min-h-28 items-center justify-center gap-2 text-sm text-text-muted"
-              role="status"
-            >
-              <LoaderCircle aria-hidden="true" className="animate-spin text-brand" size={18} />
-              Carregando jogos…
-            </div>
+            <ListGamesLoading grid={gamesView === 'grid'} />
           ) : gamesState.status === 'error' ? (
             <div className="rounded-xl border border-red-400/30 bg-red-500/10 p-5 text-center">
               <p className="text-sm text-red-100" role="alert">
