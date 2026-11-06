@@ -5,16 +5,23 @@ interface UserAvatarProps {
   readonly className: string;
   readonly initials: string;
   readonly name: string;
+  readonly appearance?: 'default' | 'neutral';
 }
 
-export function UserAvatar({ avatarUrl, className, initials, name }: UserAvatarProps) {
+export function UserAvatar({
+  avatarUrl,
+  className,
+  initials,
+  name,
+  appearance = 'default',
+}: UserAvatarProps) {
   const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
   const showImage = avatarUrl !== null && failedAvatarUrl !== avatarUrl;
 
   return (
     <span
       aria-label={`Avatar de ${name}`}
-      className={`relative grid shrink-0 place-items-center overflow-hidden rounded-full bg-linear-to-br from-avatar-start to-avatar-end text-sm font-bold text-white ${className}`}
+      className={`relative grid shrink-0 place-items-center overflow-hidden rounded-full text-sm text-white ${appearance === 'neutral' ? 'bg-white/10 font-medium' : 'bg-linear-to-br from-avatar-start to-avatar-end font-bold'} ${className}`}
       role="img"
     >
       {showImage ? (

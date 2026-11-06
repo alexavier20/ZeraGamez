@@ -32,7 +32,9 @@ describe('release list states', () => {
     render(<ReleasesEmpty />);
 
     expect(screen.getByRole('status')).toHaveTextContent('Nenhum jogo encontrado');
-    expect(screen.getByText('Tente outro termo ou limpe os filtros ativos.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Escolha outra plataforma ou gênero, ou limpe os filtros ativos'),
+    ).toBeInTheDocument();
   });
 
   it('invokes retry from the sanitized error state with a visible focus treatment', async () => {

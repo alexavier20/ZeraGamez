@@ -15,7 +15,7 @@ type ReleaseViewSwitcherProps = Readonly<{
 }>;
 
 const optionClassName =
-  'flex h-8 items-center gap-[7px] rounded-[9px] px-[11px] text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand';
+  'flex min-h-11 items-center gap-2 rounded-lg px-3 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand';
 
 export function ReleaseViewSwitcher({
   calendarButtonRef,
@@ -28,16 +28,17 @@ export function ReleaseViewSwitcher({
 }: ReleaseViewSwitcherProps) {
   return (
     <div
-      aria-label="Alternar visualização"
-      className="hidden h-10 w-fit min-w-[189px] items-center gap-1 rounded-xl bg-bg-secondary p-1 lg:flex"
+      aria-label="Filtrar por data"
+      className="flex w-fit max-w-full items-center gap-1 rounded-xl border border-white/10 bg-bg-secondary p-1"
       role="group"
     >
       <button
+        aria-label="Todas as datas"
         aria-controls={controlsId}
         aria-pressed={value === 'list'}
         className={`${optionClassName} ${
           value === 'list'
-            ? 'bg-surface-hover text-content-primary ring-1 ring-inset ring-brand'
+            ? 'bg-white/10 text-content-primary ring-1 ring-inset ring-white/15'
             : 'bg-transparent text-text-muted ring-1 ring-inset ring-transparent hover:text-content-primary'
         }`}
         onClick={() => {
@@ -45,8 +46,8 @@ export function ReleaseViewSwitcher({
         }}
         type="button"
       >
-        <List aria-hidden="true" size={15} />
-        Lista
+        <List aria-hidden="true" size={18} strokeWidth={1.5} />
+        Todas
       </button>
       <button
         aria-controls={
@@ -57,7 +58,7 @@ export function ReleaseViewSwitcher({
         aria-pressed={value === 'calendar'}
         className={`${optionClassName} ${
           value === 'calendar'
-            ? 'bg-surface-hover text-content-primary ring-1 ring-inset ring-brand'
+            ? 'bg-white/10 text-content-primary ring-1 ring-inset ring-white/15'
             : 'bg-transparent text-text-muted ring-1 ring-inset ring-transparent hover:text-content-primary'
         }`}
         onClick={() => {
@@ -66,8 +67,8 @@ export function ReleaseViewSwitcher({
         ref={calendarButtonRef}
         type="button"
       >
-        <CalendarDays aria-hidden="true" size={15} />
-        {calendarLabel ?? 'Calendário'}
+        <CalendarDays aria-hidden="true" size={18} strokeWidth={1.5} />
+        {calendarLabel ?? 'Escolher data'}
       </button>
     </div>
   );

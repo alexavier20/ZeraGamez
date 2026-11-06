@@ -36,7 +36,7 @@ export function ReleaseCalendarControl({
   const calendarButtonRef = useRef<HTMLButtonElement>(null);
   const value: ReleaseView = open || selectedDate !== null ? 'calendar' : 'list';
   const calendarLabel =
-    selectedDate === null ? 'Calendário' : formatCalendarShortDate(selectedDate);
+    selectedDate === null ? 'Escolher data' : formatCalendarShortDate(selectedDate);
 
   useEffect(() => {
     if (!open) {
@@ -63,7 +63,7 @@ export function ReleaseCalendarControl({
   }
 
   return (
-    <div className="relative hidden lg:block" ref={rootRef}>
+    <div className="relative mt-4 w-full lg:mt-0 lg:w-auto" ref={rootRef}>
       <ReleaseViewSwitcher
         calendarButtonRef={calendarButtonRef}
         calendarExpanded={open}
@@ -73,6 +73,7 @@ export function ReleaseCalendarControl({
         onChange={(nextValue) => {
           if (nextValue === 'list') {
             onClearDate();
+            onOpenChange(false);
             return;
           }
 
@@ -81,14 +82,17 @@ export function ReleaseCalendarControl({
         value={value}
       />
       {open ? (
-        <div className="absolute right-1 top-11 z-30">
+        <div className="relative z-30 mt-2 lg:absolute lg:right-0 lg:top-full">
           <ReleaseDatePicker
             currentDate={currentDate}
             knownReleaseDates={knownReleaseDates}
             month={month}
             onMonthChange={onMonthChange}
             onRequestClose={handlePickerClose}
-            onSelect={onSelectDate}
+            onSelect={(date) => {
+              onSelectDate(date);
+              handlePickerClose();
+            }}
             selectedDate={selectedDate}
           />
         </div>

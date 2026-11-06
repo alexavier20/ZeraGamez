@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router';
 
 import { useAuth } from '@/features/auth/context/AuthProvider';
 import { normalizeOtp } from '@/features/auth/model/auth';
-import { DataError } from '@/shared/supabase/data-error';
 import {
   consumePendingAuthIntent,
   peekPendingAuthIntent,
 } from '@/features/auth/model/pending-auth-intent';
+import { DataError } from '@/shared/supabase/data-error';
 
 type LoginStage = 'email' | 'code';
 type Submission = 'idle' | 'request' | 'verify' | 'resend' | 'google';
@@ -67,6 +67,10 @@ export function LoginPage() {
     if (intent?.type === 'navigate') consumePendingAuthIntent(sessionStorage);
     void navigate(intent?.returnTo ?? '/', { replace: true });
   }, [navigate, state.status]);
+
+  useEffect(() => {
+    if (stage === 'code') codeInput.current?.focus();
+  }, [stage]);
 
   const requestCode = async () => {
     if (submitting || unavailable) return;
@@ -165,41 +169,31 @@ export function LoginPage() {
 
   return (
     <main className="flex min-h-[calc(100dvh-62px)] items-center justify-center bg-app px-4 pt-8 pb-28 text-text-primary sm:min-h-[calc(100dvh-52px)] sm:pb-12 lg:py-10">
-      <section className="w-full max-w-md rounded-2xl border border-white/10 bg-surface p-6 shadow-2xl sm:p-8">
-        <p className="font-heading text-sm font-bold uppercase tracking-[0.2em] text-brand-bright">
-          Zera GameZ
-        </p>
-        <h1 className="mt-3 font-heading text-3xl font-bold">Entre para continuar</h1>
-        <p className="mt-2 text-text-muted">
-          {stage === 'email'
-            ? 'Receba um código de acesso no seu e-mail.'
-            : `Digite o código enviado para ${email}.`}
-        </p>
-
-        {unavailable ? (
-          <p
-            className="mt-5 rounded-lg border border-brand/50 bg-filter-active px-3 py-2 text-sm"
-            role="alert"
-          >
-            {state.message}
-          </p>
-        ) : message?.type === 'error' ? (
-          <p
-            className="mt-5 rounded-lg border border-brand/50 bg-filter-active px-3 py-2 text-sm"
-            id={message.field === undefined ? undefined : `login-${message.field}-error`}
-            role="alert"
-          >
-            {message.text}
-          </p>
-        ) : null}
-        {liveMessage === null ? null : (
-          <p aria-live="polite" className="mt-5 text-sm text-text-muted" role="status">
-            {liveMessage}
-          </p>
-        )}
+      <section
+        aria-labelledby="login-title"
+        className="w-full max-w-md rounded-2xl border border-white/10 bg-surface p-6 sm:p-8"
+      >
+        <p className="font-heading text-sm font-medium text-text-muted">Zera GameZ</p>
+        <h1
+          id="login-title"
+          className="mt-3 font-heading text-2xl leading-tight font-semibold sm:text-3xl"
+        >
+          {stage === 'email' ? 'Entrar no Zera GameZ' : 'Verificar acesso'}
+        </h1>
+        <div className="mt-2 min-h-12 text-sm leading-6 text-text-muted">
+          {stage === 'email' ? (
+            <p>Receba um código de acesso no seu e-mail</p>
+          ) : (
+            <>
+              <p>Digite o código enviado para</p>
+              <p className="break-all font-medium text-content-primary">{email}</p>
+            </>
+          )}
+        </div>
 
         {stage === 'email' ? (
           <form
+            aria-busy={submitting}
             className="mt-6 space-y-4"
             noValidate
             onSubmit={(event) => {
@@ -208,7 +202,7 @@ export function LoginPage() {
             }}
           >
             <div>
-              <label className="mb-2 block text-sm font-semibold" htmlFor="login-email">
+              <label className="mb-2 block text-sm font-medium" htmlFor="login-email">
                 E-mail
               </label>
               <input
@@ -219,7 +213,7 @@ export function LoginPage() {
                 }
                 aria-invalid={message?.field === 'email' && message.type === 'error'}
                 autoComplete="email"
-                className="h-12 w-full rounded-xl border border-white/20 bg-app px-3 outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/30"
+                className="h-12 w-full min-w-0 rounded-lg border border-white/15 bg-app px-3 outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/30"
                 disabled={unavailable}
                 id="login-email"
                 onChange={(event) => {
@@ -231,7 +225,7 @@ export function LoginPage() {
               />
             </div>
             <button
-              className="h-12 w-full rounded-xl bg-brand font-semibold transition-colors hover:bg-brand-bright disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-12 w-full rounded-lg bg-brand text-sm font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand hover:bg-brand-bright disabled:cursor-not-allowed disabled:opacity-60"
               disabled={submitting || unavailable}
               type="submit"
             >
@@ -240,6 +234,7 @@ export function LoginPage() {
           </form>
         ) : (
           <form
+            aria-busy={submitting}
             className="mt-6 space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
@@ -247,7 +242,7 @@ export function LoginPage() {
             }}
           >
             <div>
-              <label className="mb-2 block text-sm font-semibold" htmlFor="login-code">
+              <label className="mb-2 block text-sm font-medium" htmlFor="login-code">
                 Código de verificação
               </label>
               <input
@@ -258,7 +253,7 @@ export function LoginPage() {
                 }
                 aria-invalid={message?.field === 'code' && message.type === 'error'}
                 autoComplete="one-time-code"
-                className="h-12 w-full rounded-xl border border-white/20 bg-app px-3 text-center font-heading text-xl tracking-[0.45em] outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/30"
+                className="h-12 w-full min-w-0 rounded-lg border border-white/15 bg-app px-3 text-center font-heading text-xl tracking-[0.16em] tabular-nums outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/30"
                 disabled={unavailable}
                 id="login-code"
                 inputMode="numeric"
@@ -271,42 +266,98 @@ export function LoginPage() {
               />
             </div>
             <button
-              className="h-12 w-full rounded-xl bg-brand font-semibold transition-colors hover:bg-brand-bright disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-12 w-full rounded-lg bg-brand text-sm font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand hover:bg-brand-bright disabled:cursor-not-allowed disabled:opacity-60"
               disabled={submitting || unavailable}
               type="submit"
             >
               {submission === 'verify' ? 'Confirmando código…' : 'Confirmar código'}
             </button>
-            <button
-              className="w-full text-sm font-semibold text-text-muted underline decoration-white/30 underline-offset-4 hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={submitting || unavailable}
-              onClick={() => void resendCode()}
-              type="button"
-            >
-              {submission === 'resend' ? 'Reenviando código…' : 'Reenviar código'}
-            </button>
-            <button
-              className="w-full text-sm font-semibold text-text-muted underline decoration-white/30 underline-offset-4 hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={submitting || unavailable}
-              onClick={changeEmail}
-              type="button"
-            >
-              Alterar e-mail
-            </button>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <button
+                className="min-h-11 w-full rounded-lg text-sm font-medium text-text-muted transition-colors duration-150 hover:bg-white/5 hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={submitting || unavailable}
+                onClick={() => void resendCode()}
+                type="button"
+              >
+                {submission === 'resend' ? 'Reenviando código…' : 'Reenviar código'}
+              </button>
+              <button
+                className="min-h-11 w-full rounded-lg text-sm font-medium text-text-muted transition-colors duration-150 hover:bg-white/5 hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={submitting || unavailable}
+                onClick={changeEmail}
+                type="button"
+              >
+                Alterar e-mail
+              </button>
+            </div>
           </form>
         )}
 
-        <div className="my-6 flex items-center gap-3 text-xs text-text-muted" aria-hidden="true">
+        <div className="mt-2 min-h-5 break-words">
+          {unavailable ? (
+            <p
+              className="rounded-lg border border-red-400/20 bg-red-500/5 px-3 py-2 text-sm text-red-200"
+              role="alert"
+            >
+              {state.message}
+            </p>
+          ) : message?.type === 'error' ? (
+            <p
+              className="rounded-lg border border-red-400/20 bg-red-500/5 px-3 py-2 text-sm text-red-200"
+              id={message.field === undefined ? undefined : `login-${message.field}-error`}
+              role="alert"
+            >
+              {message.text}
+            </p>
+          ) : null}
+          {liveMessage === null ? null : (
+            <p
+              aria-live="polite"
+              className={submitting ? 'sr-only' : 'text-sm leading-6 text-text-muted'}
+              role="status"
+            >
+              {liveMessage}
+            </p>
+          )}
+        </div>
+
+        <div
+          className="mt-2 mb-6 flex items-center gap-3 text-xs text-text-muted"
+          aria-hidden="true"
+        >
           <span className="h-px flex-1 bg-white/15" />
           ou
           <span className="h-px flex-1 bg-white/15" />
         </div>
         <button
-          className="h-12 w-full rounded-xl border border-white/25 bg-app font-semibold transition-colors hover:bg-bg-secondary disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-white/15 bg-app text-sm font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand hover:bg-bg-secondary disabled:cursor-not-allowed disabled:opacity-60"
           disabled={submitting || unavailable}
           onClick={() => void startGoogleLogin()}
           type="button"
         >
+          <svg
+            aria-hidden="true"
+            className="size-[18px] shrink-0"
+            focusable="false"
+            viewBox="0 0 48 48"
+          >
+            <path
+              fill="#FBBC05"
+              d="M43.6 20.5H42V20H24v8h11.303C33.654 32.657 29.223 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.4-3.5Z"
+            />
+            <path
+              fill="#EA4335"
+              d="m6.306 14.691 6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4c-7.682 0-14.344 4.337-17.694 10.691Z"
+            />
+            <path
+              fill="#34A853"
+              d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44Z"
+            />
+            <path
+              fill="#4285F4"
+              d="M43.6 20.5H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.4-3.5Z"
+            />
+          </svg>
           {submission === 'google' ? 'Conectando ao Google…' : 'Continuar com Google'}
         </button>
       </section>

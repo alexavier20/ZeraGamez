@@ -28,11 +28,11 @@ export function HomeCarouselSkeleton({ variant }: HomeCarouselSkeletonProps) {
               </div>
               <div className="mt-2 flex h-6 items-center gap-2">
                 <div className="h-6 w-7 rounded-sm bg-surface" />
-                <div className="h-2.5 w-24 rounded bg-surface" />
+                <div className="h-3 w-24 rounded bg-surface" />
               </div>
             </>
           ) : (
-            <div className="mt-2.5">
+            <div className="mt-3">
               <div className="flex h-10 flex-col gap-2 py-1">
                 <div className="h-3 w-4/5 rounded bg-surface" />
                 <div className="h-3 w-1/2 rounded bg-surface" />

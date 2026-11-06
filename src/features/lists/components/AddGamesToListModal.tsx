@@ -233,7 +233,7 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
             <li key={game.id}>
               <button
                 aria-pressed={isSelected}
-                className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors enabled:hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors enabled:hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={submitting || isSelected || !hasReleaseDate}
                 onClick={() => {
                   selectGame(game);
@@ -241,8 +241,8 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
                 type="button"
               >
                 {game.coverUrl === null ? (
-                  <span className="flex h-14 w-10 shrink-0 items-center justify-center rounded-md bg-surface-raised text-text-muted">
-                    <Gamepad2 aria-hidden="true" size={18} />
+                  <span className="flex h-14 w-10 shrink-0 items-center justify-center rounded-md bg-bg-secondary text-text-muted">
+                    <Gamepad2 aria-hidden="true" size={18} strokeWidth={1.5} />
                   </span>
                 ) : (
                   <img
@@ -263,11 +263,11 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
                 <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-brand-bright">
                   {isSelected ? (
                     <>
-                      <Check aria-hidden="true" size={15} /> Adicionado
+                      <Check aria-hidden="true" size={18} strokeWidth={1.5} /> Adicionado
                     </>
                   ) : hasReleaseDate ? (
                     <>
-                      <Plus aria-hidden="true" size={15} /> Adicionar
+                      <Plus aria-hidden="true" size={18} strokeWidth={1.5} /> Adicionar
                     </>
                   ) : (
                     'Sem data'
@@ -295,7 +295,7 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
         aria-describedby={descriptionId}
         aria-labelledby={titleId}
         aria-modal="true"
-        className="relative z-10 my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-[1052px] flex-col overflow-hidden rounded-2xl border border-border-brand bg-surface shadow-[0_14px_36px_#00000077] sm:max-h-[calc(100dvh-4rem)]"
+        className="relative z-10 my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-[1052px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface shadow-[0_14px_36px_#00000077] sm:max-h-[calc(100dvh-4rem)]"
         ref={dialogRef}
         role="dialog"
         tabIndex={-1}
@@ -311,12 +311,12 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
           </div>
           <button
             aria-label="Fechar modal"
-            className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-bg-secondary text-text-muted transition-colors enabled:hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-bg-secondary text-text-muted transition-colors enabled:hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             disabled={submitting}
             onClick={close}
             type="button"
           >
-            <X aria-hidden="true" size={18} />
+            <X aria-hidden="true" size={18} strokeWidth={1.5} />
           </button>
         </div>
 
@@ -325,8 +325,13 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
             <label className="sr-only" htmlFor="game-search-input">
               Buscar jogos por nome
             </label>
-            <div className="flex min-h-12 items-center gap-3 rounded-xl border border-border-brand bg-bg-secondary px-4 focus-within:border-brand/70">
-              <Search aria-hidden="true" className="shrink-0 text-text-muted" size={18} />
+            <div className="flex min-h-12 items-center gap-3 rounded-xl border border-white/10 bg-bg-secondary px-4 focus-within:border-brand/70">
+              <Search
+                aria-hidden="true"
+                className="shrink-0 text-text-muted"
+                size={18}
+                strokeWidth={1.5}
+              />
               <input
                 autoComplete="off"
                 className="min-w-0 flex-1 bg-transparent text-sm text-content-primary outline-none placeholder:text-text-muted"
@@ -340,14 +345,14 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
                       : { status: 'idle' },
                   );
                 }}
-                placeholder="Buscar jogo pelo nome…"
+                placeholder="Buscar jogos"
                 ref={searchInputRef}
                 type="search"
                 value={query}
               />
             </div>
             {searchState.status === 'idle' && query.trim().length < MIN_SEARCH_LENGTH ? null : (
-              <div className="overflow-hidden rounded-xl border border-border-brand bg-bg-secondary">
+              <div className="overflow-hidden rounded-xl border border-white/10 bg-bg-secondary">
                 {searchContent}
               </div>
             )}
@@ -362,7 +367,7 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
                 >
                   Jogos adicionados
                 </h3>
-                <span className="rounded-full bg-brand/15 px-2.5 py-1 text-xs font-bold text-brand-bright">
+                <span className="rounded-full bg-brand/15 px-2.5 py-1 text-xs font-semibold text-brand-bright">
                   {selectedGames.length} {selectedGames.length === 1 ? 'jogo' : 'jogos'}
                 </span>
               </div>
@@ -379,7 +384,7 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
               <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
                 {selectedGames.map((game) => (
                   <li
-                    className={`flex min-w-0 items-center gap-2 rounded-xl border border-border-brand bg-bg-secondary p-2.5 ${draggedGameId === game.id ? 'opacity-50' : ''}`}
+                    className={`flex min-w-0 items-center gap-2 rounded-xl border border-white/10 bg-bg-secondary p-2.5 ${draggedGameId === game.id ? 'opacity-50' : ''}`}
                     key={game.id}
                     onDragOver={(event) => {
                       event.preventDefault();
@@ -405,11 +410,11 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
                       }}
                       type="button"
                     >
-                      <GripVertical aria-hidden="true" size={16} />
+                      <GripVertical aria-hidden="true" size={18} strokeWidth={1.5} />
                     </button>
                     {game.coverUrl === null ? (
-                      <span className="flex h-14 w-10 shrink-0 items-center justify-center rounded-md bg-surface-raised text-text-muted">
-                        <Gamepad2 aria-hidden="true" size={18} />
+                      <span className="flex h-14 w-10 shrink-0 items-center justify-center rounded-md bg-bg-secondary text-text-muted">
+                        <Gamepad2 aria-hidden="true" size={18} strokeWidth={1.5} />
                       </span>
                     ) : (
                       <img
@@ -432,14 +437,14 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
                     </span>
                     <button
                       aria-label={`Remover ${game.name}`}
-                      className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand-bright transition-colors enabled:hover:bg-brand/20 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-brand"
+                      className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand-bright transition-colors enabled:hover:bg-brand/20 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-brand"
                       disabled={submitting}
                       onClick={() => {
                         removeGame(game.id);
                       }}
                       type="button"
                     >
-                      <X aria-hidden="true" size={16} />
+                      <X aria-hidden="true" size={18} strokeWidth={1.5} />
                     </button>
                   </li>
                 ))}
@@ -456,7 +461,7 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
 
         <div className="flex justify-end gap-2.5 border-t border-white/5 px-5 py-4 sm:px-7">
           <button
-            className="min-h-11 rounded-xl border border-border-brand bg-bg-secondary px-4 text-sm font-semibold text-content-primary transition-colors enabled:hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            className="min-h-11 rounded-xl border border-white/10 bg-bg-secondary px-4 text-sm font-semibold text-content-primary transition-colors enabled:hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             disabled={submitting}
             onClick={close}
             type="button"
@@ -471,7 +476,12 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
           >
             {submitting ? (
               <>
-                <LoaderCircle aria-hidden="true" className="animate-spin" size={16} />
+                <LoaderCircle
+                  aria-hidden="true"
+                  className="animate-spin"
+                  size={18}
+                  strokeWidth={1.5}
+                />
                 Salvando…
               </>
             ) : (

@@ -60,11 +60,11 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
   }, [settingsOpen]);
 
   return (
-    <article className="relative rounded-2xl bg-surface shadow-lg shadow-black/10 transition-shadow duration-200 hover:ring-1 hover:ring-brand/50">
+    <article className="relative rounded-2xl border border-white/10 bg-surface transition-colors duration-150 hover:border-white/25">
       <button
         aria-haspopup="dialog"
         aria-label={`Abrir detalhes da lista ${list.name}`}
-        className="block w-full overflow-hidden rounded-2xl text-left focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-brand"
+        className="flex h-full w-full flex-col overflow-hidden rounded-2xl text-left focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-brand"
         onClick={() => {
           onSelect(list);
         }}
@@ -72,7 +72,7 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
       >
         {covers.length > 0 ? (
           <div
-            className={`grid aspect-[3/1] overflow-hidden bg-surface-raised ${coverColumnClass}`}
+            className={`grid aspect-[3/1] w-full shrink-0 overflow-hidden bg-bg-secondary ${coverColumnClass}`}
           >
             {covers.map((cover, index) => (
               <img
@@ -84,30 +84,33 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
             ))}
           </div>
         ) : (
-          <div
-            aria-hidden="true"
-            className="aspect-[3/1] bg-gradient-to-br from-brand/25 to-surface-raised"
-          />
+          <div aria-hidden="true" className="aspect-[3/1] w-full shrink-0 bg-bg-secondary" />
         )}
-        <div className="space-y-2 p-4">
-          <div className="flex items-start justify-between gap-4">
-            <h2
-              className={`flex min-w-0 items-center gap-2 font-heading text-sm font-bold ${
-                list.systemKey === null ? 'text-content-primary' : 'text-brand-bright'
-              }`}
-            >
+        <div className="w-full flex-1 space-y-2 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="flex min-h-10 min-w-0 flex-1 items-start gap-2 font-heading text-sm leading-5 font-semibold text-content-primary">
               {list.systemKey === null ? null : (
-                <Pin aria-hidden="true" className="shrink-0 text-brand-bright" size={16} />
+                <Pin
+                  aria-hidden="true"
+                  className="mt-0.5 shrink-0 text-text-muted"
+                  size={18}
+                  strokeWidth={1.5}
+                />
               )}
-              <span className="truncate">{list.name}</span>
+              <span className="line-clamp-2 break-words" title={list.name}>
+                {list.name}
+              </span>
             </h2>
-            <span className="shrink-0 rounded-full bg-brand/15 px-2 py-1 text-[10px] font-semibold text-brand-light">
+            <span className="shrink-0 pt-0.5 text-[11px] leading-5 font-medium tabular-nums text-text-muted">
               {gameCountLabel(list.gameCount)}
             </span>
           </div>
-          {list.description === null || list.description.length === 0 ? null : (
-            <p className="text-xs leading-5 text-text-muted">{list.description}</p>
-          )}
+          <p
+            className="line-clamp-2 min-h-10 break-words text-xs leading-5 text-text-muted"
+            title={list.description ?? undefined}
+          >
+            {list.description}
+          </p>
         </div>
       </button>
       {list.systemKey === null ? (
@@ -116,24 +119,24 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
             aria-controls={settingsMenuId}
             aria-expanded={settingsOpen}
             aria-label={`Configurações da lista ${list.name}`}
-            className="flex size-9 items-center justify-center rounded-xl border border-white/15 bg-black/65 text-white shadow-md backdrop-blur-sm transition hover:border-brand/60 hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            className="flex size-11 items-center justify-center rounded-lg border border-white/15 bg-black/75 text-white transition-colors duration-150 hover:border-white/30 hover:bg-bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             onClick={() => {
               setSettingsOpen((open) => !open);
             }}
             ref={settingsButtonRef}
             type="button"
           >
-            <Settings aria-hidden="true" size={17} />
+            <Settings aria-hidden="true" size={18} strokeWidth={1.5} />
           </button>
           {settingsOpen ? (
             <div
-              className="absolute top-12 right-0 min-w-40 overflow-hidden rounded-xl border border-border-brand bg-surface p-1.5 shadow-xl"
+              className="absolute top-12 right-0 min-w-40 overflow-hidden rounded-xl border border-white/10 bg-surface p-2 shadow-lg shadow-black/20"
               id={settingsMenuId}
               aria-label={`Opções da lista ${list.name}`}
               role="group"
             >
               <button
-                className="flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-content-primary transition hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-brand"
+                className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-content-primary transition-colors duration-150 hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-brand"
                 onClick={() => {
                   setSettingsOpen(false);
                   onSelect(list);
@@ -143,7 +146,7 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
                 Editar
               </button>
               <button
-                className="flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-red-200 transition hover:bg-red-500/15 focus-visible:outline-2 focus-visible:outline-red-300"
+                className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-red-200 transition-colors duration-150 hover:bg-red-500/15 focus-visible:outline-2 focus-visible:outline-red-300"
                 onClick={() => {
                   setSettingsOpen(false);
                   onDelete(list);
@@ -254,12 +257,16 @@ export function MyListsPage() {
   return (
     <main className="site-container min-h-[calc(100dvh-3.5rem)] pb-28 pt-5 sm:pb-12 sm:pt-6 lg:pt-7">
       <div className="flex items-start justify-between gap-4">
-        <PageHeading title="Minhas listas" subtitle="Organize os jogos do seu jeito" />
+        <PageHeading
+          title="Minhas listas"
+          subtitle="Organize os jogos do seu jeito"
+          titleClassName="font-heading text-2xl leading-tight font-semibold text-content-primary sm:text-[28px] lg:text-[32px]"
+        />
         <Link
-          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-bold text-white transition hover:bg-brand-light focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-medium text-white transition-colors duration-150 hover:bg-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           to={headerRoutes.createList}
         >
-          <Plus aria-hidden="true" size={18} />
+          <Plus aria-hidden="true" size={18} strokeWidth={1.5} />
           Criar lista
         </Link>
       </div>
@@ -273,7 +280,7 @@ export function MyListsPage() {
               {listsState.message}
             </p>
             <button
-              className="mt-4 rounded-xl border border-red-200/30 px-4 py-2 text-sm font-bold text-white"
+              className="mt-4 rounded-xl border border-red-200/30 px-4 py-2 text-sm font-medium text-white"
               onClick={() => void loadLists()}
               type="button"
             >
@@ -286,7 +293,7 @@ export function MyListsPage() {
               <div className="rounded-2xl border border-dashed border-white/20 bg-surface p-8 text-center">
                 <p className="text-text-muted">Você ainda não criou nenhuma lista.</p>
                 <Link
-                  className="mt-5 inline-flex rounded-xl bg-brand px-4 py-2.5 text-sm font-bold text-white"
+                  className="mt-5 inline-flex rounded-xl bg-brand px-4 py-2.5 text-sm font-medium text-white"
                   to={headerRoutes.createList}
                 >
                   Criar minha primeira lista

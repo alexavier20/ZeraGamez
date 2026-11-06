@@ -1,5 +1,5 @@
 import { LoaderCircle, Trash2, X } from 'lucide-react';
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 import type { UserListSummary } from '@/features/lists/model/lists';
@@ -27,7 +27,9 @@ export function DeleteListModal({
   const dialogRef = useRef<HTMLDivElement>(null);
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const busyRef = useRef(isDeleting);
-  busyRef.current = isDeleting;
+  useLayoutEffect(() => {
+    busyRef.current = isDeleting;
+  }, [isDeleting]);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -87,24 +89,27 @@ export function DeleteListModal({
         aria-describedby={descriptionId}
         aria-labelledby={titleId}
         aria-modal="true"
-        className="relative z-10 w-full max-w-md rounded-2xl border border-border-brand bg-surface p-6 shadow-[0_14px_36px_#00000077] sm:p-7"
+        className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-surface p-6 shadow-[0_14px_36px_#00000077] sm:p-7"
         ref={dialogRef}
         role="alertdialog"
         tabIndex={-1}
       >
         <button
           aria-label="Cancelar exclusão da lista"
-          className="absolute top-3 right-3 flex size-10 items-center justify-center rounded-xl bg-bg-secondary text-text-muted transition-colors hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-brand"
+          className="absolute top-3 right-3 flex size-11 items-center justify-center rounded-xl bg-bg-secondary text-text-muted transition-colors hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-brand"
           disabled={isDeleting}
           onClick={onClose}
           type="button"
         >
-          <X aria-hidden="true" size={18} />
+          <X aria-hidden="true" size={18} strokeWidth={1.5} />
         </button>
         <div className="flex size-12 items-center justify-center rounded-xl bg-red-500/15 text-red-200">
-          <Trash2 aria-hidden="true" size={22} />
+          <Trash2 aria-hidden="true" size={18} strokeWidth={1.5} />
         </div>
-        <h2 className="mt-4 pr-10 font-heading text-xl font-bold text-content-primary" id={titleId}>
+        <h2
+          className="mt-4 pr-10 font-heading text-xl font-semibold text-content-primary"
+          id={titleId}
+        >
           Excluir lista?
         </h2>
         <p className="mt-2 text-sm leading-6 text-text-muted" id={descriptionId}>
@@ -119,7 +124,7 @@ export function DeleteListModal({
         )}
         <div className="mt-6 flex justify-end gap-2">
           <button
-            className="min-h-11 rounded-xl border border-border-brand px-4 text-sm font-semibold text-content-primary disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-brand"
+            className="min-h-11 rounded-xl border border-white/10 px-4 text-sm font-semibold text-content-primary disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-brand"
             disabled={isDeleting}
             onClick={onClose}
             ref={cancelButtonRef}
@@ -128,15 +133,20 @@ export function DeleteListModal({
             Cancelar
           </button>
           <button
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-bold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-300"
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white transition-colors duration-150 hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-300"
             disabled={isDeleting}
             onClick={onConfirm}
             type="button"
           >
             {isDeleting ? (
-              <LoaderCircle aria-hidden="true" className="animate-spin" size={16} />
+              <LoaderCircle
+                aria-hidden="true"
+                className="animate-spin"
+                size={18}
+                strokeWidth={1.5}
+              />
             ) : (
-              <Trash2 aria-hidden="true" size={16} />
+              <Trash2 aria-hidden="true" size={18} strokeWidth={1.5} />
             )}
             {isDeleting ? 'Excluindo…' : 'Excluir lista'}
           </button>

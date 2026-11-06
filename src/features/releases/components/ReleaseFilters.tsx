@@ -9,9 +9,9 @@ import {
 } from '@/features/releases/model/release-filter-options';
 
 const desktopChipClassName =
-  'flex h-[38px] items-center gap-[7px] rounded-[11px] border px-[13px] text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand';
+  'flex h-10 items-center gap-2 rounded-lg border px-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand';
 const compactChipClassName =
-  'relative flex h-9 min-w-0 items-center rounded-[10px] border px-[11px] text-[11px] font-semibold focus-within:ring-2 focus-within:ring-brand';
+  'relative flex min-h-11 min-w-0 items-center rounded-lg border px-3 text-xs font-medium focus-within:ring-2 focus-within:ring-brand';
 
 interface FilterSelectProps<TKey extends string> {
   readonly ariaLabel: string;
@@ -32,7 +32,7 @@ function FilterSelect<TKey extends string>({
     <span className={className}>
       <select
         aria-label={ariaLabel}
-        className="min-w-0 max-w-full appearance-none truncate bg-transparent pr-5 font-body [color-scheme:dark] outline-none"
+        className="min-w-0 w-full max-w-full self-stretch appearance-none truncate bg-transparent pr-5 font-body [color-scheme:dark] outline-none"
         onChange={(event) => {
           onChange(event.target.value as TKey);
         }}
@@ -48,7 +48,12 @@ function FilterSelect<TKey extends string>({
           </option>
         ))}
       </select>
-      <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-2" size={13} />
+      <ChevronDown
+        aria-hidden="true"
+        className="pointer-events-none absolute right-2"
+        size={16}
+        strokeWidth={1.5}
+      />
     </span>
   );
 }
@@ -71,33 +76,33 @@ export function ReleaseFilters({
   const hasActiveFilters =
     additionalFilterActive || value.platform !== 'all' || value.genre !== 'all';
   const clearClassName =
-    'shrink-0 font-semibold text-brand-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-40';
+    'shrink-0 font-medium text-text-muted transition-colors enabled:hover:text-content-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-40';
 
   return (
-    <section aria-label="Filtros de lançamentos" className="mt-[18px] sm:mt-[22px] lg:mt-7">
+    <section aria-label="Filtros de lançamentos" className="mt-6">
       <div className="flex items-center gap-2 sm:hidden" data-testid="release-filters-mobile">
         <FilterSelect
           ariaLabel="Plataforma"
-          className={`${compactChipClassName} max-w-[148px] ${value.platform === 'all' ? 'border-border-brand bg-surface text-text-muted' : 'border-brand bg-filter-active text-filter-active-text'}`}
+          className={`${compactChipClassName} flex-1 ${value.platform === 'all' ? 'border-white/10 bg-surface text-text-muted' : 'border-brand bg-filter-active text-filter-active-text'}`}
           onChange={onPlatformChange}
           options={releasePlatformOptions}
           value={value.platform}
         />
         <FilterSelect
           ariaLabel="Gênero"
-          className={`${compactChipClassName} max-w-[132px] ${value.genre === 'all' ? 'border-border-brand bg-surface text-text-muted' : 'border-brand bg-filter-active text-filter-active-text'}`}
+          className={`${compactChipClassName} flex-1 ${value.genre === 'all' ? 'border-white/10 bg-surface text-text-muted' : 'border-brand bg-filter-active text-filter-active-text'}`}
           onChange={onGenreChange}
           options={releaseGenreOptions}
           value={value.genre}
         />
         <button
           aria-label="Limpar filtros"
-          className={`${clearClassName} grid size-9 place-items-center rounded-[10px]`}
+          className={`${clearClassName} grid size-11 place-items-center rounded-lg`}
           disabled={!hasActiveFilters}
           onClick={onClear}
           type="button"
         >
-          <X aria-hidden="true" size={15} />
+          <X aria-hidden="true" size={18} strokeWidth={1.5} />
         </button>
       </div>
 
@@ -107,14 +112,14 @@ export function ReleaseFilters({
       >
         <FilterSelect
           ariaLabel="Plataforma"
-          className={`${compactChipClassName} max-w-[190px] ${value.platform === 'all' ? 'border-border-brand bg-surface text-text-muted' : 'border-brand bg-filter-active text-filter-active-text'}`}
+          className={`${compactChipClassName} max-w-[190px] ${value.platform === 'all' ? 'border-white/10 bg-surface text-text-muted' : 'border-brand bg-filter-active text-filter-active-text'}`}
           onChange={onPlatformChange}
           options={releasePlatformOptions}
           value={value.platform}
         />
         <FilterSelect
           ariaLabel="Gênero"
-          className={`${compactChipClassName} max-w-[170px] ${value.genre === 'all' ? 'border-border-brand bg-surface text-text-muted' : 'border-brand bg-filter-active text-filter-active-text'}`}
+          className={`${compactChipClassName} max-w-[170px] ${value.genre === 'all' ? 'border-white/10 bg-surface text-text-muted' : 'border-brand bg-filter-active text-filter-active-text'}`}
           onChange={onGenreChange}
           options={releaseGenreOptions}
           value={value.genre}
@@ -130,13 +135,16 @@ export function ReleaseFilters({
         </button>
       </div>
 
-      <div className="hidden items-center gap-[10px] lg:flex" data-testid="release-filters-desktop">
+      <div
+        className="hidden flex-wrap items-center gap-2 lg:flex"
+        data-testid="release-filters-desktop"
+      >
         {releasePlatformOptions.map((option) => {
           const selected = option.key === value.platform;
           return (
             <button
               aria-pressed={selected}
-              className={`${desktopChipClassName} ${selected ? 'border-brand bg-filter-active font-semibold text-filter-active-text' : 'border-border-brand bg-bg-secondary font-medium text-text-muted'}`}
+              className={`${desktopChipClassName} ${selected ? 'border-brand bg-filter-active font-semibold text-filter-active-text' : 'border-white/10 bg-bg-secondary font-medium text-text-muted'}`}
               key={option.key}
               onClick={() => {
                 onPlatformChange(option.key);
@@ -149,7 +157,7 @@ export function ReleaseFilters({
         })}
         <FilterSelect
           ariaLabel="Gênero"
-          className={`${desktopChipClassName} relative focus-within:ring-2 focus-within:ring-brand ${value.genre === 'all' ? 'border-border-brand bg-bg-secondary font-medium text-text-muted' : 'border-brand bg-filter-active font-semibold text-filter-active-text'}`}
+          className={`${desktopChipClassName} relative focus-within:ring-2 focus-within:ring-brand ${value.genre === 'all' ? 'border-white/10 bg-bg-secondary font-medium text-text-muted' : 'border-brand bg-filter-active font-semibold text-filter-active-text'}`}
           onChange={onGenreChange}
           options={releaseGenreOptions}
           value={value.genre}

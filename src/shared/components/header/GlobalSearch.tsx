@@ -106,7 +106,7 @@ export function GlobalSearch({ className = '', onSearch }: Readonly<GlobalSearch
   return (
     <div className={`relative min-w-0 ${className}`} ref={containerRef}>
       <form
-        className="flex h-8 w-full items-center gap-1.5 rounded-lg border-0 bg-brand px-2.5"
+        className="flex h-8 w-full items-center gap-2 rounded-lg border border-white/15 bg-black/10 px-3"
         onSubmit={handleSubmit}
         role="search"
       >
@@ -118,7 +118,7 @@ export function GlobalSearch({ className = '', onSearch }: Readonly<GlobalSearch
           className="grid size-7 shrink-0 place-items-center rounded-md text-gray-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-200"
           type="submit"
         >
-          <Search aria-hidden="true" size={16} />
+          <Search aria-hidden="true" size={18} strokeWidth={1.5} />
         </button>
         <input
           aria-autocomplete="list"

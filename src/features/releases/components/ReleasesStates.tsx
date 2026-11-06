@@ -23,11 +23,11 @@ function StatePanel({
   return (
     <section
       aria-live={role === 'status' ? 'polite' : undefined}
-      className="flex flex-col items-center rounded-2xl border border-border-brand bg-surface px-6 py-10 text-center sm:px-10"
+      className="flex flex-col items-center rounded-2xl border border-white/10 bg-surface px-6 py-10 text-center sm:px-10"
       role={role}
     >
-      <div className="grid size-12 place-items-center rounded-xl bg-bg-secondary text-brand-bright">
-        <Icon aria-hidden="true" size={24} />
+      <div className="grid size-12 place-items-center rounded-xl bg-bg-secondary text-text-muted">
+        <Icon aria-hidden="true" size={18} strokeWidth={1.5} />
       </div>
       <h2 className="mt-4 font-heading text-lg font-semibold text-content-primary">{title}</h2>
       {body ? <p className="mt-2 max-w-md text-sm text-text-muted">{body}</p> : null}
@@ -38,7 +38,7 @@ function StatePanel({
 
 export function ReleasesLoading(): React.ReactElement {
   return (
-    <div className="mt-7" role="status" aria-live="polite" aria-label="Carregando jogos">
+    <div className="mt-8" role="status" aria-live="polite" aria-label="Carregando jogos">
       <div className="grid grid-cols-1 gap-x-3 gap-y-6 sm:grid-cols-2 sm:gap-x-4 sm:gap-y-8 xl:grid-cols-4">
         {skeletonIndexes.map((index) => (
           <div
@@ -49,7 +49,7 @@ export function ReleasesLoading(): React.ReactElement {
           >
             <div className="aspect-[16/9] w-full rounded-xl bg-surface" />
             <div className="flex flex-col gap-3 pt-3">
-              <div className="h-5 w-3/4 rounded bg-surface" />
+              <div className="h-10 w-3/4 rounded bg-surface" />
               <div className="flex gap-2">
                 <div className="h-5 w-10 rounded bg-surface" />
                 <div className="h-5 w-14 rounded bg-surface" />
@@ -65,7 +65,7 @@ export function ReleasesLoading(): React.ReactElement {
 export function ReleasesEmpty(): React.ReactElement {
   return (
     <StatePanel
-      body="Tente outro termo ou limpe os filtros ativos."
+      body="Escolha outra plataforma ou gênero, ou limpe os filtros ativos"
       icon={SearchX}
       role="status"
       title="Nenhum jogo encontrado"

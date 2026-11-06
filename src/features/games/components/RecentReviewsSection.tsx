@@ -28,12 +28,10 @@ export function RecentReviewsSection() {
   }, [attempt]);
   return (
     <section aria-labelledby="recent-reviews-title" className="pt-10 sm:pt-14">
-      <p className="font-heading text-xs font-bold uppercase tracking-[0.2em] text-brand-bright">
-        Já disponíveis
-      </p>
+      <p className="text-xs font-medium text-text-muted">Já disponíveis</p>
       <h2
         id="recent-reviews-title"
-        className="mt-1 mb-6 font-heading text-xl font-bold text-text-primary sm:text-2xl"
+        className="mt-1 mb-6 font-heading text-xl font-semibold text-text-primary sm:text-2xl"
       >
         Últimos lançamentos avaliados
       </h2>
@@ -64,7 +62,7 @@ export function RecentReviewsSection() {
           {games.map((game) => {
             const score = Math.round(game.criticScore ?? 0);
             const color =
-              score >= 75 ? 'bg-emerald-400' : score >= 50 ? 'bg-amber-400' : 'bg-red-400';
+              score >= 75 ? 'bg-[#4cc38a]' : score >= 50 ? 'bg-[#e2b75d]' : 'bg-[#e8797e]';
             const label =
               score >= 75
                 ? 'Críticas favoráveis'
@@ -82,25 +80,25 @@ export function RecentReviewsSection() {
                       src={game.coverUrl}
                       alt=""
                       loading="lazy"
-                      className="aspect-[2/3] w-full rounded-lg object-cover transition group-hover:opacity-85"
+                      className="aspect-[2/3] w-full rounded-lg object-cover transition-opacity duration-150 group-hover:opacity-90"
                     />
                   ) : (
                     <div className="aspect-[2/3] rounded-lg bg-surface" />
                   )}
                   <h3
                     title={game.name}
-                    className="mt-3 truncate text-sm font-bold text-text-primary underline decoration-white/25 underline-offset-4"
+                    className="mt-3 truncate text-sm font-medium text-text-primary transition-colors duration-150 group-hover:text-white"
                   >
                     {game.name}
                   </h3>
                   <div className="mt-2 flex items-center gap-2">
                     <span
                       aria-label={'Nota da crítica: ' + String(score) + ' de 100'}
-                      className={'rounded-sm px-1.5 py-1 text-xs font-bold text-black ' + color}
+                      className={'rounded-sm px-1.5 py-1 text-xs font-semibold tabular-nums text-black ' + color}
                     >
                       {score}
                     </span>
-                    <span className="text-[10px] text-text-muted">{label}</span>
+                    <span className="text-[11px] leading-4 text-text-muted">{label}</span>
                   </div>
                 </Link>
               </li>

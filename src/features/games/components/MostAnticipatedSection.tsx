@@ -43,14 +43,14 @@ function AnticipatedGameCard({ game, now }: Readonly<{ game: GameSearchResult; n
     <li>
       <Link
         aria-label={`Abrir ${game.name}. ${remainingDaysLabel}, ${String(countdown.hours)} ${hoursUnit} e ${String(countdown.minutes)} ${minutesUnit} para o lançamento.`}
-        className="group relative flex min-h-[176px] flex-col justify-between overflow-hidden rounded-lg border border-white/10 bg-surface p-4 shadow-[0_8px_22px_#00000050] transition hover:-translate-y-0.5 hover:border-brand/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+        className="group relative flex min-h-[176px] flex-col justify-between overflow-hidden rounded-lg border border-white/10 bg-surface p-4 transition-colors duration-150 hover:border-white/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
         to={`/jogos/${String(game.id)}`}
       >
         {game.coverUrl ? (
           <img
             alt=""
             aria-hidden="true"
-            className="absolute inset-0 size-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            className="absolute inset-0 size-full object-cover"
             loading="lazy"
             src={game.coverUrl}
           />
@@ -65,7 +65,7 @@ function AnticipatedGameCard({ game, now }: Readonly<{ game: GameSearchResult; n
         />
 
         <span className="relative block max-w-[90%]">
-          <span className="block line-clamp-2 font-heading text-base font-bold leading-tight text-white">
+          <span className="block line-clamp-2 font-heading text-base font-semibold leading-tight text-white">
             {game.name}
           </span>
           <span className="mt-1 block text-xs font-medium text-white/90">
@@ -77,15 +77,13 @@ function AnticipatedGameCard({ game, now }: Readonly<{ game: GameSearchResult; n
           <span aria-hidden="true" className="mx-auto grid w-full max-w-[216px] grid-cols-3 gap-1">
             {countdownUnits.map(({ label, value }) => (
               <span
-                className="grid h-11 place-content-center justify-items-center gap-1 rounded-md border border-white/10 bg-black/45 px-1 text-center shadow-inner"
+                className="grid h-11 place-content-center justify-items-center gap-1 rounded-md border border-white/10 bg-black/45 px-1 text-center"
                 key={label}
               >
                 <span className="block font-heading text-sm font-semibold leading-none tabular-nums text-white">
                   {String(value).padStart(2, '0')}
                 </span>
-                <span className="block text-[9px] leading-none uppercase tracking-wide text-white/70">
-                  {label}
-                </span>
+                <span className="block text-[11px] leading-none text-white/70">{label}</span>
               </span>
             ))}
           </span>
@@ -134,25 +132,23 @@ export function MostAnticipatedSection() {
       : [];
 
   return (
-    <section aria-labelledby="most-anticipated-title" className="pt-14 sm:pt-16">
+    <section aria-labelledby="most-anticipated-title" className="pt-10 sm:pt-14">
       <div className="mb-6 flex items-end justify-between">
         <div>
-          <p className="font-heading text-xs font-bold uppercase tracking-[0.2em] text-brand-bright">
-            No radar da comunidade
-          </p>
+          <p className="text-xs font-medium text-text-muted">No radar da comunidade</p>
           <h2
-            className="mt-1 font-heading text-xl font-bold text-text-primary sm:text-2xl"
+            className="mt-1 font-heading text-xl font-semibold text-text-primary sm:text-2xl"
             id="most-anticipated-title"
           >
-            Mais Hypados
+            Mais hypados
           </h2>
         </div>
         <Link
-          className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-lg border border-white/15 px-3 py-1.5 text-xs font-bold text-content-primary transition hover:border-brand/50 hover:bg-brand/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-lg border border-white/15 px-3 py-1.5 text-xs font-medium text-content-primary transition-colors duration-150 hover:border-brand/50 hover:bg-brand/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           to={headerRoutes.hype}
         >
           Ver mais
-          <ArrowRight aria-hidden="true" size={16} />
+          <ArrowRight aria-hidden="true" size={18} strokeWidth={1.5} />
         </Link>
       </div>
 
@@ -193,7 +189,7 @@ export function MostAnticipatedSection() {
         >
           <p className="text-sm text-red-100">Não foi possível carregar os jogos mais hypados.</p>
           <button
-            className="mt-3 rounded-lg border border-red-200/30 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-500/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            className="mt-3 rounded-lg border border-red-200/30 px-4 py-2 text-sm font-medium text-white transition-colors duration-150 hover:bg-red-500/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             onClick={() => {
               setRetryKey((value) => value + 1);
             }}

@@ -1,4 +1,3 @@
-import { ArrowRight } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 
@@ -37,7 +36,9 @@ export function TierListsSection() {
     if (repository === null || userId === null) return;
 
     let active = true;
-    setState({ status: 'loading' });
+    queueMicrotask(() => {
+      if (active) setState({ status: 'loading' });
+    });
     void repository
       .listSummaries(userId)
       .then((lists) => {
@@ -55,7 +56,7 @@ export function TierListsSection() {
   return (
     <section aria-labelledby="tier-lists-heading" className="mt-10">
       <h2
-        className="mb-4 font-heading text-2xl font-bold text-text-primary"
+        className="mb-4 font-heading text-xl font-semibold sm:text-2xl text-text-primary"
         id="tier-lists-heading"
       >
         Minhas Tier Lists
@@ -69,7 +70,7 @@ export function TierListsSection() {
             Não foi possível carregar suas Tier Lists.
           </p>
           <button
-            className="mt-3 rounded-xl border border-red-200/30 px-4 py-2 text-sm font-bold text-white"
+            className="mt-3 rounded-xl border border-red-200/30 px-4 py-2 text-sm font-semibold text-white"
             onClick={() => {
               setRetryKey((value) => value + 1);
             }}
@@ -82,49 +83,48 @@ export function TierListsSection() {
         <div className="rounded-2xl border border-dashed border-white/20 bg-surface p-8 text-center">
           <p className="text-text-muted">Você ainda não criou nenhuma Tier List.</p>
           <Link
-            className="mt-5 inline-flex rounded-xl bg-brand px-4 py-2.5 text-sm font-bold text-white transition hover:bg-brand-bright"
+            className="mt-5 inline-flex rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-bright"
             to="/minhas-listas/nova"
           >
             Criar Tier List
           </Link>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-x-3 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
           {state.lists.map((list) => (
             <Link
-              className="group overflow-hidden rounded-2xl bg-surface shadow-lg shadow-black/10 transition hover:ring-1 hover:ring-brand/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              className="group overflow-hidden rounded-2xl border border-white/10 bg-surface transition-colors duration-150 hover:border-white/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
               key={list.id}
               to={`/minhas-listas/tier/${String(list.id)}`}
             >
               <div aria-hidden="true" className="grid aspect-[3/1] grid-cols-5 overflow-hidden">
                 {sampleTiers.map((tier) => (
                   <span
-                    className={`${tier.color} grid place-items-center font-heading text-sm font-bold text-black/75`}
+                    className={`${tier.color} grid place-items-center font-heading text-sm font-semibold text-black/75`}
                     key={tier.label}
                   >
                     {tier.label}
                   </span>
                 ))}
               </div>
-              <div className="flex items-start justify-between gap-3 p-4">
-                <div className="min-w-0">
-                  <h3 className="truncate font-heading text-sm font-bold text-content-primary">
+              <div className="space-y-2 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <h3
+                    className="line-clamp-2 min-h-10 min-w-0 flex-1 break-words font-heading text-sm leading-5 font-semibold text-content-primary"
+                    title={list.name}
+                  >
                     {list.name}
                   </h3>
-                  {list.description === null || list.description.length === 0 ? null : (
-                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-text-muted">
-                      {list.description}
-                    </p>
-                  )}
-                  <p className="mt-2 text-[10px] text-text-muted">
+                  <span className="shrink-0 pt-0.5 text-[11px] leading-5 font-medium tabular-nums text-text-muted">
                     {String(list.gameCount)} {list.gameCount === 1 ? 'jogo' : 'jogos'}
-                  </p>
+                  </span>
                 </div>
-                <ArrowRight
-                  aria-hidden="true"
-                  className="mt-1 shrink-0 text-text-muted transition group-hover:translate-x-0.5 group-hover:text-brand-bright"
-                  size={18}
-                />
+                <p
+                  className="line-clamp-2 min-h-10 break-words text-xs leading-5 text-text-muted"
+                  title={list.description ?? undefined}
+                >
+                  {list.description}
+                </p>
               </div>
             </Link>
           ))}

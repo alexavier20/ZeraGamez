@@ -28,11 +28,7 @@ describe('SteamRankingsSection', () => {
       </MemoryRouter>,
     );
     expect(await screen.findAllByText('Game 1')).toHaveLength(3);
-    for (const title of [
-      'Steam 24hr Peak Players',
-      'Steam Positive Reviews',
-      'Steam Global Top Sellers',
-    ]) {
+    for (const title of ['Pico de jogadores', 'Avaliações positivas', 'Mais vendidos']) {
       const panel = screen.getByRole('region', { name: title });
       expect(within(panel).getAllByRole('listitem')).toHaveLength(5);
       expect(within(panel).queryByText(/0,185720/)).not.toBeInTheDocument();

@@ -3,7 +3,10 @@ import { useEffect, useState } from 'react';
 
 const slides = [
   { image: '/assets/images/home-hero-gta-vi.jpg', title: 'Grand Theft Auto VI' },
-  { image: '/assets/images/home-hero-the-witcher-3-geralt-ciri.png', title: 'The Witcher 3: Wild Hunt' },
+  {
+    image: '/assets/images/home-hero-the-witcher-3-geralt-ciri.png',
+    title: 'The Witcher 3: Wild Hunt',
+  },
   { image: '/assets/images/home-hero-zelda.png', title: 'The Legend of Zelda' },
   { image: '/assets/images/home-hero-overwatch.png', title: 'Overwatch' },
 ] as const;
@@ -50,7 +53,7 @@ export function HomeHeroCarousel() {
 
   return (
     <section
-      aria-label="Boas-vindas ao Zera GameZ"
+      aria-label="Destaques do Zera GameZ"
       aria-roledescription="carrossel"
       className="relative isolate w-full overflow-hidden bg-surface"
       onFocusCapture={(event) => {
@@ -67,7 +70,7 @@ export function HomeHeroCarousel() {
         {slides.map((slide, index) => (
           <img
             alt=""
-            className={`absolute inset-0 size-full object-cover ${index <= 1 ? 'object-top' : 'object-center'} transition-opacity duration-1000 motion-reduce:transition-none ${index === activeIndex ? 'opacity-100' : 'opacity-0'}`}
+            className={`absolute inset-0 size-full object-cover ${index <= 1 ? 'object-top' : 'object-center'} transition-opacity duration-500 motion-reduce:transition-none ${index === activeIndex ? 'opacity-100' : 'opacity-0'}`}
             fetchPriority={index === 0 ? 'high' : 'auto'}
             key={slide.image}
             src={slide.image}
@@ -78,15 +81,16 @@ export function HomeHeroCarousel() {
       </div>
 
       <div className="site-container relative flex min-h-[250px] flex-col justify-center py-10 sm:min-h-[300px] lg:min-h-[350px]">
-        <h1 className="font-heading text-3xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl">
-          Bem Vindo(a)
+        <h1 className="max-w-2xl font-heading text-3xl font-semibold leading-tight text-white sm:text-5xl lg:text-6xl">
+          Seu próximo jogo começa aqui
         </h1>
-        <p className="mt-4 max-w-2xl text-lg font-medium leading-relaxed text-white/90 sm:text-2xl">
-          Seu próximo jogo começa aqui. Acompanhe lançamentos, organize suas listas e entre no hype.
+        <p className="mt-4 max-w-xl text-base leading-relaxed text-white/80 sm:text-lg">
+          Acompanhe os lançamentos, confira as notas da crítica e organize os jogos que estão no seu
+          radar.
         </p>
       </div>
 
-      <div className="relative border-t border-white/10 bg-black/40 backdrop-blur-md">
+      <div className="relative border-t border-white/10 bg-black/50">
         <div className="site-container flex min-h-14 items-center justify-between gap-2">
           <button
             aria-label="Imagem anterior"
@@ -96,7 +100,7 @@ export function HomeHeroCarousel() {
             }}
             type="button"
           >
-            <ChevronLeft aria-hidden="true" size={20} />
+            <ChevronLeft aria-hidden="true" size={18} strokeWidth={1.5} />
           </button>
           <div className="flex flex-col items-center gap-1 py-2">
             <p
@@ -119,7 +123,7 @@ export function HomeHeroCarousel() {
                   type="button"
                 >
                   <span
-                    className={`h-1.5 rounded-full transition-all motion-reduce:transition-none ${index === activeIndex ? 'w-5 bg-brand-bright' : 'w-1.5 bg-white/40'}`}
+                    className={`h-1.5 w-5 rounded-full transition-colors duration-150 motion-reduce:transition-none ${index === activeIndex ? 'bg-brand-bright' : 'bg-white/30'}`}
                   />
                 </button>
               ))}
@@ -137,9 +141,9 @@ export function HomeHeroCarousel() {
                 type="button"
               >
                 {paused ? (
-                  <Play aria-hidden="true" size={16} />
+                  <Play aria-hidden="true" size={18} strokeWidth={1.5} />
                 ) : (
-                  <Pause aria-hidden="true" size={16} />
+                  <Pause aria-hidden="true" size={18} strokeWidth={1.5} />
                 )}
               </button>
             )}
@@ -151,7 +155,7 @@ export function HomeHeroCarousel() {
               }}
               type="button"
             >
-              <ChevronRight aria-hidden="true" size={20} />
+              <ChevronRight aria-hidden="true" size={18} strokeWidth={1.5} />
             </button>
           </div>
         </div>

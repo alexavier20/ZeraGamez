@@ -51,7 +51,13 @@ describe('ReleaseDatePicker', () => {
     setup();
 
     const dialog = screen.getByRole('dialog', { name: 'Julho de 2026' });
-    expect(dialog).toHaveClass('h-[344px]', 'w-80', 'rounded-[14px]', 'bg-surface', 'p-4');
+    expect(dialog).toHaveClass(
+      'w-[min(22rem,calc(100vw-2rem))]',
+      'max-w-full',
+      'rounded-2xl',
+      'bg-surface',
+      'p-4',
+    );
     expect(within(dialog).getAllByRole('columnheader')).toHaveLength(7);
     expect(within(dialog).getAllByRole('gridcell')).toHaveLength(42);
     expect(screen.getByRole('button', { name: '29 de julho de 2026' })).toHaveAttribute(
@@ -67,13 +73,13 @@ describe('ReleaseDatePicker', () => {
     const title = screen.getByText('Julho de 2026');
     const previous = screen.getByRole('button', { name: 'Mês anterior' });
     const next = screen.getByRole('button', { name: 'Próximo mês' });
-    expect(title).toHaveClass('font-heading', 'text-base');
+    expect(title).toHaveClass('font-heading', 'text-sm');
     expect(previous.parentElement).toBe(next.parentElement);
     expect(previous.parentElement).not.toBe(title.parentElement);
     expect(previous).toHaveClass('focus-visible:ring-2', 'focus-visible:ring-brand');
     expect(next).toHaveClass('focus-visible:ring-2', 'focus-visible:ring-brand');
     for (const weekday of within(dialog).getAllByRole('columnheader')) {
-      expect(weekday).toHaveClass('rounded', 'bg-bg-secondary', 'font-semibold');
+      expect(weekday).toHaveClass('text-[11px]', 'font-medium');
     }
     expect(screen.getByRole('button', { name: '29 de julho de 2026' })).toHaveClass(
       'focus-visible:ring-2',

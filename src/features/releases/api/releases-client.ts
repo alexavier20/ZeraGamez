@@ -4,6 +4,11 @@ import {
   type ApiErrorCode,
   type ReleasesResponse,
 } from '../../../../shared/contracts/releases';
+import { todayInSaoPaulo } from '../model/release-calendar';
+
+import { createReleasesCache } from './releases-cache';
+
+const releasesCache = createReleasesCache();
 
 export interface ReleasesClientQuery {
   from?: string;
@@ -48,17 +53,28 @@ export async function fetchReleases(
     params.set('offset', String(query.offset));
   }
   if (query.platformIds && query.platformIds.length > 0) {
-    params.set('platforms', query.platformIds.join(','));
+    params.set('platforms', [...query.platformIds].sort((left, right) => left - right).join(','));
   }
   if (query.genreIds && query.genreIds.length > 0) {
-    params.set('genres', query.genreIds.join(','));
+    params.set('genres', [...query.genreIds].sort((left, right) => left - right).join(','));
   }
 
   const suffix = params.size > 0 ? `?${params.toString()}` : '';
+  const url = `/api/releases${suffix}`;
 
+  // Custom transports stay isolated from the browser's shared production cache.
+  if (options.fetcher) return requestReleases(url, options);
+  const key = `${todayInSaoPaulo()}:${url}`;
+  return releasesCache.load(key, (signal) => requestReleases(url, { signal }), options.signal);
+}
+
+async function requestReleases(
+  url: string,
+  options: ReleasesClientOptions,
+): Promise<ReleasesResponse> {
   let response: Response;
   try {
-    response = await (options.fetcher ?? fetch)(`/api/releases${suffix}`, {
+    response = await (options.fetcher ?? fetch)(url, {
       headers: { Accept: 'application/json' },
       signal: options.signal,
     });

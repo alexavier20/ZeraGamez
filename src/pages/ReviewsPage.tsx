@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 
 import { useAuth } from '@/features/auth/context/AuthProvider';
 import { searchGames } from '@/features/games/api/game-search-client';
-import { ReviewsLoading } from '@/shared/components/LoadingSkeletons';
+import { LoadingPreview, ReviewsLoading, Skeleton } from '@/shared/components/LoadingSkeletons';
 import { PageHeading } from '@/shared/components/page-heading/PageHeading';
 import { getSupabaseClient } from '@/shared/supabase/client';
 
@@ -18,13 +18,50 @@ interface Review {
   analysis: string;
   updated_at: string;
 }
-const field = 'w-full rounded-xl border border-white/15 bg-surface p-3 text-content-primary';
+const field =
+  'min-h-11 w-full rounded-lg border border-white/15 bg-bg-secondary p-3 text-sm text-content-primary outline-none transition-colors duration-150 placeholder:text-text-muted focus:border-white/30 focus:ring-2 focus:ring-brand/30';
 const searchPageSize = 8;
 
 function scoreColor(score: number): string {
-  if (score < 5) return 'bg-red-500';
-  if (score < 8) return 'bg-yellow-400';
-  return 'bg-green-500';
+  if (score < 5) return 'bg-[#e8797e]';
+  if (score < 8) return 'bg-[#e2b75d]';
+  return 'bg-[#4cc38a]';
+}
+
+const scoreFormatter = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 });
+
+function ReviewScore({ score }: Readonly<{ score: number }>) {
+  const formatted = scoreFormatter.format(score);
+  return (
+    <div
+      aria-label={`Nota ${formatted} de 10`}
+      className={`inline-flex h-12 shrink-0 items-baseline justify-center gap-1 rounded-lg px-3 py-2 text-app tabular-nums ${scoreColor(score)}`}
+    >
+      <span className="text-2xl leading-8 font-semibold">{formatted}</span>
+      <span className="text-[11px] font-medium">/ 10</span>
+    </div>
+  );
+}
+
+function ReviewSearchLoading() {
+  return (
+    <LoadingPreview label="Pesquisando jogos">
+      <div className="grid auto-rows-[104px] gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: searchPageSize }, (_, index) => (
+          <div
+            className="flex items-center gap-3 rounded-xl border border-white/10 p-3"
+            key={index}
+          >
+            <Skeleton className="h-16 w-12 shrink-0" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-3.5 w-full" />
+              <Skeleton className="h-3.5 w-2/3" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </LoadingPreview>
+  );
 }
 
 function ReviewDate({ value }: Readonly<{ value: string | null | undefined }>) {
@@ -75,31 +112,31 @@ function ReviewDetailsModal({
           type="button"
           aria-label="Fechar avaliação"
           onClick={onClose}
-          className="absolute top-3 right-3 grid size-10 place-items-center rounded-lg text-text-muted hover:bg-white/5 hover:text-white focus-visible:outline-2 focus-visible:outline-brand"
+          className="absolute top-3 right-3 grid size-11 place-items-center rounded-lg text-text-muted hover:bg-white/5 hover:text-white focus-visible:outline-2 focus-visible:outline-brand"
         >
-          <X aria-hidden="true" size={20} />
+          <X aria-hidden="true" size={18} strokeWidth={1.5} />
         </button>
-        <div className="flex items-start gap-4 pr-10">
+        <div className="flex items-start gap-4 pr-12">
           {review.cover_url && (
             <img
               src={review.cover_url}
               alt=""
-              className="h-28 w-20 shrink-0 rounded-lg object-cover"
+              className="aspect-[2/3] w-16 shrink-0 rounded-lg object-cover sm:w-20"
             />
           )}
           <div className="min-w-0">
-            <div
-              aria-label={`Nota ${String(review.score)} de 10`}
-              className={`mb-3 grid size-16 place-items-center rounded-full text-3xl font-bold text-white tabular-nums ${scoreColor(review.score)}`}
-            >
-              {review.score}
+            <div className="mb-3">
+              <ReviewScore score={review.score} />
             </div>
-            <h2 id="review-details-title" className="break-words text-lg font-bold">
+            <h2
+              id="review-details-title"
+              className="break-words font-heading text-lg font-semibold"
+            >
               {review.name}
             </h2>
           </div>
         </div>
-        <p className="mt-6 whitespace-pre-wrap break-words text-sm leading-relaxed text-text-muted">
+        <p className="mt-6 whitespace-pre-wrap break-words text-sm leading-7 text-content-primary">
           {review.analysis}
         </p>
         <footer className="mt-6 flex flex-wrap items-center gap-2 border-t border-white/10 pt-4 text-xs text-text-muted">
@@ -137,6 +174,11 @@ export function ReviewsPage() {
   const [viewedReview, setViewedReview] = useState<Review | null>(null);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const collectionError =
+    loadError || (client === null ? 'Não foi possível carregar suas avaliações' : '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -148,17 +190,26 @@ export function ReviewsPage() {
       .select('igdb_id,name,cover_url,score,analysis,updated_at')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (!active) return;
-        setLoading(false);
-        if (error)
-          setError('Não foi possível carregar suas avaliações. Tente recarregar a página.');
-        else setReviews(data);
-      });
+      .then(
+        ({ data, error }) => {
+          if (!active) return;
+          setLoading(false);
+          if (error) setLoadError('Não foi possível carregar suas avaliações');
+          else {
+            setLoadError('');
+            setReviews(data);
+          }
+        },
+        () => {
+          if (!active) return;
+          setLoading(false);
+          setLoadError('Não foi possível carregar suas avaliações');
+        },
+      );
     return () => {
       active = false;
     };
-  }, [client, userId]);
+  }, [client, userId, loadAttempt]);
   useEffect(() => {
     const controller = new AbortController();
     if (query.trim().length < 2) return;
@@ -173,7 +224,7 @@ export function ReviewsPage() {
         })
         .catch(() => {
           if (!controller.signal.aborted)
-            setError('Não foi possível pesquisar jogos. Tente novamente.');
+            setSearchError('Não foi possível pesquisar jogos. Tente novamente.');
         })
         .finally(() => {
           if (!controller.signal.aborted) setSearching(false);
@@ -226,7 +277,7 @@ export function ReviewsPage() {
       if (error) throw error;
       setReviews((current) => [data, ...current.filter((r) => r.igdb_id !== record.igdb_id)]);
       setSelected(null);
-      setMessage('Avaliação salva!');
+      setMessage('Avaliação salva');
     } catch {
       setError('Não foi possível salvar a avaliação. Seu texto foi mantido para tentar novamente.');
     } finally {
@@ -234,40 +285,56 @@ export function ReviewsPage() {
     }
   }
   return (
-    <main className="site-container min-h-screen pb-28 pt-6">
-      <PageHeading title="Avaliações" />
+    <main className="site-container min-h-[calc(100dvh-3.5rem)] pb-28 pt-5 sm:pb-12 sm:pt-6 lg:pt-7">
+      <PageHeading
+        title="Avaliações"
+        subtitle="Dê uma nota e registre sua experiência com cada jogo"
+        titleClassName="font-heading text-2xl leading-tight font-semibold text-content-primary sm:text-[28px] lg:text-[32px]"
+      />
       {error && (
         <p role="alert" className="mt-4 text-red-400">
           {error}
         </p>
       )}
-      <p role="status" className="mt-3 text-brand">
-        {message}
-      </p>
+      {message && (
+        <p role="status" className="mt-4 text-sm text-content-primary">
+          {message}
+        </p>
+      )}
       <section
         className="mt-6 rounded-2xl border border-white/10 bg-surface p-5"
         aria-label="Pesquisar jogos para avaliar"
       >
-        <label htmlFor="review-search" className="mb-2 block font-bold">
+        <label htmlFor="review-search" className="mb-2 block font-semibold">
           Pesquisar jogo
         </label>
         <input
           id="review-search"
+          type="search"
+          aria-describedby="review-search-hint"
           className={field}
-          placeholder="Digite pelo menos 2 caracteres..."
+          placeholder="Buscar pelo nome"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
+            setSearchError('');
             setResults([]);
             setSearchPage(1);
             setSearching(e.target.value.trim().length >= 2);
             setSearchResultsOpen(true);
           }}
         />
+        <p id="review-search-hint" className="mt-2 text-xs text-text-muted">
+          Digite pelo menos 2 caracteres
+        </p>
         {searchResultsOpen && query.trim().length >= 2 && (
           <div className="mt-3">
             {searching ? (
-              <p role="status">Pesquisando...</p>
+              <ReviewSearchLoading />
+            ) : searchError ? (
+              <p role="alert" className="text-sm text-red-200">
+                {searchError}
+              </p>
             ) : results.length ? (
               <>
                 <div
@@ -284,14 +351,16 @@ export function ReviewsPage() {
                       onClick={() => {
                         choose(game);
                       }}
-                      className="flex h-[104px] min-w-0 items-center gap-3 overflow-hidden rounded-xl border border-white/10 p-3 text-left hover:border-brand aria-pressed:border-brand"
+                      className="flex h-[104px] min-w-0 items-center gap-3 overflow-hidden rounded-xl border border-white/10 p-3 text-left transition-colors duration-150 hover:border-white/25 aria-pressed:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                     >
-                      {game.coverUrl && (
+                      {game.coverUrl ? (
                         <img
                           src={game.coverUrl}
                           alt=""
                           className="h-16 w-12 shrink-0 rounded object-cover"
                         />
+                      ) : (
+                        <div aria-hidden="true" className="h-16 w-12 shrink-0 rounded bg-white/5" />
                       )}
                       <span className="line-clamp-2 min-w-0 break-words text-sm leading-5">
                         {game.name}
@@ -307,7 +376,7 @@ export function ReviewsPage() {
                     <button
                       type="button"
                       disabled={searchPage === 1}
-                      className="min-h-10 rounded-lg border border-white/15 px-3 text-sm disabled:cursor-default disabled:opacity-40"
+                      className="min-h-11 rounded-lg border border-white/15 px-3 text-sm transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-default disabled:opacity-40"
                       onClick={() => {
                         setSearchPage((page) => page - 1);
                       }}
@@ -321,7 +390,7 @@ export function ReviewsPage() {
                           type="button"
                           aria-label={`Página ${String(page)}`}
                           aria-current={searchPage === page ? 'page' : undefined}
-                          className="grid size-10 place-items-center rounded-lg border border-white/15 text-sm aria-current:bg-brand aria-current:text-white"
+                          className="grid size-11 place-items-center rounded-lg border border-white/15 text-sm transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-brand aria-current:bg-brand aria-current:text-white"
                           onClick={() => {
                             setSearchPage(page);
                           }}
@@ -333,7 +402,7 @@ export function ReviewsPage() {
                     <button
                       type="button"
                       disabled={searchPage === searchPageCount}
-                      className="min-h-10 rounded-lg border border-white/15 px-3 text-sm disabled:cursor-default disabled:opacity-40"
+                      className="min-h-11 rounded-lg border border-white/15 px-3 text-sm transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-default disabled:opacity-40"
                       onClick={() => {
                         setSearchPage((page) => page + 1);
                       }}
@@ -362,11 +431,11 @@ export function ReviewsPage() {
               {selected.coverUrl && (
                 <img src={selected.coverUrl} alt="" className="h-20 w-14 rounded object-cover" />
               )}
-              <h2 id="review-form-heading" className="text-xl font-bold">
+              <h2 id="review-form-heading" className="font-heading text-xl font-semibold">
                 {selected.name}
               </h2>
             </div>
-            <label className="block">
+            <label className="block max-w-40 text-sm font-medium">
               Nota (0 a 10)
               <input
                 className={`${field} mt-2`}
@@ -381,7 +450,7 @@ export function ReviewsPage() {
                 }}
               />
             </label>
-            <label className="block">
+            <label className="block text-sm font-medium">
               Sua análise
               <textarea
                 className={`${field} mt-2 min-h-40`}
@@ -397,12 +466,13 @@ export function ReviewsPage() {
             <div className="flex gap-3">
               <button
                 disabled={saving}
-                className="rounded-xl bg-brand px-5 py-3 font-bold text-white disabled:opacity-50"
+                className="min-h-11 rounded-lg bg-brand px-4 text-sm font-medium text-white transition-colors duration-150 hover:bg-brand-bright disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
               >
-                {saving ? 'Salvando...' : 'Salvar avaliação'}
+                {saving ? 'Salvando…' : 'Salvar avaliação'}
               </button>
               <button
                 type="button"
+                className="min-h-11 rounded-lg border border-white/15 px-4 text-sm font-medium text-text-muted transition-colors duration-150 hover:bg-white/5 hover:text-content-primary disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                 disabled={saving}
                 onClick={() => {
                   setSelected(null);
@@ -415,10 +485,32 @@ export function ReviewsPage() {
         </section>
       )}
       <section className="mt-8" aria-labelledby="my-reviews">
-        <h2 id="my-reviews" className="text-xl font-bold">
-          Minhas avaliações ({reviews.length})
+        <h2 id="my-reviews" className="flex items-center gap-2 font-heading text-xl font-semibold">
+          Minhas avaliações
+          {!loading && !collectionError && (
+            <span className="font-body text-sm font-medium tabular-nums text-text-muted">
+              ({reviews.length})
+            </span>
+          )}
         </h2>
-        {loading ? (
+        {collectionError ? (
+          <div role="alert" className="mt-4 rounded-xl border border-white/10 bg-surface p-5">
+            <p className="text-sm text-text-muted">{collectionError}</p>
+            {client !== null && (
+              <button
+                type="button"
+                className="mt-4 min-h-11 rounded-lg border border-white/15 px-4 text-sm font-medium transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-brand"
+                onClick={() => {
+                  setLoadError('');
+                  setLoading(true);
+                  setLoadAttempt((value) => value + 1);
+                }}
+              >
+                Tentar novamente
+              </button>
+            )}
+          </div>
+        ) : loading ? (
           <ReviewsLoading />
         ) : reviews.length === 0 ? (
           <p className="mt-4 text-text-muted">
@@ -445,26 +537,19 @@ export function ReviewsPage() {
                     <img
                       src={review.cover_url}
                       alt=""
-                      className="h-28 w-14 shrink-0 rounded-lg object-cover sm:w-20"
+                      className="aspect-[2/3] w-16 shrink-0 rounded-lg object-cover sm:w-20"
                     />
                   ) : (
                     <div
                       aria-hidden="true"
-                      className="h-28 w-14 shrink-0 rounded-lg bg-white/5 sm:w-20"
+                      className="aspect-[2/3] w-16 shrink-0 rounded-lg bg-white/5 sm:w-20"
                     />
                   )}
                   <div className="min-w-0 flex-1">
-                    <div className="flex h-24 flex-col items-start gap-2 pr-10 sm:h-16 sm:flex-row sm:items-center sm:gap-3">
-                      <div
-                        aria-label={`Nota ${String(review.score)} de 10`}
-                        className={`flex size-12 shrink-0 items-center justify-center rounded-full text-white sm:size-16 ${scoreColor(review.score)}`}
-                      >
-                        <strong className="text-3xl leading-none font-bold tabular-nums">
-                          {review.score}
-                        </strong>
-                      </div>
+                    <div className="flex h-24 flex-col items-start gap-2 pr-12 sm:h-16 sm:flex-row sm:items-center sm:gap-3">
+                      <ReviewScore score={review.score} />
                       <h3
-                        className="line-clamp-2 min-w-0 break-words font-bold"
+                        className="line-clamp-2 min-w-0 break-words font-heading text-sm leading-5 font-semibold"
                         title={review.name}
                       >
                         {review.name}
@@ -488,12 +573,12 @@ export function ReviewsPage() {
                   type="button"
                   aria-label={`Editar avaliação de ${review.name}`}
                   title="Editar avaliação"
-                  className="absolute top-3 right-3 z-10 grid size-10 place-items-center rounded-lg text-text-muted transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                  className="absolute top-3 right-3 z-10 grid size-11 place-items-center rounded-lg text-text-muted transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                   onClick={() => {
                     choose({ id: review.igdb_id, name: review.name, coverUrl: review.cover_url });
                   }}
                 >
-                  <Pencil aria-hidden="true" size={18} />
+                  <Pencil aria-hidden="true" size={18} strokeWidth={1.5} />
                 </button>
               </article>
             ))}

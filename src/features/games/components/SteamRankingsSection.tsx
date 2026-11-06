@@ -1,4 +1,4 @@
-import { ArrowUpRight, Gamepad2, TrendingUp } from 'lucide-react';
+import { ArrowUpRight, Gamepad2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 
@@ -49,11 +49,9 @@ function SteamRankingCard({
       className="overflow-hidden rounded-xl border border-white/10 bg-bg-secondary"
     >
       <div className="border-b border-white/10 px-4 py-5">
-        <p className="mb-2 font-heading text-[10px] font-bold uppercase tracking-[0.2em] text-brand-bright">
-          Top 5 · Steam
-        </p>
+        <p className="mb-2 text-xs font-medium text-text-muted">Top 5 · Steam</p>
         <h3
-          className="font-heading text-base font-bold text-content-primary"
+          className="font-heading text-base font-semibold text-content-primary"
           id={`steam-${metric}`}
         >
           {steamRankingLabels[metric]}
@@ -86,7 +84,7 @@ function SteamRankingCard({
         <div className="px-4 py-8 text-center" role="alert">
           <p className="text-sm text-text-muted">Não foi possível carregar este ranking.</p>
           <button
-            className="mt-4 min-h-11 rounded-lg border border-white/15 px-4 text-xs font-bold text-content-primary hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-brand"
+            className="mt-4 min-h-11 rounded-lg border border-white/15 px-4 text-xs font-medium text-content-primary hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-brand"
             onClick={() => {
               setState({ status: 'loading' });
               setAttempt((value) => value + 1);
@@ -107,7 +105,7 @@ function SteamRankingCard({
                 to={`/jogos/${String(game.id)}`}
               >
                 <span
-                  className={`w-5 shrink-0 text-center font-heading text-lg font-bold tabular-nums ${index === 0 ? 'text-brand-bright' : 'text-text-muted'}`}
+                  className={`w-5 shrink-0 text-center font-heading text-lg font-semibold tabular-nums ${index === 0 ? 'text-brand-bright' : 'text-text-muted'}`}
                 >
                   {String(index + 1).padStart(2, '0')}
                 </span>
@@ -120,7 +118,7 @@ function SteamRankingCard({
                   />
                 ) : (
                   <span className="grid h-14 w-10 shrink-0 place-items-center rounded bg-surface text-text-muted">
-                    <Gamepad2 aria-hidden="true" size={20} />
+                    <Gamepad2 aria-hidden="true" size={18} strokeWidth={1.5} />
                   </span>
                 )}
                 <span className="line-clamp-2 min-w-0 flex-1 text-sm font-semibold text-content-primary">
@@ -129,7 +127,8 @@ function SteamRankingCard({
                 <ArrowUpRight
                   aria-hidden="true"
                   className="shrink-0 text-text-muted transition-colors group-hover:text-brand-bright"
-                  size={16}
+                  size={18}
+                  strokeWidth={1.5}
                 />
               </Link>
             </li>
@@ -144,14 +143,11 @@ export function SteamRankingsSection() {
   return (
     <section aria-labelledby="steam-rankings-title" className="pt-10 sm:pt-14">
       <div className="mb-6">
-        <p className="font-heading text-xs font-bold uppercase tracking-[0.2em] text-brand-bright">
-          Em alta no PC
-        </p>
+        <p className="text-xs font-medium text-text-muted">Em alta no PC</p>
         <h2
-          className="mt-1 flex items-center gap-2 font-heading text-xl font-bold text-content-primary sm:text-2xl"
+          className="mt-1 flex items-center gap-2 font-heading text-xl font-semibold text-content-primary sm:text-2xl"
           id="steam-rankings-title"
         >
-          <TrendingUp aria-hidden="true" size={24} />
           Rankings Steam
         </h2>
       </div>

@@ -30,9 +30,7 @@ function RankingList({
       {games.map((game, index) => {
         const rank = start + index;
         const isPodium = rank <= 3;
-        const rankToneClassName = isPodium
-          ? 'animate-pulse text-amber-300 drop-shadow-[0_0_8px_#facc15] motion-reduce:animate-none'
-          : 'text-brand-bright';
+        const rankToneClassName = isPodium ? 'text-[#e2b75d]' : 'text-text-muted';
         const releaseDate = game.releaseDate
           ? formatReleaseDate(game.releaseDate)
           : 'Data indisponível';
@@ -41,12 +39,12 @@ function RankingList({
           <li key={game.id}>
             <Link
               aria-label={`${String(rank)}º lugar: ${game.name}. Lançamento: ${releaseDate}`}
-              className="group flex min-h-[60px] min-w-0 items-center gap-2 rounded-xl border border-white/10 bg-transparent p-2 transition hover:border-brand/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:gap-3"
+              className="group flex min-h-[60px] min-w-0 items-center gap-2 rounded-xl border border-white/10 bg-transparent p-2 transition-colors duration-150 hover:border-white/25 hover:bg-white/[0.02] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:gap-3"
               to={`/jogos/${String(game.id)}`}
             >
               <span
                 aria-hidden="true"
-                className={`w-8 shrink-0 text-center font-heading text-2xl font-bold tabular-nums sm:w-10 sm:text-3xl ${rankToneClassName}`}
+                className={`w-8 shrink-0 text-center font-heading text-2xl font-semibold tabular-nums sm:w-10 sm:text-3xl ${rankToneClassName}`}
               >
                 {rank}
               </span>
@@ -62,11 +60,14 @@ function RankingList({
                   aria-hidden="true"
                   className="grid size-10 shrink-0 place-items-center rounded-lg bg-bg-secondary text-text-muted sm:size-12"
                 >
-                  <Gamepad2 size={22} />
+                  <Gamepad2 aria-hidden="true" size={18} strokeWidth={1.5} />
                 </span>
               )}
               <span className="min-w-0 flex-1">
-                <span className="line-clamp-1 text-sm font-semibold leading-tight text-content-primary transition-colors group-hover:text-white sm:text-base">
+                <span
+                  title={game.name}
+                  className="line-clamp-1 text-sm font-semibold leading-tight text-content-primary transition-colors group-hover:text-white sm:text-base"
+                >
                   {game.name}
                 </span>
                 <span className="mt-0.5 block truncate text-xs leading-4 text-text-muted">
@@ -87,7 +88,6 @@ export function HypeRankingPage() {
 
   useEffect(() => {
     const controller = new AbortController();
-    setState({ status: 'loading' });
 
     void getTopHypedGames({ signal: controller.signal })
       .then((games) => {
@@ -106,7 +106,11 @@ export function HypeRankingPage() {
 
   return (
     <main className="site-container min-h-[calc(100dvh-3.5rem)] pb-28 pt-5 sm:pb-12 sm:pt-6 lg:pt-7">
-      <PageHeading subtitle="Top 10 Hypados" title="Tô no Hype" />
+      <PageHeading
+        subtitle="Os 10 jogos mais aguardados"
+        title="Tô no Hype"
+        titleClassName="font-heading text-2xl leading-tight font-semibold text-content-primary sm:text-[28px] lg:text-[32px]"
+      />
 
       <section aria-label="Ranking dos jogos mais hypados" className="mt-6">
         {state.status === 'loading' ? (
@@ -143,8 +147,9 @@ export function HypeRankingPage() {
           >
             <p className="text-sm text-red-100">Não foi possível carregar o ranking agora.</p>
             <button
-              className="mt-4 rounded-xl border border-red-200/30 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-500/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              className="mt-4 min-h-11 rounded-lg border border-red-200/30 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-red-500/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               onClick={() => {
+                setState({ status: 'loading' });
                 setRetryKey((value) => value + 1);
               }}
               type="button"

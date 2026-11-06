@@ -8,7 +8,9 @@ afterEach(() => vi.useRealTimers());
 describe('HomeHeroCarousel', () => {
   it('permite navegar entre as quatro imagens e voltar ao início', () => {
     render(<HomeHeroCarousel />);
-    expect(screen.getByRole('heading', { name: 'Bem Vindo(a)' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Seu próximo jogo começa aqui' }),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Imagem anterior' }));
     expect(screen.getByText('Overwatch')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Próxima imagem' }));
@@ -27,7 +29,3 @@ describe('HomeHeroCarousel', () => {
     expect(screen.getByText('The Witcher 3: Wild Hunt')).toBeInTheDocument();
   });
 });
-
-
-
-

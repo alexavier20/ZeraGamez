@@ -5,20 +5,17 @@ import { HeaderBrand } from './header/HeaderBrand';
 
 export function HomeFooter() {
   return (
-    <footer className="mt-16 border-t border-white/10 bg-black/20 pb-28 pt-8 sm:mt-20 sm:pb-8">
+    <footer className="mt-16 border-t border-white/10 bg-bg-secondary pb-28 pt-8 sm:mt-20 sm:pb-8">
       <div className="site-container">
         <div className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
           <div className="max-w-xs">
             <HeaderBrand />
             <p className="mt-3 text-sm leading-relaxed text-text-muted">
-              Seu próximo jogo começa aqui. Acompanhe lançamentos, organize suas listas e entre no
-              hype.
+              Lançamentos, avaliações e sua próxima jogatina
             </p>
           </div>
           <nav aria-label="Navegação do rodapé">
-            <p className="mb-3 font-heading text-xs font-bold uppercase tracking-widest text-brand-bright">
-              Explore
-            </p>
+            <p className="mb-3 text-xs font-medium text-text-muted">Explore</p>
             <ul className="flex flex-wrap gap-x-6 gap-y-2">
               {desktopNavItems.map(({ label, to }) => (
                 <li key={to}>

@@ -37,14 +37,14 @@ describe('ReleaseViewSwitcher', () => {
     const user = userEvent.setup();
     render(<ControlledSwitcher />);
 
-    const group = screen.getByRole('group', { name: 'Alternar visualização' });
-    const listButton = screen.getByRole('button', { name: 'Lista' });
-    const calendarButton = screen.getByRole('button', { name: 'Calendário' });
+    const group = screen.getByRole('group', { name: 'Filtrar por data' });
+    const listButton = screen.getByRole('button', { name: 'Todas as datas' });
+    const calendarButton = screen.getByRole('button', { name: 'Escolher data' });
 
     expect(group).toBeInTheDocument();
     expect(listButton).toHaveAttribute('aria-controls', 'release-results');
     expect(listButton).toHaveAttribute('aria-pressed', 'true');
-    expect(listButton).toHaveClass('ring-1', 'ring-inset', 'ring-brand');
+    expect(listButton).toHaveClass('ring-1', 'ring-inset', 'ring-white/15');
     expect(calendarButton).toHaveAttribute('aria-pressed', 'false');
     expect(calendarButton).toHaveAttribute('aria-controls', 'release-results');
     expect(calendarButton).toHaveClass('ring-1', 'ring-inset', 'ring-transparent');
@@ -54,13 +54,13 @@ describe('ReleaseViewSwitcher', () => {
     expect(listButton).toHaveAttribute('aria-pressed', 'false');
     expect(listButton).toHaveClass('ring-1', 'ring-inset', 'ring-transparent');
     expect(calendarButton).toHaveAttribute('aria-pressed', 'true');
-    expect(calendarButton).toHaveClass('ring-1', 'ring-inset', 'ring-brand');
+    expect(calendarButton).toHaveClass('ring-1', 'ring-inset', 'ring-white/15');
 
     listButton.focus();
     await user.keyboard('{Enter}');
 
     expect(listButton).toHaveAttribute('aria-pressed', 'true');
-    expect(listButton).toHaveClass('ring-1', 'ring-inset', 'ring-brand');
+    expect(listButton).toHaveClass('ring-1', 'ring-inset', 'ring-white/15');
     expect(calendarButton).toHaveAttribute('aria-pressed', 'false');
     expect(calendarButton).toHaveClass('ring-1', 'ring-inset', 'ring-transparent');
   });

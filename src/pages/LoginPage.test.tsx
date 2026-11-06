@@ -64,13 +64,14 @@ describe('LoginPage', () => {
     await user.click(screen.getByRole('button', { name: 'Enviar código' }));
 
     expect(service.requestEmailCode).toHaveBeenCalledWith('alex@example.com');
+    expect(screen.getByRole('textbox', { name: 'Código de verificação' })).toHaveFocus();
     await user.type(screen.getByRole('textbox', { name: 'Código de verificação' }), '123456');
     await user.click(screen.getByRole('button', { name: 'Confirmar código' }));
 
     expect(service.verifyEmailCode).toHaveBeenCalledWith('alex@example.com', '123456');
   });
 
-  it('does not truncate an eight-digit email OTP', async () => {
+  it.each(['12345678', '1234567890'])('does not truncate the %s email OTP', async (otp) => {
     const user = userEvent.setup();
     const service = createFakeAuthService(null);
     renderLogin(service);
@@ -82,11 +83,11 @@ describe('LoginPage', () => {
 
     const codeInput = document.getElementById('login-code');
     expect(codeInput).toBeInstanceOf(HTMLInputElement);
-    await user.type(codeInput as HTMLInputElement, '12345678');
+    await user.type(codeInput as HTMLInputElement, otp);
     await user.click(screen.getByRole('button', { name: /Confirmar/ }));
 
-    expect(codeInput).toHaveValue('12345678');
-    expect(service.verifyEmailCode).toHaveBeenCalledWith('alex@example.com', '12345678');
+    expect(codeInput).toHaveValue(otp);
+    expect(service.verifyEmailCode).toHaveBeenCalledWith('alex@example.com', otp);
   });
 
   it('starts Google with the dedicated callback', async () => {

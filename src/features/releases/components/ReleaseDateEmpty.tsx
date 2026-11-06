@@ -16,22 +16,22 @@ export function ReleaseDateEmpty({ date, onClearDate }: ReleaseDateEmptyProps): 
       className="flex h-[360px] flex-col items-center justify-center text-center"
       role="status"
     >
-      <div className="grid size-14 place-items-center rounded-2xl border border-border-brand bg-bg-secondary text-brand">
-        <CalendarX aria-hidden="true" size={24} />
+      <div className="grid size-14 place-items-center rounded-2xl border border-white/10 bg-bg-secondary text-text-muted">
+        <CalendarX aria-hidden="true" size={18} strokeWidth={1.5} />
       </div>
-      <h2 className="mt-[14px] font-heading text-[22px] font-semibold text-content-primary">
+      <h2 className="mt-4 font-heading text-[22px] font-semibold text-content-primary">
         Nenhum lançamento nesta data
       </h2>
-      <p className="mt-[14px] max-w-[640px] text-[13px] text-text-muted">
+      <p className="mt-4 max-w-[640px] text-[13px] text-text-muted">
         Não encontramos jogos com lançamento em {formatReleaseDate(date)}. Escolha outro dia ou
         limpe o filtro.
       </p>
       <button
-        className="mt-[14px] flex h-9 items-center gap-2 rounded-[9px] border border-border-brand bg-surface-hover px-[14px] text-xs font-semibold text-content-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className="mt-4 flex min-h-11 items-center gap-2 rounded-lg border border-white/10 bg-surface px-4 text-xs font-semibold text-content-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         onClick={onClearDate}
         type="button"
       >
-        <X aria-hidden="true" size={14} />
+        <X aria-hidden="true" size={18} strokeWidth={1.5} />
         Limpar data
       </button>
     </section>

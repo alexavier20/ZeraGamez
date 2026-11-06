@@ -19,22 +19,20 @@ function DailyReleasesSection() {
     <section aria-labelledby="today-releases-title" className="pt-10 sm:pt-14">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="font-heading text-xs font-bold uppercase tracking-[0.2em] text-brand-bright">
-            No radar de hoje
-          </p>
+          <p className="text-xs font-medium text-text-muted">No radar de hoje</p>
           <h2
-            className="mt-1 font-heading text-xl font-bold text-text-primary sm:text-2xl"
+            className="mt-1 font-heading text-xl font-semibold text-text-primary sm:text-2xl"
             id="today-releases-title"
           >
             Lançamentos do dia
           </h2>
         </div>
         <Link
-          className="inline-flex min-h-9 w-fit items-center gap-2 rounded-lg border border-white/15 px-3 py-1.5 text-xs font-bold text-content-primary transition hover:border-brand/50 hover:bg-brand/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="inline-flex min-h-9 w-fit items-center gap-2 rounded-lg border border-white/15 px-3 py-1.5 text-xs font-medium text-content-primary transition-colors duration-150 hover:border-brand/50 hover:bg-brand/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           to={headerRoutes.releases}
         >
           Ver mais
-          <ArrowRight aria-hidden="true" size={16} />
+          <ArrowRight aria-hidden="true" size={18} strokeWidth={1.5} />
         </Link>
       </div>
 
@@ -47,7 +45,7 @@ function DailyReleasesSection() {
         >
           <p className="text-sm text-red-100">Não foi possível carregar os lançamentos de hoje.</p>
           <button
-            className="mt-4 rounded-lg border border-red-200/30 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-500/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            className="mt-4 rounded-lg border border-red-200/30 px-4 py-2 text-sm font-medium text-white transition-colors duration-150 hover:bg-red-500/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             onClick={retry}
             type="button"
           >

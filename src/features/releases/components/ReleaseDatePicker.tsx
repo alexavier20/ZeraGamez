@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import {
@@ -135,37 +135,46 @@ export function ReleaseDatePicker({
   return (
     <div
       aria-label={formatCalendarMonth(month)}
-      className="h-[344px] w-80 rounded-[14px] border border-border-brand bg-surface p-4 shadow-[0_8px_20px_#00000066]"
+      className="w-[min(22rem,calc(100vw-2rem))] max-w-full rounded-2xl border border-white/10 bg-surface p-4 lg:max-w-none"
       id="release-date-picker"
       role="dialog"
     >
-      <div className="flex h-full flex-col gap-3">
-        <div className="flex h-8 items-center justify-between">
-          <span className="font-heading text-base font-semibold text-content-primary">
+      <div className="flex flex-col gap-3">
+        <div className="flex min-h-9 items-center justify-between gap-2">
+          <span className="min-w-0 font-heading text-sm font-semibold text-content-primary">
             {formatCalendarMonth(month)}
           </span>
           <div className="flex items-center gap-2">
             <button
               aria-label="Mês anterior"
-              className="grid size-8 place-items-center rounded-lg bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+              className="grid size-9 shrink-0 place-items-center rounded-lg bg-white/5 transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
               onClick={() => {
                 moveToHeaderMonth(-1);
               }}
               onKeyDown={handleEscape}
               type="button"
             >
-              <ChevronLeft aria-hidden="true" size={16} />
+              <ChevronLeft aria-hidden="true" size={18} strokeWidth={1.5} />
             </button>
             <button
               aria-label="Próximo mês"
-              className="grid size-8 place-items-center rounded-lg bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+              className="grid size-9 shrink-0 place-items-center rounded-lg bg-white/5 transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
               onClick={() => {
                 moveToHeaderMonth(1);
               }}
               onKeyDown={handleEscape}
               type="button"
             >
-              <ChevronRight aria-hidden="true" size={16} />
+              <ChevronRight aria-hidden="true" size={18} strokeWidth={1.5} />
+            </button>
+            <button
+              aria-label="Fechar calendário"
+              className="grid size-9 place-items-center rounded-lg text-text-muted transition-colors hover:bg-white/10 hover:text-content-primary focus-visible:outline-2 focus-visible:outline-brand"
+              onClick={onRequestClose}
+              onKeyDown={handleEscape}
+              type="button"
+            >
+              <X aria-hidden="true" size={18} strokeWidth={1.5} />
             </button>
           </div>
         </div>
@@ -174,7 +183,7 @@ export function ReleaseDatePicker({
           <div className="grid grid-cols-7 gap-1" role="row">
             {weekdays.map((weekday) => (
               <div
-                className="grid h-5 w-9 place-items-center rounded bg-bg-secondary text-[11px] font-semibold text-text-muted"
+                className="grid h-5 place-items-center text-[11px] font-medium text-text-muted"
                 key={weekday}
                 role="columnheader"
               >
@@ -189,19 +198,20 @@ export function ReleaseDatePicker({
                 const today = day.date === currentDate;
                 const knownRelease = knownReleaseDates.has(day.date);
                 const dayClassName = selected
-                  ? 'bg-brand font-bold text-white'
+                  ? 'bg-brand font-semibold text-white'
                   : today
                     ? 'border border-brand bg-transparent font-medium text-content-primary'
                     : day.inCurrentMonth
-                      ? 'font-medium text-content-primary hover:bg-surface-hover'
-                      : 'font-medium text-text-muted opacity-[0.58] hover:bg-surface-hover';
+                      ? 'font-medium text-content-primary hover:bg-white/10'
+                      : 'font-medium text-text-muted opacity-60 hover:bg-white/10';
 
                 return (
                   <div key={day.date} role="gridcell">
                     <button
+                      aria-current={today ? 'date' : undefined}
                       aria-label={formatCalendarLongDate(day.date)}
                       aria-pressed={selected}
-                      className={`relative grid size-9 place-items-center rounded-lg text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface ${dayClassName}`}
+                      className={`relative grid min-h-11 w-full place-items-center rounded-lg text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface ${dayClassName}`}
                       data-calendar-day="true"
                       data-today={today || undefined}
                       onClick={() => {

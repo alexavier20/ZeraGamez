@@ -17,20 +17,20 @@ export function HomeReleaseCard({ item }: HomeReleaseCardProps) {
     <article className="min-w-0">
       <Link
         aria-label={`Ver detalhes de ${item.name}`}
-        className="group block overflow-hidden rounded-xl bg-bg-secondary shadow-[0_8px_24px_#00000040] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+        className="group block overflow-hidden rounded-xl bg-bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
         to={`/jogos/${String(item.id)}`}
       >
         {item.coverUrl ? (
           <img
             alt={`Capa de ${item.name}`}
-            className="aspect-[2/3] w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            className="aspect-[2/3] w-full object-cover transition-opacity duration-150 group-hover:opacity-90"
             loading="lazy"
             src={item.coverUrl}
           />
         ) : (
           <span
             aria-label={`Capa indisponível de ${item.name}`}
-            className="flex aspect-[2/3] w-full items-center justify-center bg-gradient-to-br from-bg-secondary to-surface-hover text-text-muted"
+            className="flex aspect-[2/3] w-full items-center justify-center bg-bg-secondary text-text-muted"
             role="img"
           >
             <Gamepad2 aria-hidden="true" size={36} />
@@ -38,7 +38,7 @@ export function HomeReleaseCard({ item }: HomeReleaseCardProps) {
         )}
       </Link>
 
-      <div className="mt-2.5 min-w-0">
+      <div className="mt-3 min-w-0">
         <h3
           className="line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-text-primary"
           title={item.name}
@@ -54,7 +54,7 @@ export function HomeReleaseCard({ item }: HomeReleaseCardProps) {
           <ul aria-label={`Plataformas de ${item.name}`} className="mt-2 flex flex-wrap gap-1.5">
             {platforms.map((platform, index) => (
               <li
-                className="rounded-md bg-white/10 px-2 py-1 text-[10px] font-semibold text-text-muted"
+                className="rounded-md bg-white/10 px-2 py-1 text-[11px] font-medium text-text-muted"
                 key={`${String(item.platforms[index]?.id ?? platform)}-${platform}`}
               >
                 {platform}

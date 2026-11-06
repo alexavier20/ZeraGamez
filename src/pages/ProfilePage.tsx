@@ -79,7 +79,7 @@ function ProfileSettings({ auth, user }: ProfileSettingsProps) {
       });
       setDisplayName(updatedUser.name);
       setSelectedAvatar(null);
-      setSuccess('Perfil atualizado com sucesso.');
+      setSuccess('Perfil atualizado');
     } catch {
       setProfileError(saveProfileErrorMessage);
     } finally {
@@ -122,47 +122,49 @@ function ProfileSettings({ auth, user }: ProfileSettingsProps) {
   return (
     <main className="site-container min-h-[calc(100dvh-3.5rem)] max-w-xl pb-28 pt-5 sm:pb-12 sm:pt-6 lg:pt-7">
       <button
-        className="mb-4 inline-flex min-h-9 items-center gap-2 rounded-lg text-sm font-semibold text-text-muted transition-colors hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary"
+        className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-lg text-sm font-medium text-text-muted transition-colors hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary"
         onClick={handleBack}
         type="button"
       >
-        <ArrowLeft aria-hidden="true" size={17} />
+        <ArrowLeft aria-hidden="true" size={18} strokeWidth={1.5} />
         Voltar
       </button>
       <section
-        aria-label="Conta"
+        aria-labelledby="profile-title"
         className="rounded-2xl border border-white/10 bg-surface p-5 sm:p-6"
       >
-        <h1 className="sr-only">Perfil</h1>
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-4">
-            <UserAvatar
-              avatarUrl={visibleAvatarUrl}
-              className="size-12 shrink-0 border border-white text-lg"
-              initials={user.initials}
-              name={displayName.trim() || user.name}
-            />
-            <div className="min-w-0">
-              <h1 className="truncate font-heading text-lg font-bold text-content-primary sm:text-xl">
-                Olá, {user.name}
-              </h1>
-              <p className="truncate text-sm text-text-muted">{user.email}</p>
-            </div>
+        <h1
+          id="profile-title"
+          className="font-heading text-2xl font-semibold leading-tight text-content-primary sm:text-[28px]"
+        >
+          Perfil
+        </h1>
+        <div className="mt-5 grid grid-cols-[3rem_minmax(0,1fr)] items-start gap-x-4 gap-y-3 sm:grid-cols-[3rem_minmax(0,1fr)_auto]">
+          <UserAvatar
+            appearance="neutral"
+            avatarUrl={visibleAvatarUrl}
+            className="size-12 border border-white/10 text-lg"
+            initials={user.initials}
+            name={displayName.trim() || user.name}
+          />
+          <div className="min-w-0">
+            <p className="break-words text-base font-medium text-content-primary">{user.name}</p>
+            <p className="mt-1 break-all text-sm text-text-muted">{user.email}</p>
           </div>
           <button
-            className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.06] px-3 text-sm font-semibold text-content-primary transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+            className="col-start-2 inline-flex min-h-11 items-center justify-self-start gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm font-medium text-content-primary transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary disabled:cursor-not-allowed disabled:opacity-60 sm:col-start-3 sm:row-start-1"
             disabled={signingOut}
             onClick={() => void handleSignOut()}
             type="button"
           >
-            <LogOut aria-hidden="true" size={15} />
+            <LogOut aria-hidden="true" size={18} strokeWidth={1.5} />
             {signingOut ? 'Saindo…' : 'Sair'}
           </button>
         </div>
 
         {signOutError === null ? null : (
           <p
-            className="mt-4 rounded-xl border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-100"
+            className="mt-4 break-words rounded-lg border border-red-400/20 bg-red-500/5 p-3 text-sm text-red-200"
             role="alert"
           >
             {signOutError}
@@ -170,26 +172,28 @@ function ProfileSettings({ auth, user }: ProfileSettingsProps) {
         )}
 
         <form
+          aria-busy={saving}
           className="mt-6 border-t border-white/10 pt-5"
           onSubmit={(event) => {
             void handleSaveProfile(event);
           }}
         >
-          <h2 className="font-heading text-lg font-bold text-content-primary">
+          <h2 className="font-heading text-lg font-semibold text-content-primary">
             Configurações do perfil
           </h2>
 
           <div className="mt-5 space-y-5">
             <div>
               <label
-                className="mb-2 block text-sm font-semibold text-content-primary"
+                className="mb-2 block text-sm font-medium text-content-primary"
                 htmlFor="profile-name"
               >
                 Nome para exibição
               </label>
               <input
                 autoComplete="nickname"
-                className="min-h-11 w-full rounded-xl border border-white/15 bg-app px-3 text-sm text-text-primary outline-none transition focus:border-brand-bright focus:ring-2 focus:ring-brand/30"
+                aria-describedby="profile-name-help"
+                className="min-h-11 w-full rounded-lg border border-white/10 bg-app px-3 text-sm text-text-primary outline-none transition-colors focus:border-brand-bright focus:ring-2 focus:ring-brand/30"
                 id="profile-name"
                 maxLength={50}
                 onChange={(event) => {
@@ -198,40 +202,36 @@ function ProfileSettings({ auth, user }: ProfileSettingsProps) {
                 required
                 value={displayName}
               />
-              <p className="mt-2 text-xs text-text-muted">
-                Esse nome aparece na saudação e no seu perfil.
+              <p className="mt-2 text-xs text-text-muted" id="profile-name-help">
+                Nome exibido no seu perfil
               </p>
             </div>
 
             <div>
-              <span className="mb-2 block text-sm font-semibold text-content-primary">
+              <span className="mb-2 block text-sm font-medium text-content-primary">
                 Foto de perfil
               </span>
               <div className="flex flex-wrap items-center gap-3">
                 <label
-                  className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-content-primary transition hover:border-brand/50 hover:bg-brand/10 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand"
+                  className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-medium text-content-primary transition-colors hover:bg-white/10 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-text-primary"
                   htmlFor="profile-photo"
                 >
-                  <ImagePlus aria-hidden="true" size={17} />
+                  <input
+                    accept="image/jpeg,image/png,image/webp"
+                    aria-describedby="profile-photo-help"
+                    className="sr-only"
+                    id="profile-photo"
+                    onChange={handleAvatarChange}
+                    type="file"
+                  />
+                  <ImagePlus aria-hidden="true" size={18} strokeWidth={1.5} />
                   Escolher imagem
                 </label>
-                {visibleAvatarUrl === null ? null : (
-                  <img
-                    alt=""
-                    aria-hidden="true"
-                    className="size-9 rounded-full border border-white object-cover"
-                    src={visibleAvatarUrl}
-                  />
-                )}
-                <input
-                  accept="image/jpeg,image/png,image/webp"
-                  className="sr-only"
-                  id="profile-photo"
-                  onChange={handleAvatarChange}
-                  type="file"
-                />
-                <p className="basis-full text-xs text-text-muted">
-                  {selectedAvatar?.file.name ?? 'JPEG, PNG ou WebP, até 5 MB.'}
+                <p
+                  className="min-w-0 basis-full break-all text-xs text-text-muted"
+                  id="profile-photo-help"
+                >
+                  {selectedAvatar?.file.name ?? 'JPEG, PNG ou WebP, até 5 MB'}
                 </p>
               </div>
             </div>
@@ -239,7 +239,7 @@ function ProfileSettings({ auth, user }: ProfileSettingsProps) {
 
           {profileError === null ? null : (
             <p
-              className="mt-5 rounded-lg border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-100"
+              className="mt-5 break-words rounded-lg border border-red-400/20 bg-red-500/5 p-3 text-sm text-red-200"
               role="alert"
             >
               {profileError}
@@ -247,20 +247,20 @@ function ProfileSettings({ auth, user }: ProfileSettingsProps) {
           )}
           {success === null ? null : (
             <p
-              className="mt-5 flex items-center gap-2 rounded-lg border border-emerald-400/25 bg-emerald-500/10 p-3 text-sm text-emerald-200"
+              className="mt-5 flex items-center gap-2 rounded-lg border border-emerald-400/20 bg-emerald-500/5 p-3 text-sm text-emerald-200"
               role="status"
             >
-              <CheckCircle2 aria-hidden="true" className="shrink-0" size={17} />
+              <CheckCircle2 aria-hidden="true" className="shrink-0" size={18} strokeWidth={1.5} />
               {success}
             </p>
           )}
-          <div className="mt-5 flex justify-center">
+          <div className="mt-5 flex justify-end">
             <button
-              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-bright disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-40"
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-44"
               disabled={saving}
               type="submit"
             >
-              <Save aria-hidden="true" size={17} />
+              <Save aria-hidden="true" size={18} strokeWidth={1.5} />
               {saving ? 'Salvando…' : 'Salvar alterações'}
             </button>
           </div>
@@ -272,15 +272,12 @@ function ProfileSettings({ auth, user }: ProfileSettingsProps) {
         </form>
 
         <div className="mt-6 border-t border-white/10 pt-5">
-          <h3 className="font-heading text-base font-bold text-content-primary">
+          <h2 className="font-heading text-lg font-semibold text-content-primary">
             Métodos de acesso
-          </h3>
-          <ul className="mt-3 flex flex-wrap gap-2" aria-label="Métodos de acesso disponíveis">
+          </h2>
+          <ul className="mt-3 space-y-2" aria-label="Métodos de acesso disponíveis">
             {['Código por e-mail', 'Google'].map((method) => (
-              <li
-                className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-text-muted"
-                key={method}
-              >
+              <li className="text-sm text-text-muted" key={method}>
                 {method}
               </li>
             ))}

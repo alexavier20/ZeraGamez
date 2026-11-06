@@ -27,7 +27,7 @@ export function ReleaseList({
   const groups = groupReleasesByDate(response.data);
 
   return (
-    <div className="mt-7 space-y-7">
+    <div className="mt-8 space-y-8">
       {groups.map((group) => (
         <ReleaseDateGroup
           generatedAt={response.meta.generatedAt}

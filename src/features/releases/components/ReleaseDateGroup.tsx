@@ -54,9 +54,7 @@ export function ReleaseDateGroup({
             <span>{date}</span>
           )}
         </span>
-        <span className="text-xs font-semibold uppercase text-text-muted sm:hidden">
-          {mobileHeading}
-        </span>
+        <span className="text-sm font-medium text-text-muted sm:hidden">{mobileHeading}</span>
       </h2>
 
       <ul

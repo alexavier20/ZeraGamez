@@ -27,7 +27,10 @@ export function ListCardsLoading({ tiers = false }: Readonly<{ tiers?: boolean }
     <LoadingPreview label={tiers ? 'Carregando suas Tier Lists' : 'Carregando suas listas'}>
       <div className="grid gap-x-3 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
-          <div className="overflow-hidden rounded-2xl bg-surface" key={index}>
+          <div
+            className="overflow-hidden rounded-2xl border border-white/10 bg-surface"
+            key={index}
+          >
             <div
               className={tiers ? 'grid aspect-[3/1] grid-cols-5' : 'grid aspect-[3/1] grid-cols-3'}
             >
@@ -35,13 +38,18 @@ export function ListCardsLoading({ tiers = false }: Readonly<{ tiers?: boolean }
                 <Skeleton className="h-full rounded-none border-r border-surface" key={cover} />
               ))}
             </div>
-            <div className="space-y-3 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <Skeleton className="h-3.5 w-3/5" />
-                <Skeleton className="h-5 w-12 rounded-full" />
+            <div className="space-y-2 p-4">
+              <div className="flex min-h-10 items-start justify-between gap-3">
+                <div className="w-3/5 space-y-2">
+                  <Skeleton className="h-3.5 w-full" />
+                  <Skeleton className="h-3.5 w-2/3" />
+                </div>
+                <Skeleton className="h-4 w-12" />
               </div>
-              <Skeleton className="h-3 w-4/5" />
-              {tiers && <Skeleton className="h-2.5 w-12" />}
+              <div className="flex h-10 flex-col gap-2 py-1">
+                <Skeleton className="h-3 w-4/5" />
+                <Skeleton className="h-3 w-3/5" />
+              </div>
             </div>
           </div>
         ))}
@@ -74,18 +82,19 @@ export function HypeCardsLoading() {
   return (
     <LoadingPreview label="Carregando seus hypes">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 min-[900px]:grid-cols-3 lg:grid-cols-4">
-        {Array.from({ length: 4 }, (_, index) => (
+        {Array.from({ length: 12 }, (_, index) => (
           <div
-            className="mx-auto flex min-h-[164px] w-full max-w-[320px] flex-col justify-between rounded-xl border border-white/10 bg-surface p-3"
+            className="relative mx-auto flex min-h-[164px] w-full max-w-[320px] flex-col justify-between rounded-xl border border-white/10 bg-surface p-3"
             key={index}
           >
-            <div className="space-y-2">
+            <Skeleton className="absolute right-2 top-2 size-11 rounded-lg" />
+            <div className="space-y-2 pr-12">
               <Skeleton className="h-4 w-3/4" />
               <Skeleton className="h-3 w-1/2" />
             </div>
-            <div className="mt-5 grid grid-cols-3 gap-1">
+            <div className="mt-5 grid grid-cols-3 gap-2">
               {[0, 1, 2].map((unit) => (
-                <Skeleton className="h-11 rounded-md" key={unit} />
+                <Skeleton className="h-12 rounded-lg" key={unit} />
               ))}
             </div>
           </div>
@@ -105,10 +114,10 @@ export function ReviewsLoading() {
             key={index}
           >
             <div className="flex flex-1 items-start gap-3 sm:gap-4">
-              <Skeleton className="h-28 w-14 shrink-0 rounded-lg sm:w-20" />
+              <Skeleton className="aspect-[2/3] w-16 shrink-0 rounded-lg sm:w-20" />
               <div className="min-w-0 flex-1">
                 <div className="flex h-24 flex-col gap-2 sm:h-16 sm:flex-row sm:items-center sm:gap-3">
-                  <Skeleton className="size-12 shrink-0 rounded-full sm:size-16" />
+                  <Skeleton className="h-12 w-20 shrink-0 rounded-lg" />
                   <Skeleton className="h-4 w-1/2" />
                 </div>
                 <div className="mt-3 space-y-3">
@@ -169,29 +178,39 @@ export function ProfileLoading() {
   return (
     <main className="site-container min-h-[calc(100dvh-3.5rem)] max-w-xl pb-28 pt-5 sm:pb-12 sm:pt-6 lg:pt-7">
       <LoadingPreview label="Carregando perfil">
-        <Skeleton className="mb-4 h-9 w-20" />
+        <Skeleton className="mb-4 h-11 w-20" />
         <div className="rounded-2xl border border-white/10 bg-surface p-5 sm:p-6">
-          <div className="flex items-center gap-4">
+          <Skeleton className="h-7 w-24 sm:h-9" />
+          <div className="mt-5 grid grid-cols-[3rem_minmax(0,1fr)] items-start gap-x-4 gap-y-3 sm:grid-cols-[3rem_minmax(0,1fr)_auto]">
             <Skeleton className="size-12 shrink-0 rounded-full" />
-            <div className="flex-1 space-y-2">
+            <div className="min-w-0 space-y-1">
               <Skeleton className="h-6 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-5 w-full max-w-48" />
             </div>
-            <Skeleton className="h-9 w-16" />
+            <Skeleton className="col-start-2 h-11 w-20 sm:col-start-3 sm:row-start-1" />
           </div>
-          <div className="mt-6 space-y-5 border-t border-white/10 pt-5">
-            <Skeleton className="h-6 w-52" />
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-11 w-full rounded-xl" />
-              <Skeleton className="h-3 w-3/4" />
+          <div className="mt-6 border-t border-white/10 pt-5">
+            <Skeleton className="h-7 w-52 max-w-full" />
+            <div className="mt-5 space-y-5">
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-11 w-full rounded-lg" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+              <div>
+                <Skeleton className="mb-2 h-5 w-28" />
+                <Skeleton className="h-11 w-44 max-w-full rounded-lg" />
+                <Skeleton className="mt-3 h-4 w-3/4" />
+              </div>
             </div>
-            <div className="space-y-3">
-              <Skeleton className="h-4 w-28" />
-              <Skeleton className="h-10 w-40 rounded-xl" />
-              <Skeleton className="h-3 w-1/2" />
+            <Skeleton className="ml-auto mt-5 h-11 w-full rounded-lg sm:w-44" />
+          </div>
+          <div className="mt-6 border-t border-white/10 pt-5">
+            <Skeleton className="h-7 w-44 max-w-full" />
+            <div className="mt-3 space-y-2">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-5 w-16" />
             </div>
-            <Skeleton className="ml-auto h-11 w-36 rounded-xl" />
           </div>
         </div>
       </LoadingPreview>
@@ -278,11 +297,11 @@ export function ProtectedPageLoading({ pathname }: Readonly<{ pathname: string }
         ) : (
           <>
             <div className="flex items-center justify-between gap-4">
-              <div className="w-2/3 space-y-3">
-                <Skeleton className="h-8 w-48" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-8 w-48 max-w-full" />
                 <Skeleton className="h-4 w-56 max-w-full" />
               </div>
-              {!creating && <Skeleton className="h-11 w-28 rounded-xl" />}
+              {!creating && !reviews && <Skeleton className="h-11 w-28 rounded-xl" />}
             </div>
             {creating ? (
               <div className="mt-8 space-y-6 rounded-2xl border border-white/10 bg-surface p-5 sm:p-7">
@@ -300,7 +319,11 @@ export function ProtectedPageLoading({ pathname }: Readonly<{ pathname: string }
               </div>
             ) : reviews ? (
               <>
-                <Skeleton className="mt-6 h-12 w-full rounded-xl" />
+                <div className="mt-6 rounded-2xl border border-white/10 bg-surface p-5">
+                  <Skeleton className="mb-2 h-5 w-32" />
+                  <Skeleton className="h-12 w-full rounded-lg" />
+                  <Skeleton className="mt-2 h-4 w-48 max-w-full" />
+                </div>
                 <Skeleton className="mt-8 h-7 w-48" />
                 <ReviewsLoading />
               </>

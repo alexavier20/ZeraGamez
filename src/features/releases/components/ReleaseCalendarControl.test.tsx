@@ -53,10 +53,12 @@ function ControlledCalendarControl({
 }
 
 describe('ReleaseCalendarControl', () => {
-  it('keeps the complete control desktop-only when the picker is open', () => {
+  it('keeps the calendar available at every breakpoint with an inline mobile picker', () => {
     render(<ControlledCalendarControl initialOpen />);
 
-    expect(screen.getByRole('group').parentElement).toHaveClass('relative', 'hidden', 'lg:block');
+    expect(screen.getByRole('group').parentElement).toHaveClass('relative', 'w-full');
+    expect(screen.getByRole('group').parentElement).not.toHaveClass('hidden');
+    expect(screen.getByRole('dialog').parentElement).toHaveClass('relative', 'lg:absolute');
   });
 
   it('opens and closes the controlled calendar from its trigger', async () => {
@@ -64,7 +66,7 @@ describe('ReleaseCalendarControl', () => {
     const onOpenChange = vi.fn();
     render(<ControlledCalendarControl onOpenChange={onOpenChange} />);
 
-    const calendar = screen.getByRole('button', { name: 'Calendário' });
+    const calendar = screen.getByRole('button', { name: 'Escolher data' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
     await user.click(calendar);
@@ -90,9 +92,11 @@ describe('ReleaseCalendarControl', () => {
 
     await user.click(screen.getByRole('button', { name: '29 de julho de 2026' }));
     expect(onSelectDate).toHaveBeenCalledWith('2026-07-29');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: '29 jul. 2026' })).toHaveFocus());
     expect(screen.getByRole('button', { name: '29 jul. 2026' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Lista' }));
+    await user.click(screen.getByRole('button', { name: 'Todas as datas' }));
     expect(onClearDate).toHaveBeenCalledTimes(1);
   });
 
@@ -115,8 +119,18 @@ describe('ReleaseCalendarControl', () => {
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Calendário' })).toHaveFocus();
+      expect(screen.getByRole('button', { name: 'Escolher data' })).toHaveFocus();
     });
+  });
+
+  it('closes from the visible touch control and restores focus', async () => {
+    const user = userEvent.setup();
+    render(<ControlledCalendarControl initialOpen />);
+    await user.click(screen.getByRole('button', { name: 'Fechar calendário' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Escolher data' })).toHaveFocus(),
+    );
   });
 
   it('removes its global pointerdown listener when unmounted', () => {

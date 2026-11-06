@@ -184,7 +184,11 @@ export function ReleasesPage() {
       className="site-container min-h-[calc(100dvh-3.5rem)] pb-28 pt-5 sm:pb-12 sm:pt-6 lg:pt-7"
     >
       <div className="lg:flex lg:items-end lg:justify-between">
-        <PageHeading title="Próximos lançamentos" subtitle={releaseSubtitle(selectedDate, state)} />
+        <PageHeading
+          title="Próximos lançamentos"
+          subtitle={releaseSubtitle(selectedDate, state)}
+          titleClassName="font-heading text-2xl leading-tight font-semibold text-content-primary sm:text-[28px] lg:text-[32px]"
+        />
         <ReleaseCalendarControl
           controlsId={resultsId}
           currentDate={currentDate}

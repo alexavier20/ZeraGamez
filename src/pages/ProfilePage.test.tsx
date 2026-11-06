@@ -67,6 +67,7 @@ describe('ProfilePage', () => {
     renderProfile(createAuthService(vi.fn().mockResolvedValue(undefined)));
 
     expect(await screen.findByRole('heading', { name: 'Perfil' })).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.getByText('alex@example.com')).toBeInTheDocument();
     const avatar = screen.getByRole('img', { name: 'Avatar de Alex Xavier' });
     expect(avatar).toHaveTextContent('AX');
@@ -92,6 +93,39 @@ describe('ProfilePage', () => {
     expect(await screen.findByRole('heading', { name: 'Métodos de acesso' })).toBeInTheDocument();
     expect(screen.getByText('Código por e-mail')).toBeInTheDocument();
     expect(screen.getByText('Google')).toBeInTheDocument();
+  });
+
+  it('keeps the save action pending and updates the identity after saving', async () => {
+    const user = userEvent.setup();
+    const pendingSave = deferred<AuthenticatedUser>();
+    const updateProfile = vi.fn(() => pendingSave.promise);
+    renderProfile({
+      ...createAuthService(vi.fn().mockResolvedValue(undefined)),
+      updateProfile,
+    });
+
+    const nameInput = await screen.findByRole('textbox', { name: 'Nome para exibição' });
+    await user.clear(nameInput);
+    await user.type(nameInput, '  Alex Gamer  ');
+    await user.click(screen.getByRole('button', { name: 'Salvar alterações' }));
+
+    expect(updateProfile).toHaveBeenCalledExactlyOnceWith({
+      avatarFile: undefined,
+      displayName: 'Alex Gamer',
+    });
+    expect(screen.getByRole('button', { name: 'Salvando…' })).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent('Salvando perfil…');
+
+    await act(async () => {
+      pendingSave.resolve({ ...authenticatedUser, name: 'Alex Gamer' });
+      await pendingSave.promise;
+    });
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Perfil atualizado');
+    expect(screen.getByRole('img', { name: 'Avatar de Alex Gamer' })).toBeInTheDocument();
+    expect(screen.getByText('Alex Gamer')).toBeInTheDocument();
+    expect(nameInput).toHaveValue('Alex Gamer');
+    expect(screen.getByRole('button', { name: 'Salvar alterações' })).toBeEnabled();
   });
 
   it('clears pending intent, awaits sign out, and only then returns home', async () => {

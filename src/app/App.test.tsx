@@ -284,11 +284,12 @@ describe('Zera GameZ', () => {
       'lg:items-end',
       'lg:justify-between',
     );
-    const viewSwitcher = screen.getByRole('group', { name: 'Alternar visualização' });
-    const listButton = screen.getByRole('button', { name: 'Lista' });
-    const calendarButton = screen.getByRole('button', { name: 'Calendário' });
+    const viewSwitcher = screen.getByRole('group', { name: 'Filtrar por data' });
+    const listButton = screen.getByRole('button', { name: 'Todas as datas' });
+    const calendarButton = screen.getByRole('button', { name: 'Escolher data' });
 
-    expect(viewSwitcher).toHaveClass('hidden', 'lg:flex');
+    expect(viewSwitcher).toHaveClass('flex');
+    expect(viewSwitcher).not.toHaveClass('hidden');
     expect(listButton).toHaveAttribute('aria-pressed', 'true');
     expect(calendarButton).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByRole('region', { name: 'Resultados de lan\u00e7amentos' })).toHaveAttribute(
@@ -325,14 +326,9 @@ describe('Zera GameZ', () => {
       (headingAndSwitcher?.compareDocumentPosition(filters) ?? 0) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-    expect(filters).toHaveClass('mt-[18px]', 'sm:mt-[22px]', 'lg:mt-7');
+    expect(filters).toHaveClass('mt-6');
 
-    expect(main).toHaveClass(
-      'site-container',
-      'pt-5',
-      'sm:pt-6',
-      'lg:pt-7',
-    );
+    expect(main).toHaveClass('site-container', 'pt-5', 'sm:pt-6', 'lg:pt-7');
     expect(releasesLink).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'Explorar' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('banner')).toBeInTheDocument();
@@ -714,14 +710,14 @@ describe('Zera GameZ', () => {
     render(<AppRouter />);
 
     expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
-    await user.click(screen.getByRole('button', { name: 'Calendário' }));
+    await user.click(screen.getByRole('button', { name: 'Escolher data' }));
     await user.click(screen.getByRole('button', { name: 'Próximo mês' }));
     expect(
       screen.getByRole('dialog', { name: formatCalendarMonth(nextMonth) }),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Lista' }));
-    await user.click(screen.getByRole('button', { name: 'Calendário' }));
+    await user.click(screen.getByRole('button', { name: 'Todas as datas' }));
+    await user.click(screen.getByRole('button', { name: 'Escolher data' }));
 
     expect(
       screen.getByRole('dialog', { name: formatCalendarMonth(currentMonth) }),
@@ -740,7 +736,7 @@ describe('Zera GameZ', () => {
     render(<AppRouter />);
 
     expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
-    await user.click(screen.getByRole('button', { name: 'Calendário' }));
+    await user.click(screen.getByRole('button', { name: 'Escolher data' }));
     await user.click(
       screen.getByRole('button', { name: formatCalendarLongDate(adjacentDay.date) }),
     );
@@ -767,7 +763,7 @@ describe('Zera GameZ', () => {
       expect(releaseObservedTarget).toBeDefined();
     });
     const broadSentinel = releaseObservedTarget as HTMLElement;
-    await user.click(screen.getByRole('button', { name: 'Calendário' }));
+    await user.click(screen.getByRole('button', { name: 'Escolher data' }));
     await user.click(screen.getByRole('button', { name: formatCalendarLongDate(selectedDate) }));
 
     await waitFor(() => {
@@ -802,7 +798,7 @@ describe('Zera GameZ', () => {
     render(<AppRouter />);
 
     expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
-    await user.click(screen.getByRole('button', { name: 'Calendário' }));
+    await user.click(screen.getByRole('button', { name: 'Escolher data' }));
     await user.click(screen.getByRole('button', { name: formatCalendarLongDate(selectedDate) }));
 
     expect(
@@ -828,7 +824,7 @@ describe('Zera GameZ', () => {
     render(<AppRouter />);
 
     expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
-    await user.click(screen.getByRole('button', { name: 'Calendário' }));
+    await user.click(screen.getByRole('button', { name: 'Escolher data' }));
     await user.click(screen.getByRole('button', { name: formatCalendarLongDate(selectedDate) }));
 
     expect(
@@ -860,7 +856,7 @@ describe('Zera GameZ', () => {
     expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
     await user.click(screen.getByRole('button', { name: 'PC' }));
     await user.selectOptions(screen.getAllByRole('combobox', { name: 'Gênero' })[0], 'rpg');
-    await user.click(screen.getByRole('button', { name: 'Calendário' }));
+    await user.click(screen.getByRole('button', { name: 'Escolher data' }));
     await user.click(screen.getByRole('button', { name: formatCalendarLongDate(selectedDate) }));
 
     await waitFor(() => {
@@ -906,7 +902,7 @@ describe('Zera GameZ', () => {
     expect(await screen.findAllByText('Eclipse Protocol')).toHaveLength(2);
     await user.click(screen.getByRole('button', { name: 'PC' }));
     await user.selectOptions(screen.getAllByRole('combobox', { name: 'Gênero' })[0], 'rpg');
-    await user.click(screen.getByRole('button', { name: 'Calendário' }));
+    await user.click(screen.getByRole('button', { name: 'Escolher data' }));
     await user.click(screen.getByRole('button', { name: formatCalendarLongDate(selectedDate) }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -1033,7 +1029,7 @@ describe('Zera GameZ', () => {
     });
     expect(fetchReleasesMock).toHaveBeenCalledTimes(1);
 
-    await user.click(screen.getByRole('button', { name: 'Lista' }));
+    await user.click(screen.getByRole('button', { name: 'Todas as datas' }));
     expect(screen.getAllByText('Eclipse Protocol')).toHaveLength(2);
     expect(fetchReleasesMock).toHaveBeenCalledTimes(1);
     await waitFor(() => {

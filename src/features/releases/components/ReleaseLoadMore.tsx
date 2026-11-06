@@ -47,12 +47,12 @@ export function ReleaseLoadMore({
 
   if (pagination.status === 'loading') {
     return (
-      <LoadingPreview label="Carregando mais lançamentos…" className="mt-7">
+      <LoadingPreview label="Carregando mais lançamentos…" className="mt-8">
         <div className="grid grid-cols-1 gap-x-3 gap-y-6 sm:grid-cols-2 sm:gap-x-4 sm:gap-y-8 xl:grid-cols-4">
           {[0, 1, 2, 3].map((index) => (
             <div key={index}>
               <Skeleton className="aspect-video rounded-xl" />
-              <Skeleton className="mt-3 h-5 w-3/4" />
+              <Skeleton className="mt-3 h-10 w-3/4" />
               <div className="mt-3 flex gap-2">
                 <Skeleton className="h-5 w-10" />
                 <Skeleton className="h-5 w-14" />
@@ -66,7 +66,7 @@ export function ReleaseLoadMore({
 
   if (pagination.status === 'error') {
     return (
-      <div className="mt-7 flex flex-col items-center gap-3 text-center" role="alert">
+      <div className="mt-8 flex flex-col items-center gap-3 text-center" role="alert">
         <p className="text-sm text-text-muted">Não foi possível carregar mais jogos</p>
         <button
           className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
@@ -81,7 +81,7 @@ export function ReleaseLoadMore({
 
   if (pagination.status === 'complete') {
     return (
-      <p aria-live="polite" className="mt-7 text-center text-sm text-text-muted" role="status">
+      <p aria-live="polite" className="mt-8 text-center text-sm text-text-muted" role="status">
         Todos os lançamentos disponíveis foram carregados
       </p>
     );
@@ -89,7 +89,7 @@ export function ReleaseLoadMore({
 
   if (typeof IntersectionObserver === 'undefined') {
     return (
-      <div className="mt-7 flex justify-center">
+      <div className="mt-8 flex justify-center">
         <button
           className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           onClick={onLoadMore}
@@ -101,5 +101,5 @@ export function ReleaseLoadMore({
     );
   }
 
-  return <div aria-hidden="true" className="mt-7 min-h-4" ref={sentinelRef} />;
+  return <div aria-hidden="true" className="mt-8 min-h-4" ref={sentinelRef} />;
 }

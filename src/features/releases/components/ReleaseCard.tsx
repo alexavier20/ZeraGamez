@@ -71,13 +71,11 @@ function WantToPlayButton({
         selected ? `Remover ${gameName} de Quero jogar` : `Marcar ${gameName} como quero jogar`
       }
       aria-pressed={selected}
-      className={`inline-flex shrink-0 items-center justify-center border text-content-primary transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${
-        compact
-          ? 'size-7 rounded-lg'
-          : 'h-7 w-[104px] gap-[7px] rounded-[10px] px-2 text-[11px] font-semibold'
+      className={`inline-flex shrink-0 items-center justify-center border text-content-primary transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${
+        compact ? 'size-11 rounded-lg' : 'min-h-11 gap-2 rounded-lg px-3 text-xs font-medium'
       } ${
         selected
-          ? 'border-success bg-success hover:bg-success/90'
+          ? 'border-[#25734b] bg-[#175736] hover:bg-[#1c6841]'
           : 'border-transparent bg-app/80 hover:bg-app'
       }`}
       disabled={disabled}
@@ -86,8 +84,8 @@ function WantToPlayButton({
       }}
       type="button"
     >
-      <Icon aria-hidden="true" size={15} />
-      {compact ? null : <span>Quero jogar!</span>}
+      <Icon aria-hidden="true" size={18} strokeWidth={1.5} />
+      {compact ? null : <span>Quero jogar</span>}
     </button>
   );
 }
@@ -103,14 +101,14 @@ function AddToListsButton({ buttonRef, disabled, gameName, onClick }: AddToLists
   return (
     <button
       aria-label={`Adicionar ${gameName} à lista`}
-      className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg border border-border-brand bg-app/85 text-content-primary transition-colors hover:border-brand hover:bg-app focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-60"
+      className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-app/85 text-content-primary transition-colors hover:border-brand hover:bg-app focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-60"
       disabled={disabled}
       onClick={onClick}
       ref={buttonRef}
       title={`Adicionar ${gameName} à lista`}
       type="button"
     >
-      <BookmarkPlus aria-hidden="true" size={15} />
+      <BookmarkPlus aria-hidden="true" size={18} strokeWidth={1.5} />
     </button>
   );
 }
@@ -146,10 +144,13 @@ function PlatformChips({
       );
       const platformWidths = platformNodes.map((node) => node.getBoundingClientRect().width);
       const summaryWidths = new Map(
-        summaryNodes.map((node) => [
-          Number(node.dataset.platformSummaryMeasure),
-          node.getBoundingClientRect().width,
-        ] as const),
+        summaryNodes.map(
+          (node) =>
+            [
+              Number(node.dataset.platformSummaryMeasure),
+              node.getBoundingClientRect().width,
+            ] as const,
+        ),
       );
 
       if (platforms.length === 0) {
@@ -182,8 +183,7 @@ function PlatformChips({
     };
 
     recalculate();
-    const observer =
-      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(recalculate);
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(recalculate);
     observer?.observe(row);
     observer?.observe(measurement);
     window.addEventListener('resize', recalculate);
@@ -274,20 +274,20 @@ function ReleaseCardDesktop({
       <div className="relative">
         <Link
           aria-label={`Ver detalhes de ${item.name}`}
-          className="block aspect-[16/9] w-full overflow-hidden rounded-xl shadow-[0_8px_24px_#00000040] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="block aspect-[16/9] w-full overflow-hidden rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           to={`/jogos/${String(item.id)}`}
         >
           {item.coverUrl ? (
             <img
               alt={`Capa de ${item.name}`}
-              className="size-full rounded-xl object-cover transition-opacity hover:opacity-85"
+              className="size-full rounded-xl object-cover transition-opacity duration-150 hover:opacity-90"
               loading="lazy"
               src={item.coverUrl}
             />
           ) : (
             <div
               aria-label={`Capa indisponível de ${item.name}`}
-              className="flex size-full items-center justify-center rounded-xl bg-gradient-to-br from-bg-secondary to-surface-hover text-text-muted"
+              className="flex size-full items-center justify-center rounded-xl bg-bg-secondary text-text-muted"
               role="img"
             >
               <Gamepad2 aria-hidden="true" size={32} />
@@ -317,7 +317,7 @@ function ReleaseCardDesktop({
 
       <div className="flex min-w-0 flex-1 flex-col gap-3 pt-3">
         <h3
-          className="truncate font-heading text-base font-semibold text-text-primary"
+          className="line-clamp-2 min-h-10 font-heading text-base leading-5 font-semibold text-text-primary"
           title={item.name}
         >
           <Link
@@ -350,20 +350,20 @@ function ReleaseCardMobile({
       <div className="relative">
         <Link
           aria-label={`Ver detalhes de ${item.name}`}
-          className="block aspect-[16/9] w-full overflow-hidden rounded-[10px] shadow-[0_8px_24px_#00000040] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="block aspect-[16/9] w-full overflow-hidden rounded-[10px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           to={`/jogos/${String(item.id)}`}
         >
           {item.coverUrl ? (
             <img
               alt={`Capa de ${item.name}`}
-              className="size-full rounded-[10px] object-cover transition-opacity hover:opacity-85"
+              className="size-full rounded-[10px] object-cover transition-opacity duration-150 hover:opacity-90"
               loading="lazy"
               src={item.coverUrl}
             />
           ) : (
             <div
               aria-label={`Capa indisponível de ${item.name}`}
-              className="flex size-full items-center justify-center rounded-[10px] bg-gradient-to-br from-bg-secondary to-surface-hover text-text-muted"
+              className="flex size-full items-center justify-center rounded-[10px] bg-bg-secondary text-text-muted"
               role="img"
             >
               <Gamepad2 aria-hidden="true" size={24} />
@@ -389,10 +389,10 @@ function ReleaseCardMobile({
         ) : null}
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-2 pt-2.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-2 pt-3">
         <div className="flex min-w-0 items-start justify-between gap-2">
           <h3
-            className="min-w-0 truncate font-heading text-sm font-semibold text-text-primary"
+            className="min-w-0 line-clamp-2 min-h-10 font-heading text-sm leading-5 font-semibold text-text-primary"
             title={item.name}
           >
             <Link
