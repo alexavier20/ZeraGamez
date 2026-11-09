@@ -16,6 +16,7 @@ interface Review {
   cover_url: string | null;
   score: number;
   analysis: string;
+  is_public: boolean;
   updated_at: string;
 }
 const field =
@@ -169,9 +170,26 @@ export function ReviewsPage() {
     coverUrl: string | null;
   } | null>(null);
   const [score, setScore] = useState('');
+  const [scorePreview, setScorePreview] = useState<number | null>(null);
   const [analysis, setAnalysis] = useState('');
+  const selectedScore = score === '' ? null : Number(score);
+  const displayedScore = scorePreview ?? selectedScore;
+  const scoreLabel = displayedScore === null ? '—' : String(displayedScore);
+  const scoreDescription =
+    displayedScore === null
+      ? 'Passe o mouse ou escolha uma nota'
+      : displayedScore <= 4
+        ? 'Flopou'
+        : displayedScore <= 7
+          ? 'Mista ou mediana'
+          : displayedScore <= 9
+            ? 'Excelente'
+            : 'GOTY';
+  const [isPublic, setIsPublic] = useState(true);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewsOwnerId, setReviewsOwnerId] = useState<string | null>(null);
   const [viewedReview, setViewedReview] = useState<Review | null>(null);
+  const [viewedReviewOwnerId, setViewedReviewOwnerId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
@@ -179,6 +197,8 @@ export function ReviewsPage() {
   const [loadAttempt, setLoadAttempt] = useState(0);
   const collectionError =
     loadError || (client === null ? 'Não foi possível carregar suas avaliações' : '');
+  const reviewsBelongToCurrentUser = userId !== null && reviewsOwnerId === userId;
+  const visibleReviews = reviewsBelongToCurrentUser ? reviews : [];
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -187,7 +207,7 @@ export function ReviewsPage() {
     if (!client || !userId) return;
     void client
       .from('game_reviews')
-      .select('igdb_id,name,cover_url,score,analysis,updated_at')
+      .select('igdb_id,name,cover_url,score,analysis,is_public,updated_at')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .then(
@@ -198,6 +218,7 @@ export function ReviewsPage() {
           else {
             setLoadError('');
             setReviews(data);
+            setReviewsOwnerId(userId);
           }
         },
         () => {
@@ -236,11 +257,15 @@ export function ReviewsPage() {
     };
   }, [query]);
   function choose(game: { id: number; name: string; coverUrl: string | null }) {
-    const existing = reviews.find((r) => r.igdb_id === game.id);
+    const existing = reviewsBelongToCurrentUser
+      ? reviews.find((r) => r.igdb_id === game.id)
+      : undefined;
     setSelected(game);
     setSearchResultsOpen(false);
-    setScore(existing ? String(existing.score) : '');
+    setScore(existing && existing.score >= 1 ? String(Math.round(existing.score)) : '');
+    setScorePreview(null);
     setAnalysis(existing?.analysis ?? '');
+    setIsPublic(existing?.is_public ?? true);
     setMessage('');
     setError('');
   }
@@ -250,11 +275,11 @@ export function ReviewsPage() {
     if (
       score === '' ||
       !Number.isFinite(Number(score)) ||
-      Number(score) < 0 ||
+      Number(score) < 1 ||
       Number(score) > 10 ||
       !analysis.trim()
     ) {
-      setError('Informe uma nota de 0 a 10 e escreva sua análise.');
+      setError('Informe uma nota de 1 a 10 e escreva sua análise.');
       return;
     }
     setSaving(true);
@@ -266,16 +291,20 @@ export function ReviewsPage() {
       cover_url: selected.coverUrl,
       score: Number(score),
       analysis: analysis.trim(),
+      is_public: isPublic,
       updated_at: new Date().toISOString(),
     };
     try {
       const { data, error } = await client
         .from('game_reviews')
         .upsert({ ...record, user_id: userId }, { onConflict: 'user_id,igdb_id' })
-        .select('igdb_id,name,cover_url,score,analysis,updated_at')
+        .select('igdb_id,name,cover_url,score,analysis,is_public,updated_at')
         .single();
       if (error) throw error;
       setReviews((current) => [data, ...current.filter((r) => r.igdb_id !== record.igdb_id)]);
+      setReviewsOwnerId(userId);
+      setLoading(false);
+      setLoadError('');
       setSelected(null);
       setMessage('Avaliação salva');
     } catch {
@@ -427,29 +456,129 @@ export function ReviewsPage() {
           aria-labelledby="review-form-heading"
         >
           <form onSubmit={(e) => void save(e)} className="space-y-4">
-            <div className="flex items-center gap-3">
-              {selected.coverUrl && (
-                <img src={selected.coverUrl} alt="" className="h-20 w-14 rounded object-cover" />
-              )}
-              <h2 id="review-form-heading" className="font-heading text-xl font-semibold">
-                {selected.name}
-              </h2>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex min-w-0 items-center gap-3">
+                {selected.coverUrl && (
+                  <img src={selected.coverUrl} alt="" className="h-20 w-14 rounded object-cover" />
+                )}
+                <h2
+                  id="review-form-heading"
+                  className="min-w-0 break-words font-heading text-xl font-semibold"
+                >
+                  {selected.name}
+                </h2>
+              </div>
+              <fieldset className="shrink-0">
+                <legend className="sr-only">Visibilidade da avaliação</legend>
+                <div className="flex flex-wrap gap-2">
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm transition-colors hover:border-white/25 has-checked:border-brand/60">
+                    <input
+                      className="accent-brand"
+                      type="radio"
+                      name="review-visibility"
+                      value="public"
+                      checked={isPublic}
+                      onChange={() => setIsPublic(true)}
+                    />
+                    Pública
+                    <span className="sr-only">
+                      Outras pessoas poderão encontrar e ler esta avaliação.
+                    </span>
+                  </label>
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm transition-colors hover:border-white/25 has-checked:border-brand/60">
+                    <input
+                      className="accent-brand"
+                      type="radio"
+                      name="review-visibility"
+                      value="private"
+                      checked={!isPublic}
+                      onChange={() => setIsPublic(false)}
+                    />
+                    Privada
+                    <span className="sr-only">Só você poderá ver esta avaliação.</span>
+                  </label>
+                </div>
+              </fieldset>
             </div>
-            <label className="block max-w-40 text-sm font-medium">
-              Nota (0 a 10)
-              <input
-                className={`${field} mt-2`}
-                type="number"
-                min="0"
-                max="10"
-                step="0.1"
-                required
-                value={score}
-                onChange={(e) => {
-                  setScore(e.target.value);
-                }}
-              />
-            </label>
+              <fieldset
+                className="max-w-xl space-y-3"
+                onMouseLeave={() => setScorePreview(null)}
+              >
+                <legend className="sr-only">Sua nota, de 1 a 10</legend>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-text-muted">
+                      Sua nota
+                    </p>
+                    <p aria-live="polite" className="mt-1 text-sm font-semibold">
+                      {scoreDescription}
+                    </p>
+                  </div>
+                  <output
+                    className={`grid size-16 shrink-0 place-items-center rounded-full border-2 font-heading text-3xl font-bold ${
+                      displayedScore === null
+                        ? 'border-white/40 text-content-primary'
+                        : displayedScore <= 4
+                          ? 'border-rose-400 bg-rose-400 text-black'
+                          : displayedScore <= 7
+                            ? 'border-amber-400 bg-amber-400 text-black'
+                            : 'border-emerald-500 bg-emerald-500 text-black'
+                    }`}
+                  >
+                    {scoreLabel}
+                  </output>
+                </div>
+                <div className="flex gap-1">
+                  {Array.from({ length: 10 }, (_, index) => {
+                    const value = index + 1;
+                    const colorClass =
+                      displayedScore === null
+                        ? ''
+                        : displayedScore <= 4
+                          ? 'bg-rose-400'
+                          : displayedScore <= 7
+                            ? 'bg-amber-400'
+                            : 'bg-emerald-500';
+                    const idleColorClass =
+                      value <= 4
+                        ? 'bg-rose-400/40'
+                        : value <= 7
+                          ? 'bg-amber-400/40'
+                          : 'bg-emerald-500/40';
+                    const isFilled = displayedScore !== null && value <= displayedScore;
+                    return (
+                      <label
+                        key={value}
+                        className="min-w-0 flex-1 cursor-pointer"
+                        onMouseEnter={() => setScorePreview(value)}
+                      >
+                        <input
+                          className="peer sr-only"
+                          type="radio"
+                          name="review-score"
+                          value={value}
+                          checked={score === String(value)}
+                          required={value === 1}
+                          aria-label={`Nota ${value}`}
+                          onFocus={() => setScorePreview(value)}
+                          onBlur={() => setScorePreview(null)}
+                          onChange={() => setScore(String(value))}
+                        />
+                        <span
+                          aria-hidden="true"
+                          className={`block h-3 rounded-sm transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand ${
+                            isFilled ? colorClass : displayedScore === null ? idleColorClass : 'bg-white/10'
+                          }`}
+                        />
+                      </label>
+                    );
+                  })}
+                </div>
+                <div className="flex justify-between text-xs text-text-muted" aria-hidden="true">
+                  <span>1</span>
+                  <span>10</span>
+                </div>
+              </fieldset>
             <label className="block text-sm font-medium">
               Sua análise
               <textarea
@@ -487,9 +616,9 @@ export function ReviewsPage() {
       <section className="mt-8" aria-labelledby="my-reviews">
         <h2 id="my-reviews" className="flex items-center gap-2 font-heading text-xl font-semibold">
           Minhas avaliações
-          {!loading && !collectionError && (
+          {!loading && reviewsBelongToCurrentUser && !collectionError && (
             <span className="font-body text-sm font-medium tabular-nums text-text-muted">
-              ({reviews.length})
+              ({visibleReviews.length})
             </span>
           )}
         </h2>
@@ -510,15 +639,15 @@ export function ReviewsPage() {
               </button>
             )}
           </div>
-        ) : loading ? (
+        ) : loading || !reviewsBelongToCurrentUser ? (
           <ReviewsLoading />
-        ) : reviews.length === 0 ? (
+        ) : visibleReviews.length === 0 ? (
           <p className="mt-4 text-text-muted">
             Você ainda não avaliou nenhum jogo. Pesquise um jogo para começar.
           </p>
         ) : (
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            {reviews.map((review) => (
+            {visibleReviews.map((review) => (
               <article
                 key={review.igdb_id}
                 className="relative flex h-[280px] min-w-0 flex-col rounded-2xl border border-white/10 bg-surface p-5 transition-colors hover:border-white/25"
@@ -530,6 +659,7 @@ export function ReviewsPage() {
                   className="absolute inset-0 rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                   onClick={() => {
                     setViewedReview(review);
+                    setViewedReviewOwnerId(userId);
                   }}
                 />
                 <div className="pointer-events-none flex min-h-0 flex-1 items-start gap-3 sm:gap-4">
@@ -564,6 +694,7 @@ export function ReviewsPage() {
                   <span className="min-w-0 truncate font-semibold text-content-primary">
                     {state.status === 'authenticated' ? state.user.name : ''}
                   </span>
+                  <span>{review.is_public ? 'Pública' : 'Privada'}</span>
                   <span aria-hidden="true">·</span>
                   <span className="shrink-0">
                     <ReviewDate value={review.updated_at} />
@@ -585,12 +716,13 @@ export function ReviewsPage() {
           </div>
         )}
       </section>
-      {viewedReview && (
+      {viewedReview && viewedReviewOwnerId === userId && (
         <ReviewDetailsModal
           review={viewedReview}
           author={state.status === 'authenticated' ? state.user.name : ''}
           onClose={() => {
             setViewedReview(null);
+            setViewedReviewOwnerId(null);
           }}
         />
       )}
