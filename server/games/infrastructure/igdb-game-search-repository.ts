@@ -3,20 +3,20 @@ import { z } from 'zod';
 import {
   gameSearchResultSchema,
   type GameSearchResult,
-} from '../../../shared/contracts/game-search';
+} from '../../../shared/contracts/game-search.js';
 import {
   InvalidUpstreamResponseError,
   isTimeoutError,
   ServiceUnavailableError,
   UpstreamTimeoutError,
-} from '../../releases/infrastructure/upstream-errors';
+} from '../../releases/infrastructure/upstream-errors.js';
 
-import type { SteamRankingMetric } from '../../../shared/contracts/steam-rankings';
+import type { SteamRankingMetric } from '../../../shared/contracts/steam-rankings.js';
 import type {
   AccessTokenLease,
   AccessTokenProvider,
-} from '../../releases/infrastructure/twitch-token-provider';
-import type { GameSearchRepository } from '../application/search-games';
+} from '../../releases/infrastructure/twitch-token-provider.js';
+import type { GameSearchRepository } from '../application/search-games.js';
 
 const igdbDateSchema = z
   .number()

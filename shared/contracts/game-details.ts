@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { civilDateSchema } from './releases';
+import { civilDateSchema } from './releases.js';
 
 const httpsUrlSchema = z.url().startsWith('https://');
 

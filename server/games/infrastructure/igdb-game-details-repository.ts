@@ -1,18 +1,18 @@
 import { z } from 'zod';
 
-import { gameDetailsSchema, type GameDetails } from '../../../shared/contracts/game-details';
+import { gameDetailsSchema, type GameDetails } from '../../../shared/contracts/game-details.js';
 import {
   InvalidUpstreamResponseError,
   isTimeoutError,
   ServiceUnavailableError,
   UpstreamTimeoutError,
-} from '../../releases/infrastructure/upstream-errors';
+} from '../../releases/infrastructure/upstream-errors.js';
 
 import type {
   AccessTokenLease,
   AccessTokenProvider,
-} from '../../releases/infrastructure/twitch-token-provider';
-import type { GameDetailsRepository } from '../application/get-game-details';
+} from '../../releases/infrastructure/twitch-token-provider.js';
+import type { GameDetailsRepository } from '../application/get-game-details.js';
 
 const igdbDateSchema = z
   .number()
@@ -224,7 +224,7 @@ export class IgdbGameDetailsRepository implements GameDetailsRepository {
     const result = igdbGamesSchema.safeParse(payload);
     if (!result.success) throw new InvalidUpstreamResponseError('Resposta IGDB inválida.');
 
-    const game = result.data.at(0);
+    const game = result.data[0];
     return game === undefined ? null : toGameDetails(game);
   }
 

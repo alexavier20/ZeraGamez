@@ -1,4 +1,4 @@
-import type { GameSearchResult } from '../../../shared/contracts/game-search';
+import type { GameSearchResult } from '../../../shared/contracts/game-search.js';
 
 export interface GameSearchRepository {
   search(query: string): Promise<readonly GameSearchResult[]>;

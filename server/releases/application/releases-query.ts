@@ -1,4 +1,4 @@
-import type { Clock } from './list-upcoming-releases';
+import type { Clock } from './list-upcoming-releases.js';
 
 export interface ReleaseQuery {
   from: string;

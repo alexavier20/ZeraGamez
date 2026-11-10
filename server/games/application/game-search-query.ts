@@ -1,7 +1,7 @@
 import {
   steamRankingMetricSchema,
   type SteamRankingMetric,
-} from '../../../shared/contracts/steam-rankings';
+} from '../../../shared/contracts/steam-rankings.js';
 
 const MIN_QUERY_LENGTH = 2;
 const MAX_QUERY_LENGTH = 80;

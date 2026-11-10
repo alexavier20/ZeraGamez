@@ -1,18 +1,18 @@
 import {
   InvalidGameDetailsQueryError,
   parseGameDetailsId,
-} from '../server/games/application/game-details-query';
-import { getGameDetails } from '../server/games/application/get-game-details';
-import { IgdbGameDetailsRepository } from '../server/games/infrastructure/igdb-game-details-repository';
-import { readIgdbEnvironment } from '../server/releases/infrastructure/env';
-import { TwitchTokenProvider } from '../server/releases/infrastructure/twitch-token-provider';
+} from '../server/games/application/game-details-query.js';
+import { getGameDetails } from '../server/games/application/get-game-details.js';
+import { IgdbGameDetailsRepository } from '../server/games/infrastructure/igdb-game-details-repository.js';
+import { readIgdbEnvironment } from '../server/releases/infrastructure/env.js';
+import { TwitchTokenProvider } from '../server/releases/infrastructure/twitch-token-provider.js';
 import {
   InvalidUpstreamResponseError,
   ServiceUnavailableError,
   UpstreamTimeoutError,
-} from '../server/releases/infrastructure/upstream-errors';
-import { gameDetailsResponseSchema } from '../shared/contracts/game-details';
-import { apiErrorResponseSchema, type ApiErrorCode } from '../shared/contracts/releases';
+} from '../server/releases/infrastructure/upstream-errors.js';
+import { gameDetailsResponseSchema } from '../shared/contracts/game-details.js';
+import { apiErrorResponseSchema, type ApiErrorCode } from '../shared/contracts/releases.js';
 
 const successHeaders = {
   'Cache-Control': 'public, max-age=0, must-revalidate',

@@ -60,14 +60,14 @@ export function consolidateReleases(
 
   const releases: ConsolidatedRelease[] = [];
   for (const entries of byGame.values()) {
-    const firstEntry = entries.at(0);
+    const firstEntry = entries[0];
     if (!firstEntry) continue;
     const releaseDate = entries.reduce(
       (earliest, entry) => (entry.releaseDate < earliest ? entry.releaseDate : earliest),
       firstEntry.releaseDate,
     );
     const selected = entries.filter((entry) => entry.releaseDate === releaseDate);
-    const selectedEntry = selected.at(0);
+    const selectedEntry = selected[0];
     if (!selectedEntry) continue;
     const game = selectedEntry.game;
     const platforms = [

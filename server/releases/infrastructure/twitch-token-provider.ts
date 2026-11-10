@@ -5,9 +5,9 @@ import {
   isTimeoutError,
   ServiceUnavailableError,
   UpstreamTimeoutError,
-} from './upstream-errors';
+} from './upstream-errors.js';
 
-import type { Clock } from '../application/list-upcoming-releases';
+import type { Clock } from '../application/list-upcoming-releases.js';
 
 const tokenResponseSchema = z.object({
   access_token: z.string().min(1),

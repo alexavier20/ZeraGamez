@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { ServiceUnavailableError } from './upstream-errors';
+import { ServiceUnavailableError } from './upstream-errors.js';
 
 const environmentSchema = z.object({
   IGDB_CLIENT_ID: z.string().trim().min(1),

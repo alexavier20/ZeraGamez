@@ -3,25 +3,25 @@ import {
   type Clock,
   type ListUpcomingReleasesDependencies,
   type ListUpcomingReleasesResult,
-} from '../server/releases/application/list-upcoming-releases';
+} from '../server/releases/application/list-upcoming-releases.js';
 import {
   InvalidQueryError,
   parseReleasesQuery,
   type ReleaseQuery,
-} from '../server/releases/application/releases-query';
-import { readIgdbEnvironment } from '../server/releases/infrastructure/env';
-import { IgdbReleaseRepository } from '../server/releases/infrastructure/igdb-release-repository';
-import { TwitchTokenProvider } from '../server/releases/infrastructure/twitch-token-provider';
+} from '../server/releases/application/releases-query.js';
+import { readIgdbEnvironment } from '../server/releases/infrastructure/env.js';
+import { IgdbReleaseRepository } from '../server/releases/infrastructure/igdb-release-repository.js';
+import { TwitchTokenProvider } from '../server/releases/infrastructure/twitch-token-provider.js';
 import {
   InvalidUpstreamResponseError,
   ServiceUnavailableError,
   UpstreamTimeoutError,
-} from '../server/releases/infrastructure/upstream-errors';
+} from '../server/releases/infrastructure/upstream-errors.js';
 import {
   apiErrorResponseSchema,
   releasesResponseSchema,
   type ApiErrorCode,
-} from '../shared/contracts/releases';
+} from '../shared/contracts/releases.js';
 
 const successHeaders = {
   'Cache-Control': 'public, max-age=0, must-revalidate',

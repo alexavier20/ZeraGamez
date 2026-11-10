@@ -1,20 +1,20 @@
 import { z } from 'zod';
 
-import { addDays, type ReleaseQuery } from '../application/releases-query';
+import { addDays, type ReleaseQuery } from '../application/releases-query.js';
 
 import {
   InvalidUpstreamResponseError,
   isTimeoutError,
   ServiceUnavailableError,
   UpstreamTimeoutError,
-} from './upstream-errors';
+} from './upstream-errors.js';
 
-import type { AccessTokenLease, AccessTokenProvider } from './twitch-token-provider';
+import type { AccessTokenLease, AccessTokenProvider } from './twitch-token-provider.js';
 import type {
   ReleaseRepository,
   ReleaseRepositoryResult,
-} from '../application/list-upcoming-releases';
-import type { CandidateRelease } from '../domain/release';
+} from '../application/list-upcoming-releases.js';
+import type { CandidateRelease } from '../domain/release.js';
 
 const igdbDateSchema = z
   .number()

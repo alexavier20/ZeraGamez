@@ -1,24 +1,24 @@
 import {
   InvalidGameSearchQueryError,
   parseGameSearchRequest,
-} from '../server/games/application/game-search-query';
+} from '../server/games/application/game-search-query.js';
 import {
   listMostAnticipatedGames,
   listTopHypedGames,
   searchGames,
-} from '../server/games/application/search-games';
-import { IgdbGameSearchRepository } from '../server/games/infrastructure/igdb-game-search-repository';
-import { readIgdbEnvironment } from '../server/releases/infrastructure/env';
-import { TwitchTokenProvider } from '../server/releases/infrastructure/twitch-token-provider';
+} from '../server/games/application/search-games.js';
+import { IgdbGameSearchRepository } from '../server/games/infrastructure/igdb-game-search-repository.js';
+import { readIgdbEnvironment } from '../server/releases/infrastructure/env.js';
+import { TwitchTokenProvider } from '../server/releases/infrastructure/twitch-token-provider.js';
 import {
   InvalidUpstreamResponseError,
   ServiceUnavailableError,
   UpstreamTimeoutError,
-} from '../server/releases/infrastructure/upstream-errors';
-import { gameSearchResponseSchema, type GameSearchResult } from '../shared/contracts/game-search';
-import { apiErrorResponseSchema, type ApiErrorCode } from '../shared/contracts/releases';
+} from '../server/releases/infrastructure/upstream-errors.js';
+import { gameSearchResponseSchema, type GameSearchResult } from '../shared/contracts/game-search.js';
+import { apiErrorResponseSchema, type ApiErrorCode } from '../shared/contracts/releases.js';
 
-import type { SteamRankingMetric } from '../shared/contracts/steam-rankings';
+import type { SteamRankingMetric } from '../shared/contracts/steam-rankings.js';
 
 const successHeaders = {
   'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',

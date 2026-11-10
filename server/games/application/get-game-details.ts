@@ -1,4 +1,4 @@
-import type { GameDetails } from '../../../shared/contracts/game-details';
+import type { GameDetails } from '../../../shared/contracts/game-details.js';
 
 export interface GameDetailsRepository {
   findById(id: number): Promise<GameDetails | null>;

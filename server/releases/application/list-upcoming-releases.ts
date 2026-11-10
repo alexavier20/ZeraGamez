@@ -2,9 +2,9 @@ import {
   consolidateReleases,
   type CandidateRelease,
   type ConsolidatedRelease,
-} from '../domain/release';
+} from '../domain/release.js';
 
-import type { ReleaseQuery } from './releases-query';
+import type { ReleaseQuery } from './releases-query.js';
 
 export interface Clock {
   now(): Date;
