@@ -12,7 +12,7 @@ export function GameDetailsLoading() {
     <main className="site-container pb-28 pt-5 sm:pb-12 sm:pt-6 lg:pt-7">
       <LoadingPreview label="Carregando detalhes do jogo…">
         <Skeleton className="mb-5 h-5 w-20" />
-        <div className="grid gap-6 rounded-2xl border border-white/10 bg-surface p-4 sm:grid-cols-[160px_minmax(0,1fr)] sm:p-6 lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-8 lg:p-8">
+        <div className="grid gap-6 rounded-2xl border border-border bg-surface p-4 sm:grid-cols-[160px_minmax(0,1fr)] sm:p-6 lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-8 lg:p-8">
           <Skeleton className="mx-auto aspect-[3/4] w-40 rounded-2xl sm:mx-0 sm:w-full" />
           <div className="flex min-w-0 flex-col justify-center">
             <Skeleton className="h-3 w-32" />
@@ -51,7 +51,7 @@ export function GameDetailsLoading() {
           <div className="space-y-5 border-t-2 border-brand pt-4">
             <Skeleton className="h-7 w-32" />
             {[0, 1, 2, 3].map((index) => (
-              <div className="space-y-3 border-t border-white/10 py-4" key={index}>
+              <div className="space-y-3 border-t border-border py-4" key={index}>
                 <Skeleton className="h-3 w-24" />
                 <Skeleton className="h-5 w-3/4" />
               </div>
@@ -106,7 +106,7 @@ export function GameDetailsNotFound() {
           </p>
         </div>
         <button
-          className="inline-flex items-center gap-2 text-sm font-semibold text-content-primary underline decoration-brand underline-offset-4 hover:text-brand-bright focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-content-primary underline decoration-brand underline-offset-4 hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
           onClick={() => {
             const historyIndex = window.history.state?.idx;
             if (typeof historyIndex === 'number' && historyIndex > 0) {

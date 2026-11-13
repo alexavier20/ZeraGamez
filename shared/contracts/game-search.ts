@@ -11,6 +11,7 @@ export const gameSearchResultSchema = z.object({
   releaseDate: civilDateSchema.nullable(),
   platforms: z.array(z.string().trim().min(1)),
   criticScore: z.number().min(0).max(100).optional(),
+  hypeCount: z.number().int().nonnegative().optional(),
   steamRankingValue: z.number().nonnegative().optional(),
 });
 

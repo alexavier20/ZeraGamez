@@ -131,7 +131,7 @@ function ProfileSettings({ auth, user }: ProfileSettingsProps) {
       </button>
       <section
         aria-labelledby="profile-title"
-        className="rounded-2xl border border-white/10 bg-surface p-5 sm:p-6"
+        className="rounded-2xl border border-border bg-surface p-5 sm:p-6"
       >
         <h1
           id="profile-title"
@@ -139,11 +139,11 @@ function ProfileSettings({ auth, user }: ProfileSettingsProps) {
         >
           Perfil
         </h1>
-        <div className="mt-5 grid grid-cols-[3rem_minmax(0,1fr)] items-start gap-x-4 gap-y-3 sm:grid-cols-[3rem_minmax(0,1fr)_auto]">
+        <div className="mt-5 grid grid-cols-[4rem_minmax(0,1fr)] items-start gap-x-4 gap-y-3 sm:grid-cols-[4rem_minmax(0,1fr)_auto]">
           <UserAvatar
             appearance="neutral"
             avatarUrl={visibleAvatarUrl}
-            className="size-12 border border-white/10 text-lg"
+            className="size-16 border border-border text-xl"
             initials={user.initials}
             name={displayName.trim() || user.name}
           />
@@ -152,7 +152,7 @@ function ProfileSettings({ auth, user }: ProfileSettingsProps) {
             <p className="mt-1 break-all text-sm text-text-muted">{user.email}</p>
           </div>
           <button
-            className="col-start-2 inline-flex min-h-11 items-center justify-self-start gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm font-medium text-content-primary transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary disabled:cursor-not-allowed disabled:opacity-60 sm:col-start-3 sm:row-start-1"
+      className="col-start-2 inline-flex min-h-11 items-center justify-self-start gap-2 rounded-lg border border-border bg-brand-bright/10 px-3 text-sm font-medium text-content-primary transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary disabled:cursor-not-allowed disabled:opacity-60 sm:col-start-3 sm:row-start-1"
             disabled={signingOut}
             onClick={() => void handleSignOut()}
             type="button"
@@ -164,7 +164,7 @@ function ProfileSettings({ auth, user }: ProfileSettingsProps) {
 
         {signOutError === null ? null : (
           <p
-            className="mt-4 break-words rounded-lg border border-red-400/20 bg-red-500/5 p-3 text-sm text-red-200"
+            className="mt-4 break-words rounded-lg border border-red-400/20 bg-red-500/5 p-3 text-sm text-red-700"
             role="alert"
           >
             {signOutError}
@@ -173,7 +173,7 @@ function ProfileSettings({ auth, user }: ProfileSettingsProps) {
 
         <form
           aria-busy={saving}
-          className="mt-6 border-t border-white/10 pt-5"
+          className="mt-6 border-t border-border pt-5"
           onSubmit={(event) => {
             void handleSaveProfile(event);
           }}
@@ -193,7 +193,7 @@ function ProfileSettings({ auth, user }: ProfileSettingsProps) {
               <input
                 autoComplete="nickname"
                 aria-describedby="profile-name-help"
-                className="min-h-11 w-full rounded-lg border border-white/10 bg-app px-3 text-sm text-text-primary outline-none transition-colors focus:border-brand-bright focus:ring-2 focus:ring-brand/30"
+                className="min-h-11 w-full rounded-lg border border-border bg-app px-3 text-sm text-text-primary outline-none transition-colors focus:border-brand-bright focus:ring-2 focus:ring-brand/30"
                 id="profile-name"
                 maxLength={50}
                 onChange={(event) => {
@@ -213,7 +213,7 @@ function ProfileSettings({ auth, user }: ProfileSettingsProps) {
               </span>
               <div className="flex flex-wrap items-center gap-3">
                 <label
-                  className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-medium text-content-primary transition-colors hover:bg-white/10 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-text-primary"
+         className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-border bg-brand-bright/10 px-4 py-2 text-sm font-medium text-content-primary transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-text-primary"
                   htmlFor="profile-photo"
                 >
                   <input
@@ -239,7 +239,7 @@ function ProfileSettings({ auth, user }: ProfileSettingsProps) {
 
           {profileError === null ? null : (
             <p
-              className="mt-5 break-words rounded-lg border border-red-400/20 bg-red-500/5 p-3 text-sm text-red-200"
+              className="mt-5 break-words rounded-lg border border-red-400/20 bg-red-500/5 p-3 text-sm text-red-700"
               role="alert"
             >
               {profileError}
@@ -247,7 +247,7 @@ function ProfileSettings({ auth, user }: ProfileSettingsProps) {
           )}
           {success === null ? null : (
             <p
-              className="mt-5 flex items-center gap-2 rounded-lg border border-emerald-400/20 bg-emerald-500/5 p-3 text-sm text-emerald-200"
+              className="mt-5 flex items-center gap-2 rounded-lg border border-brand/30 bg-brand/5 p-3 text-sm text-brand"
               role="status"
             >
               <CheckCircle2 aria-hidden="true" className="shrink-0" size={18} strokeWidth={1.5} />
@@ -256,7 +256,7 @@ function ProfileSettings({ auth, user }: ProfileSettingsProps) {
           )}
           <div className="mt-5 flex justify-end">
             <button
-              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-44"
+       className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-hover hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-44"
               disabled={saving}
               type="submit"
             >
@@ -271,7 +271,7 @@ function ProfileSettings({ auth, user }: ProfileSettingsProps) {
           ) : null}
         </form>
 
-        <div className="mt-6 border-t border-white/10 pt-5">
+        <div className="mt-6 border-t border-border pt-5">
           <h2 className="font-heading text-lg font-semibold text-content-primary">
             Métodos de acesso
           </h2>

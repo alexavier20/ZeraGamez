@@ -32,6 +32,6 @@ export const mobileNavItems: readonly MobileNavigationItem[] = [
   { label: 'Início', to: headerRoutes.home, icon: 'home' },
   { label: 'Explorar', to: headerRoutes.releases, icon: 'explore' },
   { label: 'Listas', to: headerRoutes.lists, icon: 'lists' },
-  { label: 'Avaliações', to: headerRoutes.reviews, icon: 'lists' },
+  { label: 'Avaliações', to: headerRoutes.reviews, icon: 'reviews' },
   { label: 'Perfil', to: headerRoutes.profile, icon: 'profile' },
 ];

@@ -23,7 +23,7 @@ function StatePanel({
   return (
     <section
       aria-live={role === 'status' ? 'polite' : undefined}
-      className="flex flex-col items-center rounded-2xl border border-white/10 bg-surface px-6 py-10 text-center sm:px-10"
+      className="flex flex-col items-center rounded-2xl border border-border bg-surface px-6 py-10 text-center sm:px-10"
       role={role}
     >
       <div className="grid size-12 place-items-center rounded-xl bg-bg-secondary text-text-muted">
@@ -78,7 +78,7 @@ export function ReleasesError({ onRetry }: { readonly onRetry: () => void }): Re
     <StatePanel
       action={
         <button
-          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-primary transition-colors hover:bg-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-hover hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           onClick={onRetry}
           type="button"
         >

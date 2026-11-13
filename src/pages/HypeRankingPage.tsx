@@ -30,7 +30,7 @@ function RankingList({
       {games.map((game, index) => {
         const rank = start + index;
         const isPodium = rank <= 3;
-        const rankToneClassName = isPodium ? 'text-[#e2b75d]' : 'text-text-muted';
+        const rankToneClassName = isPodium ? 'text-brand' : 'text-text-muted';
         const releaseDate = game.releaseDate
           ? formatReleaseDate(game.releaseDate)
           : 'Data indisponível';
@@ -39,7 +39,7 @@ function RankingList({
           <li key={game.id}>
             <Link
               aria-label={`${String(rank)}º lugar: ${game.name}. Lançamento: ${releaseDate}`}
-              className="group flex min-h-[60px] min-w-0 items-center gap-2 rounded-xl border border-white/10 bg-transparent p-2 transition-colors duration-150 hover:border-white/25 hover:bg-white/[0.02] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:gap-3"
+       className="group flex min-h-[60px] min-w-0 items-center gap-2 rounded-xl border border-border bg-transparent p-2 transition-colors duration-150 hover:border-border hover:bg-brand-bright hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:gap-3"
               to={`/jogos/${String(game.id)}`}
             >
               <span
@@ -66,7 +66,7 @@ function RankingList({
               <span className="min-w-0 flex-1">
                 <span
                   title={game.name}
-                  className="line-clamp-1 text-sm font-semibold leading-tight text-content-primary transition-colors group-hover:text-white sm:text-base"
+                  className="line-clamp-1 text-sm font-semibold leading-tight text-content-primary transition-colors group-hover:text-brand sm:text-base"
                 >
                   {game.name}
                 </span>
@@ -125,7 +125,7 @@ export function HypeRankingPage() {
                   {column.map((item) => (
                     <li
                       aria-hidden="true"
-                      className="flex min-h-[60px] items-center gap-2 rounded-xl border border-white/10 p-2 sm:gap-3"
+                      className="flex min-h-[60px] items-center gap-2 rounded-xl border border-border p-2 sm:gap-3"
                       key={item}
                     >
                       <Skeleton className="h-8 w-8 shrink-0 sm:w-10" />
@@ -145,9 +145,9 @@ export function HypeRankingPage() {
             className="rounded-2xl border border-red-400/30 bg-red-500/10 p-6 text-center"
             role="alert"
           >
-            <p className="text-sm text-red-100">Não foi possível carregar o ranking agora.</p>
+            <p className="text-sm text-red-700">Não foi possível carregar o ranking agora.</p>
             <button
-              className="mt-4 min-h-11 rounded-lg border border-red-200/30 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-red-500/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              className="mt-4 min-h-11 rounded-lg border border-red-200/30 px-4 py-2 text-sm font-semibold text-red-700 transition-colors duration-150 hover:bg-red-500/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
               onClick={() => {
                 setState({ status: 'loading' });
                 setRetryKey((value) => value + 1);
@@ -159,7 +159,7 @@ export function HypeRankingPage() {
           </div>
         ) : games.length === 0 ? (
           <p
-            className="rounded-2xl border border-dashed border-white/15 bg-surface px-5 py-8 text-center text-sm text-text-muted"
+            className="rounded-2xl border border-dashed border-border bg-surface px-5 py-8 text-center text-sm text-text-muted"
             role="status"
           >
             Ainda não há jogos futuros com hype registrado.

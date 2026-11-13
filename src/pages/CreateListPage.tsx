@@ -98,7 +98,7 @@ export function CreateListPage() {
       <PageHeading title="Criar lista" subtitle="Dê um nome e uma descrição para sua coleção" />
 
       <form
-        className="mt-8 space-y-6 rounded-2xl border border-white/10 bg-surface p-5 sm:p-7"
+        className="mt-8 space-y-6 rounded-2xl border border-border bg-surface p-5 sm:p-7"
         noValidate
         onSubmit={(event) => {
           void handleSubmit(event);
@@ -114,7 +114,7 @@ export function CreateListPage() {
           <input
             aria-describedby={nameError === null ? undefined : 'create-list-name-error'}
             aria-invalid={nameError === null ? undefined : true}
-            className="min-h-12 w-full rounded-xl border border-white/15 bg-app px-4 text-content-primary outline-none transition placeholder:text-text-muted focus:border-brand focus:ring-2 focus:ring-brand/30"
+            className="min-h-12 w-full rounded-xl border border-border bg-app px-4 text-content-primary outline-none transition placeholder:text-text-muted focus:border-brand focus:ring-2 focus:ring-brand/30"
             id="create-list-name"
             maxLength={80}
             onChange={(event) => {
@@ -125,7 +125,7 @@ export function CreateListPage() {
             value={name}
           />
           {nameError === null ? null : (
-            <p className="mt-2 text-sm text-red-300" id="create-list-name-error" role="alert">
+            <p className="mt-2 text-sm text-red-700" id="create-list-name-error" role="alert">
               {nameError.text}
             </p>
           )}
@@ -139,7 +139,7 @@ export function CreateListPage() {
             Tipo da lista
           </label>
           <select
-            className="min-h-12 w-full rounded-xl border border-white/15 bg-app px-4 text-content-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/30"
+            className="min-h-12 w-full rounded-xl border border-border bg-app px-4 text-content-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/30"
             disabled={pending}
             id="create-list-type"
             onChange={(event) => {
@@ -164,7 +164,7 @@ export function CreateListPage() {
               descriptionError === null ? undefined : 'create-list-description-error'
             }
             aria-invalid={descriptionError === null ? undefined : true}
-            className="min-h-32 w-full resize-y rounded-xl border border-white/15 bg-app px-4 py-3 text-content-primary outline-none transition placeholder:text-text-muted focus:border-brand focus:ring-2 focus:ring-brand/30"
+            className="min-h-32 w-full resize-y rounded-xl border border-border bg-app px-4 py-3 text-content-primary outline-none transition placeholder:text-text-muted focus:border-brand focus:ring-2 focus:ring-brand/30"
             id="create-list-description"
             maxLength={500}
             onChange={(event) => {
@@ -176,7 +176,7 @@ export function CreateListPage() {
           />
           {descriptionError === null ? null : (
             <p
-              className="mt-2 text-sm text-red-300"
+              className="mt-2 text-sm text-red-700"
               id="create-list-description-error"
               role="alert"
             >
@@ -187,7 +187,7 @@ export function CreateListPage() {
 
         {submissionError === null ? null : (
           <p
-            className="rounded-xl border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-100"
+            className="rounded-xl border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-700"
             role="alert"
           >
             {submissionError.text}
@@ -196,13 +196,13 @@ export function CreateListPage() {
 
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Link
-            className="rounded-xl border border-white/15 px-5 py-3 text-center text-sm font-bold text-content-primary"
+            className="rounded-xl border border-border px-5 py-3 text-center text-sm font-bold text-content-primary"
             to={headerRoutes.lists}
           >
             Cancelar
           </Link>
           <button
-            className="rounded-xl bg-brand px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-xl bg-brand px-5 py-3 text-sm font-bold text-white transition-colors duration-150 hover:bg-brand-hover hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
             disabled={pending}
             type="submit"
           >

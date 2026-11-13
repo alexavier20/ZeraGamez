@@ -93,11 +93,43 @@ sem texto; ao digitar, volta às sugestões por nome.
    Supabase. No console do Google, use a URL de callback exibida pelo Supabase;
    em **Authentication > URL Configuration**, permita
    `http://localhost:3000/entrar` e a URL `/entrar` do domínio de produção.
+   Para o Supabase local, adicione também `http://127.0.0.1:55431/auth/v1/callback`
+   como URI autorizada no Google Cloud e configure as credenciais no bloco
+   `[auth.external.google]` de `supabase/config.toml`. O callback do Google local
+   é diferente do callback do projeto hospedado.
 5. Defina `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` no `.env.local`
    e também nos ambientes Development, Preview e Production da Vercel. Esses
    valores são públicos e a autorização dos dados continua protegida por RLS.
 6. A chave `service_role` é secreta: ela nunca deve usar o prefixo `VITE_`, ser
    colocada no `.env.local` do frontend ou entrar no bundle enviado ao navegador.
+
+### Autenticação durante o desenvolvimento local
+
+- Inicie o Supabase local com `npx supabase start` antes de executar `npm run dev`.
+  O `.env.local` aponta para `http://127.0.0.1:55431`, sem usar a URL do
+  banco de produção.
+- Os códigos de acesso por e-mail enviados pelo Supabase local são capturados
+  pelo Mailpit; consulte `http://127.0.0.1:55434` em vez da caixa de entrada real.
+  O template local em `supabase/templates/magic_link.html` exibe o código
+  numérico que a tela de login solicita.
+- Depois de alterar `supabase/config.toml` ou um template, reinicie a stack com
+  `npx supabase stop` e `npx supabase start`.
+- O Google OAuth hospedado não habilita o provedor no Supabase local. Para usá-lo
+  localmente, adicione ao `supabase/config.toml`:
+
+  ```toml
+  [auth.external.google]
+  enabled = true
+  client_id = "<seu-client-id-google>"
+  secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET)"
+  skip_nonce_check = false
+  ```
+
+  Defina `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET` no PowerShell antes de
+  iniciar a stack. No Google
+  Cloud, autorize a origem local usada pelo app e o callback
+  `http://127.0.0.1:55431/auth/v1/callback`. A allowlist local do Supabase aceita
+  `/entrar` em `localhost` e `127.0.0.1`, nas portas `3000` e `5173`.
 
 ## Comandos disponíveis
 

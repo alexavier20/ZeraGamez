@@ -135,7 +135,7 @@ export function ReleaseDatePicker({
   return (
     <div
       aria-label={formatCalendarMonth(month)}
-      className="w-[min(22rem,calc(100vw-2rem))] max-w-full rounded-2xl border border-white/10 bg-surface p-4 lg:max-w-none"
+      className="w-[min(22rem,calc(100vw-2rem))] max-w-full rounded-2xl border border-border bg-surface p-4 lg:max-w-none"
       id="release-date-picker"
       role="dialog"
     >
@@ -147,7 +147,7 @@ export function ReleaseDatePicker({
           <div className="flex items-center gap-2">
             <button
               aria-label="Mês anterior"
-              className="grid size-9 shrink-0 place-items-center rounded-lg bg-white/5 transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+       className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-bright/10 transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
               onClick={() => {
                 moveToHeaderMonth(-1);
               }}
@@ -158,7 +158,7 @@ export function ReleaseDatePicker({
             </button>
             <button
               aria-label="Próximo mês"
-              className="grid size-9 shrink-0 place-items-center rounded-lg bg-white/5 transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+       className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-bright/10 transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
               onClick={() => {
                 moveToHeaderMonth(1);
               }}
@@ -169,7 +169,7 @@ export function ReleaseDatePicker({
             </button>
             <button
               aria-label="Fechar calendário"
-              className="grid size-9 place-items-center rounded-lg text-text-muted transition-colors hover:bg-white/10 hover:text-content-primary focus-visible:outline-2 focus-visible:outline-brand"
+       className="grid size-9 place-items-center rounded-lg text-text-muted transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-brand"
               onClick={onRequestClose}
               onKeyDown={handleEscape}
               type="button"
@@ -179,6 +179,10 @@ export function ReleaseDatePicker({
           </div>
         </div>
 
+        <p className="mb-1 flex items-center gap-2 text-xs text-text-muted">
+          <span aria-hidden="true" className="size-1.5 rounded-full bg-brand" />
+          Datas com lançamentos
+        </p>
         <div className="grid gap-1" onKeyDown={handleGridKeyDown} role="grid" tabIndex={-1}>
           <div className="grid grid-cols-7 gap-1" role="row">
             {weekdays.map((weekday) => (
@@ -198,12 +202,12 @@ export function ReleaseDatePicker({
                 const today = day.date === currentDate;
                 const knownRelease = knownReleaseDates.has(day.date);
                 const dayClassName = selected
-                  ? 'bg-brand font-semibold text-white'
+                  ? 'bg-brand font-semibold text-white hover:bg-brand-hover'
                   : today
                     ? 'border border-brand bg-transparent font-medium text-content-primary'
                     : day.inCurrentMonth
-                      ? 'font-medium text-content-primary hover:bg-white/10'
-                      : 'font-medium text-text-muted opacity-60 hover:bg-white/10';
+           ? 'font-medium text-content-primary hover:bg-brand-bright/30 hover:text-brand-ink '
+           : 'font-medium text-text-muted opacity-60 hover:bg-brand-bright/30 hover:text-brand-ink ';
 
                 return (
                   <div key={day.date} role="gridcell">

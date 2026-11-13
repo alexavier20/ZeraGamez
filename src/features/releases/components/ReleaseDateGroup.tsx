@@ -43,7 +43,7 @@ export function ReleaseDateGroup({
       <h2 aria-label={heading} className="font-heading" id={headingId}>
         <span className="hidden items-center gap-2 text-xl font-semibold text-text-primary sm:flex">
           {headingMode === 'relative' && dayKind === 'today' ? (
-            <span className="rounded-md bg-brand px-2 py-1 text-xs font-semibold text-content-primary">
+            <span className="rounded-md bg-brand px-2 py-1 text-xs font-semibold text-white">
               Hoje
             </span>
           ) : null}

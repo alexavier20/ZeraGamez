@@ -71,12 +71,12 @@ function WantToPlayButton({
         selected ? `Remover ${gameName} de Quero jogar` : `Marcar ${gameName} como quero jogar`
       }
       aria-pressed={selected}
-      className={`inline-flex shrink-0 items-center justify-center border text-content-primary transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${
-        compact ? 'size-11 rounded-lg' : 'min-h-11 gap-2 rounded-lg px-3 text-xs font-medium'
+      className={`inline-flex shrink-0 items-center justify-center border transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${
+        compact ? 'size-9 rounded-lg' : 'min-h-9 gap-2 rounded-lg px-3 text-xs font-medium'
       } ${
         selected
-          ? 'border-[#25734b] bg-[#175736] hover:bg-[#1c6841]'
-          : 'border-transparent bg-app/80 hover:bg-app'
+          ? 'border-brand bg-brand text-white hover:bg-brand-hover hover:text-white'
+          : 'border-transparent bg-app/80 text-content-primary hover:bg-app'
       }`}
       disabled={disabled}
       onClick={() => {
@@ -101,7 +101,7 @@ function AddToListsButton({ buttonRef, disabled, gameName, onClick }: AddToLists
   return (
     <button
       aria-label={`Adicionar ${gameName} à lista`}
-      className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-app/85 text-content-primary transition-colors hover:border-brand hover:bg-app focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-60"
+      className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-app/85 text-content-primary transition-colors hover:border-brand/50 hover:bg-app focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-60"
       disabled={disabled}
       onClick={onClick}
       ref={buttonRef}
@@ -114,9 +114,9 @@ function AddToListsButton({ buttonRef, disabled, gameName, onClick }: AddToLists
 }
 
 const platformChipClassName =
-  'max-w-[120px] shrink-0 truncate rounded-md bg-white/10 px-2 py-1 text-[11px] font-semibold text-text-muted';
+  'max-w-[120px] shrink-0 truncate rounded-md bg-brand-bright/20 px-2 py-1 text-[11px] font-semibold text-text-muted';
 const platformSummaryClassName =
-  'shrink-0 rounded-md bg-white/10 px-2 py-1 text-[11px] font-semibold text-text-muted';
+  'shrink-0 rounded-md bg-brand-bright/20 px-2 py-1 text-[11px] font-semibold text-text-muted';
 
 function PlatformChips({
   gameName,
@@ -321,7 +321,7 @@ function ReleaseCardDesktop({
           title={item.name}
         >
           <Link
-            className="rounded-sm hover:text-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            className="rounded-sm hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             to={`/jogos/${String(item.id)}`}
           >
             {item.name}
@@ -370,6 +370,9 @@ function ReleaseCardMobile({
             </div>
           )}
         </Link>
+        <span className="absolute bottom-2 left-2 rounded-md bg-app/85 px-2 py-1 text-[11px] font-semibold text-content-primary">
+          {presentation.status}
+        </span>
         {showActions ? (
           <div className="absolute right-2 top-2 flex items-center gap-1.5">
             <WantToPlayButton
@@ -396,7 +399,7 @@ function ReleaseCardMobile({
             title={item.name}
           >
             <Link
-              className="rounded-sm hover:text-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              className="rounded-sm hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
               to={`/jogos/${String(item.id)}`}
             >
               {item.name}

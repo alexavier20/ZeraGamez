@@ -54,12 +54,12 @@ function InfoList({
 }) {
   if (values.length === 0) return null;
   return (
-    <div className="border-t border-white/10 py-4 first:border-t-0 first:pt-0">
+    <div className="border-t border-border py-4 first:border-t-0 first:pt-0">
       <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-text-muted">{label}</dt>
       <dd className="mt-2 flex flex-wrap gap-2">
         {values.map((value) => (
           <span
-            className="rounded-md border border-white/10 bg-app/70 px-2.5 py-1 text-sm text-content-primary"
+            className="rounded-md border border-border bg-app/70 px-2.5 py-1 text-sm text-content-primary"
             key={value}
           >
             {value}
@@ -230,36 +230,36 @@ function GameHero({ game }: { readonly game: GameDetails }) {
     actionDisabled || (authState.status === 'authenticated' && completedStatus !== 'ready');
 
   return (
-    <section className="relative isolate overflow-hidden rounded-3xl border border-border-brand bg-surface shadow-[0_20px_64px_#00000040]">
+    <section className="relative isolate overflow-hidden rounded-3xl border border-border-brand bg-surface shadow-[0_20px_64px_#2b2b3033]">
       {heroImage ? (
         <img
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 h-full w-full object-cover opacity-25"
+          className="absolute inset-0 h-full w-full object-cover opacity-60"
           src={heroImage}
         />
       ) : null}
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-gradient-to-r from-app via-app/95 to-app/65"
+        className="absolute inset-0 bg-gradient-to-r from-app/90 via-app/70 to-app/25"
       />
       <div className="relative grid gap-6 p-4 sm:grid-cols-[160px_minmax(0,1fr)] sm:gap-6 sm:p-6 lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-8 lg:p-8">
         <div className="mx-auto w-40 sm:mx-0 sm:w-full">
           {game.coverUrl ? (
             <img
               alt={`Capa de ${game.name}`}
-              className="aspect-[3/4] w-full rounded-2xl border border-white/10 object-cover shadow-[0_16px_40px_#00000080]"
+              className="aspect-[3/4] w-full rounded-2xl border border-border object-cover shadow-[0_16px_40px_#2b2b3066]"
               src={game.coverUrl}
             />
           ) : (
-            <div className="flex aspect-[3/4] w-full items-center justify-center rounded-2xl border border-white/10 bg-bg-secondary text-text-muted">
+            <div className="flex aspect-[3/4] w-full items-center justify-center rounded-2xl border border-border bg-bg-secondary text-text-muted">
               <Gamepad2 aria-hidden="true" size={40} />
             </div>
           )}
         </div>
 
         <div className="flex min-w-0 flex-col justify-center">
-          <p className="font-heading text-xs font-bold uppercase tracking-[0.22em] text-brand-bright">
+          <p className="font-heading text-xs font-bold uppercase tracking-[0.22em] text-brand">
             Detalhes do jogo
           </p>
           <h1 className="mt-2 break-words font-heading text-2xl font-bold leading-tight text-text-primary sm:text-3xl lg:text-4xl">
@@ -268,14 +268,14 @@ function GameHero({ game }: { readonly game: GameDetails }) {
 
           <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3 text-sm text-text-muted">
             <span className="inline-flex items-center gap-2">
-              <CalendarDays aria-hidden="true" className="text-brand-bright" size={16} />
+              <CalendarDays aria-hidden="true" className="text-brand" size={16} />
               {formatGameReleaseDate(game.firstReleaseDate)}
             </span>
             <span
               className="inline-flex items-center gap-2"
               aria-label={`Nota IGDB: ${formatScore(game.rating)}`}
             >
-              <Star aria-hidden="true" className="fill-brand-bright text-brand-bright" size={16} />
+              <Star aria-hidden="true" className="fill-brand-bright text-brand" size={16} />
               <span className="font-semibold text-text-primary">{formatScore(game.rating)}</span>
               <span>IGDB</span>
               {game.ratingCount === null ? null : (
@@ -300,7 +300,7 @@ function GameHero({ game }: { readonly game: GameDetails }) {
           <div className="mt-6 flex flex-wrap items-center gap-2.5 sm:gap-3">
             {game.videos[0] ? (
               <a
-                className="inline-flex h-11 items-center justify-center rounded-xl border border-white/20 bg-app/70 px-4 text-sm font-semibold text-content-primary transition-colors hover:border-white/40 hover:bg-app focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-border bg-app/70 px-4 text-sm font-semibold text-content-primary transition-colors hover:border-border hover:bg-app focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                 href={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(game.videos[0].videoId)}`}
                 rel="noreferrer"
                 target="_blank"
@@ -314,10 +314,10 @@ function GameHero({ game }: { readonly game: GameDetails }) {
               }
               aria-pressed={wantsToPlay}
               disabled={wantToPlayDisabled}
-              className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-white transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60 ${
+              className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-white transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60 ${
                 wantsToPlay
-                  ? 'bg-[#118c45] ring-2 ring-inset ring-white/80 shadow-[0_0_0_2px_#ffffff66]'
-                  : 'bg-[#16c765] hover:bg-[#13b85b]'
+                  ? 'bg-brand ring-2 ring-inset ring-brand-bright shadow-[0_0_0_2px_#a19ad066] hover:bg-brand-hover hover:text-white '
+         : 'bg-brand hover:bg-brand-hover hover:text-white '
               }`}
               onClick={() => {
                 toggleSystemList('want_to_play');
@@ -335,10 +335,10 @@ function GameHero({ game }: { readonly game: GameDetails }) {
               aria-label={completed ? 'Remover da lista Já Zerei' : 'Adicionar à lista Já Zerei'}
               aria-pressed={completed}
               disabled={completedDisabled}
-              className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-white transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60 ${
+              className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-white transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60 ${
                 completed
-                  ? 'bg-[#118c45] ring-2 ring-inset ring-white/80 shadow-[0_0_0_2px_#ffffff66]'
-                  : 'bg-[#16c765] hover:bg-[#13b85b]'
+                  ? 'bg-brand ring-2 ring-inset ring-brand-bright shadow-[0_0_0_2px_#a19ad066] hover:bg-brand-hover hover:text-white '
+         : 'bg-brand hover:bg-brand-hover hover:text-white '
               }`}
               onClick={() => {
                 toggleSystemList('completed');
@@ -354,7 +354,7 @@ function GameHero({ game }: { readonly game: GameDetails }) {
             </button>
           </div>
           {actionError === null ? null : (
-            <p className="mt-3 text-sm text-red-200" role="alert">
+            <p className="mt-3 text-sm text-red-700" role="alert">
               {actionError}
             </p>
           )}
@@ -409,7 +409,7 @@ function GameGallery({ game }: { readonly game: GameDetails }) {
     <section aria-labelledby="game-gallery-heading" className="mt-10">
       <div className="mb-4 flex items-end justify-between gap-4">
         <div>
-          <p className="font-heading text-xs font-bold uppercase tracking-[0.18em] text-brand-bright">
+          <p className="font-heading text-xs font-bold uppercase tracking-[0.18em] text-brand">
             Imagens
           </p>
           <h2
@@ -425,7 +425,7 @@ function GameGallery({ game }: { readonly game: GameDetails }) {
         {visibleImages.map((image, index) => (
           <button
             aria-label={`Ampliar imagem ${String(index + 1)} de ${game.name}`}
-            className="group relative block aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            className="group relative block aspect-video w-full overflow-hidden rounded-xl border border-border bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             key={image}
             onClick={() => setSelectedImage(index)}
             type="button"
@@ -444,7 +444,7 @@ function GameGallery({ game }: { readonly game: GameDetails }) {
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <button
             aria-label="Fechar imagem ampliada"
-            className="absolute inset-0 size-full bg-black/90 backdrop-blur-sm"
+            className="absolute inset-0 size-full bg-text-primary/90 backdrop-blur-sm"
             onClick={closeImage}
             tabIndex={-1}
             type="button"
@@ -458,7 +458,7 @@ function GameGallery({ game }: { readonly game: GameDetails }) {
           >
             <button
               aria-label="Fechar imagem ampliada"
-              className="absolute top-2 right-2 z-10 flex size-10 items-center justify-center rounded-xl border border-white/20 bg-black/70 text-white transition hover:bg-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              className="absolute top-2 right-2 z-10 flex size-10 items-center justify-center rounded-xl border border-border bg-text-primary/70 text-white transition hover:bg-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
               onClick={closeImage}
               ref={closeButtonRef}
               type="button"
@@ -467,7 +467,7 @@ function GameGallery({ game }: { readonly game: GameDetails }) {
             </button>
             <img
               alt={`${game.name} — imagem ${String(expandedImageIndex + 1)}`}
-              className="max-h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] rounded-xl border border-white/15 object-contain shadow-2xl"
+              className="max-h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] rounded-xl border border-border object-contain shadow-2xl"
               src={expandedImageUrl}
             />
           </div>
@@ -507,7 +507,7 @@ function GameDetailsContent({ game }: { readonly game: GameDetails }) {
         <div className="min-w-0">
           {game.summary || game.storyline ? (
             <section aria-labelledby="game-about-heading">
-              <p className="font-heading text-xs font-bold uppercase tracking-[0.18em] text-brand-bright">
+              <p className="font-heading text-xs font-bold uppercase tracking-[0.18em] text-brand">
                 Sobre o jogo
               </p>
               <h2
@@ -534,7 +534,7 @@ function GameDetailsContent({ game }: { readonly game: GameDetails }) {
             </section>
           ) : (
             <section aria-labelledby="game-about-heading">
-              <p className="font-heading text-xs font-bold uppercase tracking-[0.18em] text-brand-bright">
+              <p className="font-heading text-xs font-bold uppercase tracking-[0.18em] text-brand">
                 Sobre o jogo
               </p>
               <h2
@@ -554,7 +554,7 @@ function GameDetailsContent({ game }: { readonly game: GameDetails }) {
 
         <aside aria-labelledby="game-information-heading">
           <div className="border-t-2 border-brand pt-4">
-            <p className="font-heading text-xs font-bold uppercase tracking-[0.18em] text-brand-bright">
+            <p className="font-heading text-xs font-bold uppercase tracking-[0.18em] text-brand">
               Ficha do jogo
             </p>
             <h2
@@ -571,7 +571,7 @@ function GameDetailsContent({ game }: { readonly game: GameDetails }) {
             <InfoList label="Modos de jogo" values={game.gameModes} />
             <InfoList label="Perspectiva" values={game.playerPerspectives} />
             {game.criticRating === null ? null : (
-              <div className="border-t border-white/10 py-4">
+              <div className="border-t border-border py-4">
                 <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-text-muted">
                   Nota da crítica
                 </dt>
@@ -588,14 +588,14 @@ function GameDetailsContent({ game }: { readonly game: GameDetails }) {
               </div>
             )}
             {game.ageRatings.length === 0 ? null : (
-              <div className="border-t border-white/10 py-4">
+              <div className="border-t border-border py-4">
                 <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-text-muted">
                   Classificação indicativa
                 </dt>
                 <dd className="mt-2 flex flex-wrap gap-2">
                   {game.ageRatings.map(({ organization, rating }) => (
                     <span
-                      className="rounded-md border border-white/10 bg-surface px-2.5 py-1 text-sm text-content-primary"
+                      className="rounded-md border border-border bg-surface px-2.5 py-1 text-sm text-content-primary"
                       key={`${organization}-${rating}`}
                     >
                       {organization}: {rating}

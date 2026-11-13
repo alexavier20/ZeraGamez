@@ -106,7 +106,7 @@ export function GlobalSearch({ className = '', onSearch }: Readonly<GlobalSearch
   return (
     <div className={`relative min-w-0 ${className}`} ref={containerRef}>
       <form
-        className="flex h-8 w-full items-center gap-2 rounded-lg border border-white/15 bg-black/10 px-3"
+        className="flex h-11 w-full items-center gap-2 rounded-full border border-border bg-app px-4"
         onSubmit={handleSubmit}
         role="search"
       >
@@ -115,7 +115,7 @@ export function GlobalSearch({ className = '', onSearch }: Readonly<GlobalSearch
         </label>
         <button
           aria-label={headerCopy.searchButtonLabel}
-          className="grid size-7 shrink-0 place-items-center rounded-md text-gray-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-200"
+          className="grid size-7 shrink-0 place-items-center rounded-full text-text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary"
           type="submit"
         >
           <Search aria-hidden="true" size={18} strokeWidth={1.5} />
@@ -125,7 +125,7 @@ export function GlobalSearch({ className = '', onSearch }: Readonly<GlobalSearch
           aria-controls={resultsId}
           aria-expanded={showSuggestions}
           aria-busy={searchState.status === 'loading'}
-          className="min-w-0 flex-1 bg-transparent text-sm text-gray-200 outline-none placeholder:text-gray-200"
+          className="min-w-0 flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-muted"
           id={inputId}
           onChange={(event) => {
             const nextQuery = event.target.value;

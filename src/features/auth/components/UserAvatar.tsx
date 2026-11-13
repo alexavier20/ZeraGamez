@@ -21,7 +21,7 @@ export function UserAvatar({
   return (
     <span
       aria-label={`Avatar de ${name}`}
-      className={`relative grid shrink-0 place-items-center overflow-hidden rounded-full text-sm text-white ${appearance === 'neutral' ? 'bg-white/10 font-medium' : 'bg-linear-to-br from-avatar-start to-avatar-end font-bold'} ${className}`}
+      className={`relative grid shrink-0 place-items-center overflow-hidden rounded-full text-sm ${appearance === 'neutral' ? 'bg-brand-bright/20 font-medium text-brand' : 'bg-linear-to-br from-avatar-start to-avatar-end font-bold text-white'} ${className}`}
       role="img"
     >
       {showImage ? (

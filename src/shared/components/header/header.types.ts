@@ -62,5 +62,5 @@ export interface NavigationItem {
 }
 
 export interface MobileNavigationItem extends NavigationItem {
-  readonly icon: 'home' | 'explore' | 'lists' | 'profile';
+  readonly icon: 'home' | 'explore' | 'lists' | 'reviews' | 'profile';
 }

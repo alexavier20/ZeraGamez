@@ -84,6 +84,7 @@ function toGameSearchResult(game: z.infer<typeof igdbGameSchema>): GameSearchRes
     coverUrl: game.cover ? imageUrl(game.cover.image_id) : null,
     releaseDate: game.first_release_date ?? null,
     ...(game.aggregated_rating !== undefined ? { criticScore: game.aggregated_rating } : {}),
+    ...(game.hypes !== undefined && game.hypes !== null ? { hypeCount: game.hypes } : {}),
     platforms: [...new Set((game.platforms ?? []).map(({ name }) => name))],
   });
 }

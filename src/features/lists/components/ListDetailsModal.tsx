@@ -445,7 +445,7 @@ function ListDetailsDialog({
     <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto px-3 py-4 sm:px-6 sm:py-8">
       <button
         aria-label="Fechar detalhes da lista"
-        className="absolute inset-0 size-full bg-black/75 disabled:cursor-not-allowed"
+        className="absolute inset-0 size-full bg-text-primary/75 disabled:cursor-not-allowed"
         disabled={saving || busyGameId !== null || isReordering}
         onClick={onClose}
         tabIndex={-1}
@@ -456,12 +456,12 @@ function ListDetailsDialog({
         aria-describedby={descriptionId}
         aria-labelledby={titleId}
         aria-modal="true"
-        className="relative z-10 my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-[1052px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface shadow-[0_14px_36px_#00000077] sm:max-h-[calc(100dvh-4rem)]"
+        className="relative z-10 my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-[1052px] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_14px_36px_#2b2b3066] sm:max-h-[calc(100dvh-4rem)]"
         ref={dialogRef}
         role="dialog"
         tabIndex={-1}
       >
-        <header className="relative border-b border-white/10 bg-gradient-to-br from-brand/10 via-surface to-surface px-5 py-5 sm:px-7 sm:py-6">
+        <header className="relative border-b border-border bg-gradient-to-br from-brand/10 via-surface to-surface px-5 py-5 sm:px-7 sm:py-6">
           <button
             aria-label="Fechar modal"
             className="absolute top-3 right-3 flex size-11 items-center justify-center rounded-xl bg-bg-secondary text-text-muted transition-colors hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-brand"
@@ -473,7 +473,7 @@ function ListDetailsDialog({
           </button>
           <div className="flex flex-col gap-4 pr-12 sm:flex-row sm:items-center">
             {covers.length > 0 ? (
-              <div className="grid h-36 w-full shrink-0 grid-cols-3 overflow-hidden rounded-xl border border-white/10 bg-bg-secondary sm:w-52">
+              <div className="grid h-36 w-full shrink-0 grid-cols-3 overflow-hidden rounded-xl border border-border bg-bg-secondary sm:w-52">
                 {covers.map((cover, index) => (
                   <img
                     alt={`Capa de ${list.name} ${String(index + 1)}`}
@@ -484,12 +484,12 @@ function ListDetailsDialog({
                 ))}
               </div>
             ) : (
-              <div className="flex h-28 w-full shrink-0 items-center justify-center rounded-xl border border-white/10 bg-bg-secondary text-content-primary sm:h-36 sm:w-52">
+              <div className="flex h-28 w-full shrink-0 items-center justify-center rounded-xl border border-border bg-bg-secondary text-content-primary sm:h-36 sm:w-52">
                 <Gamepad2 aria-hidden="true" size={32} strokeWidth={1.5} />
               </div>
             )}
             <div className="min-w-0 flex-1 space-y-2">
-              <span className="inline-flex rounded-md bg-white/5 px-2 py-1 text-xs font-medium text-text-muted">
+              <span className="inline-flex rounded-md bg-brand-bright/10 px-2 py-1 text-xs font-medium text-text-muted">
                 {list.systemKey === null ? 'Privada' : 'Lista do sistema'}
               </span>
               <h2
@@ -512,7 +512,7 @@ function ListDetailsDialog({
             <div className="flex shrink-0 flex-wrap gap-2 sm:self-start">
               {list.systemKey === null ? (
                 <button
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-bg-secondary px-4 text-sm font-semibold text-content-primary transition-colors duration-150 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+         className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-bg-secondary px-4 text-sm font-semibold text-content-primary transition-colors duration-150 hover:bg-brand-bright/30 hover:text-brand-ink disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                   disabled={saving || busyGameId !== null || isReordering}
                   onClick={() => {
                     setEditing((current) => !current);
@@ -525,7 +525,7 @@ function ListDetailsDialog({
                 </button>
               ) : null}
               <button
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-bright disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-hover hover:text-white disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                 disabled={saving || busyGameId !== null || isReordering}
                 onClick={onAddGames}
                 ref={firstActionRef}
@@ -540,7 +540,7 @@ function ListDetailsDialog({
 
         {editing ? (
           <form
-            className="space-y-4 border-b border-white/5 px-5 py-5 sm:px-7"
+            className="space-y-4 border-b border-border px-5 py-5 sm:px-7"
             onSubmit={(event) => {
               void saveList(event);
             }}
@@ -553,7 +553,7 @@ function ListDetailsDialog({
                 Nome da lista
               </label>
               <input
-                className="min-h-11 w-full rounded-xl border border-white/15 bg-bg-secondary px-4 text-content-primary outline-none transition-colors duration-150 placeholder:text-text-muted focus:border-brand focus:ring-2 focus:ring-brand/30"
+                className="min-h-11 w-full rounded-xl border border-border bg-bg-secondary px-4 text-content-primary outline-none transition-colors duration-150 placeholder:text-text-muted focus:border-brand focus:ring-2 focus:ring-brand/30"
                 id="edit-list-name"
                 maxLength={80}
                 onChange={(event) => {
@@ -571,7 +571,7 @@ function ListDetailsDialog({
                 Descrição
               </label>
               <textarea
-                className="min-h-24 w-full resize-y rounded-xl border border-white/15 bg-bg-secondary px-4 py-3 text-content-primary outline-none transition-colors duration-150 placeholder:text-text-muted focus:border-brand focus:ring-2 focus:ring-brand/30"
+                className="min-h-24 w-full resize-y rounded-xl border border-border bg-bg-secondary px-4 py-3 text-content-primary outline-none transition-colors duration-150 placeholder:text-text-muted focus:border-brand focus:ring-2 focus:ring-brand/30"
                 id="edit-list-description"
                 maxLength={500}
                 onChange={(event) => {
@@ -582,7 +582,7 @@ function ListDetailsDialog({
             </div>
             <div className="flex justify-end gap-2">
               <button
-                className="min-h-11 rounded-xl border border-white/10 px-4 text-sm font-semibold text-content-primary disabled:opacity-60"
+                className="min-h-11 rounded-xl border border-border px-4 text-sm font-semibold text-content-primary disabled:opacity-60"
                 disabled={saving}
                 onClick={() => {
                   setName(list.name);
@@ -595,7 +595,7 @@ function ListDetailsDialog({
                 Cancelar
               </button>
               <button
-                className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-hover hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={saving}
                 type="submit"
               >
@@ -634,7 +634,7 @@ function ListDetailsDialog({
               ) : null}
               {coverSelectionError ? (
                 <button
-                  className="mt-1 text-xs font-semibold text-red-200 underline underline-offset-2"
+                  className="mt-1 text-xs font-semibold text-red-700 underline underline-offset-2"
                   onClick={() => {
                     setCoverSelectionState({ listId: list.id, status: 'loading' });
                     void loadCoverSelection();
@@ -646,7 +646,7 @@ function ListDetailsDialog({
               ) : null}
             </div>
             <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap sm:justify-end">
-              <label className="flex min-h-11 min-w-[min(100%,18rem)] flex-1 items-center gap-2 rounded-xl border border-white/10 bg-bg-secondary px-3 text-text-muted focus-within:border-brand/70 sm:flex-none">
+              <label className="flex min-h-11 min-w-[min(100%,18rem)] flex-1 items-center gap-2 rounded-xl border border-border bg-bg-secondary px-3 text-text-muted focus-within:border-brand/70 sm:flex-none">
                 <Search aria-hidden="true" size={18} strokeWidth={1.5} />
                 <span className="sr-only">Buscar nesta lista</span>
                 <input
@@ -667,7 +667,7 @@ function ListDetailsDialog({
                 <button
                   aria-controls={`${descriptionId}-games`}
                   aria-pressed={gamesView === 'list'}
-                  className={`inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${gamesView === 'list' ? 'bg-white/10 text-content-primary ring-1 ring-inset ring-white/15' : 'text-text-muted hover:text-content-primary'}`}
+                  className={`inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${gamesView === 'list' ? 'bg-brand-bright/20 text-content-primary ring-1 ring-inset ring-border' : 'text-text-muted hover:text-content-primary'}`}
                   onClick={() => {
                     setGamesView('list');
                   }}
@@ -679,7 +679,7 @@ function ListDetailsDialog({
                 <button
                   aria-controls={`${descriptionId}-games`}
                   aria-pressed={gamesView === 'grid'}
-                  className={`inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${gamesView === 'grid' ? 'bg-white/10 text-content-primary ring-1 ring-inset ring-white/15' : 'text-text-muted hover:text-content-primary'}`}
+                  className={`inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${gamesView === 'grid' ? 'bg-brand-bright/20 text-content-primary ring-1 ring-inset ring-border' : 'text-text-muted hover:text-content-primary'}`}
                   onClick={() => {
                     setGamesView('grid');
                   }}
@@ -696,11 +696,11 @@ function ListDetailsDialog({
             <ListGamesLoading grid={gamesView === 'grid'} />
           ) : gamesState.status === 'error' ? (
             <div className="rounded-xl border border-red-400/30 bg-red-500/10 p-5 text-center">
-              <p className="text-sm text-red-100" role="alert">
+              <p className="text-sm text-red-700" role="alert">
                 {gameLoadErrorMessage}
               </p>
               <button
-                className="mt-3 rounded-lg border border-red-200/30 px-4 py-2 text-sm font-semibold text-white"
+                className="mt-3 rounded-lg border border-red-200/30 px-4 py-2 text-sm font-semibold text-red-700"
                 onClick={() => {
                   void loadGames();
                 }}
@@ -710,11 +710,11 @@ function ListDetailsDialog({
               </button>
             </div>
           ) : games.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-white/15 px-5 py-8 text-center">
+            <div className="rounded-xl border border-dashed border-border px-5 py-8 text-center">
               <Gamepad2 aria-hidden="true" className="mx-auto text-text-muted" size={28} />
               <p className="mt-3 text-sm text-text-muted">Esta lista ainda não tem jogos.</p>
               <button
-                className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-white"
+                className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-hover hover:text-white"
                 onClick={onAddGames}
                 type="button"
               >
@@ -722,17 +722,17 @@ function ListDetailsDialog({
               </button>
             </div>
           ) : visibleGames.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-white/15 px-4 py-6 text-center text-sm text-text-muted">
+            <p className="rounded-xl border border-dashed border-border px-4 py-6 text-center text-sm text-text-muted">
               Nenhum jogo corresponde à busca.
             </p>
           ) : (
             <div
-              className="min-h-0 overflow-auto rounded-xl border border-white/10"
+              className="min-h-0 overflow-auto rounded-xl border border-border"
               onDragOver={handleGamesContainerDragOver}
               ref={gamesScrollContainerRef}
             >
               {gamesView === 'list' ? (
-                <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-3 border-b border-white/10 bg-bg-secondary px-4 py-3 text-xs font-semibold text-text-muted sm:grid-cols-[minmax(0,1fr)_minmax(9rem,auto)_auto]">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-3 border-b border-border bg-bg-secondary px-4 py-3 text-xs font-semibold text-text-muted sm:grid-cols-[minmax(0,1fr)_minmax(9rem,auto)_auto]">
                   <span>Jogo</span>
                   <span className="hidden sm:block">Lançamento</span>
                   <span className="sr-only">Ações</span>
@@ -762,7 +762,7 @@ function ListDetailsDialog({
                         aria-pressed={isCoverSelected}
                         className={
                           gamesView === 'grid'
-                            ? `absolute top-2 left-2 z-10 flex size-11 items-center justify-center rounded-lg shadow-lg backdrop-blur-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-white ${isCoverSelected ? 'bg-brand text-white' : 'bg-black/65 text-white hover:bg-brand/80'}`
+                            ? `absolute top-2 left-2 z-10 flex size-11 items-center justify-center rounded-lg shadow-lg backdrop-blur-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-brand ${isCoverSelected ? 'bg-brand text-white hover:bg-brand-hover' : 'bg-text-primary/65 text-white hover:bg-brand-hover'}`
                             : `relative flex size-11 items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-brand ${isCoverSelected ? 'bg-brand/15 text-content-primary' : 'text-text-muted hover:bg-brand/10 hover:text-content-primary'}`
                         }
                         disabled={
@@ -802,8 +802,8 @@ function ListDetailsDialog({
                       aria-label={`Remover ${game.name} da lista`}
                       className={
                         gamesView === 'grid'
-                          ? 'absolute top-2 right-2 z-10 flex size-11 items-center justify-center rounded-lg bg-black/65 text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-white'
-                          : 'flex size-11 items-center justify-center rounded-lg text-text-muted transition-colors duration-150 hover:bg-red-500/15 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-brand'
+                          ? 'absolute top-2 right-2 z-10 flex size-11 items-center justify-center rounded-lg bg-text-primary/65 text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-brand'
+                          : 'flex size-11 items-center justify-center rounded-lg text-text-muted transition-colors duration-150 hover:bg-red-500/15 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-brand'
                       }
                       disabled={busyGameId !== null || saving || isReordering}
                       onClick={() => {
@@ -826,7 +826,7 @@ function ListDetailsDialog({
                   const itemClassName =
                     gamesView === 'grid'
                       ? `relative flex w-full min-w-0 flex-col overflow-hidden rounded-md transition-transform duration-200 ease-out hover:-translate-y-1 hover:scale-[1.02] ${canReorder ? 'cursor-grab active:cursor-grabbing' : ''} ${draggedGameId === game.igdbId ? 'scale-[0.98] opacity-40' : ''} ${isDropTarget ? 'scale-[1.03] ring-2 ring-brand' : ''} ${swappedGameIds.has(game.igdbId) ? 'scale-[1.02] ring-2 ring-brand/70' : ''}`
-                      : `grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-b border-white/5 px-4 py-3 transition-colors last:border-b-0 hover:bg-white/5 sm:grid-cols-[minmax(0,1fr)_minmax(9rem,auto)_auto] ${canReorder ? 'cursor-grab active:cursor-grabbing' : ''} ${draggedGameId === game.igdbId ? 'opacity-50' : ''} ${isDropTarget ? 'bg-brand/10 ring-1 ring-inset ring-brand' : ''} ${swappedGameIds.has(game.igdbId) ? 'bg-brand/15 ring-1 ring-inset ring-brand/70' : ''}`;
+           : `grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-b border-border px-4 py-3 transition-colors last:border-b-0 hover:bg-brand-bright hover:text-brand-ink sm:grid-cols-[minmax(0,1fr)_minmax(9rem,auto)_auto] ${canReorder ? 'cursor-grab active:cursor-grabbing' : ''} ${draggedGameId === game.igdbId ? 'opacity-50' : ''} ${isDropTarget ? 'bg-brand/10 ring-1 ring-inset ring-brand' : ''} ${swappedGameIds.has(game.igdbId) ? 'bg-brand/15 ring-1 ring-inset ring-brand/70' : ''}`;
 
                   return (
                     <li className={itemClassName} key={game.igdbId}>
@@ -930,7 +930,7 @@ function ListDetailsDialog({
           )}
 
           {errorMessage === null ? null : (
-            <p className="mt-3 text-sm text-red-200" role="alert">
+            <p className="mt-3 text-sm text-red-700" role="alert">
               {errorMessage}
             </p>
           )}

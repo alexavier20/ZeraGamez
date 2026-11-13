@@ -218,7 +218,7 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
     ) : searchState.status === 'loading' ? (
       <GameRowsLoading />
     ) : searchState.status === 'error' ? (
-      <p className="px-4 py-3 text-sm text-brand-bright" role="alert">
+      <p className="px-4 py-3 text-sm text-brand" role="alert">
         Não foi possível buscar jogos. Tente novamente.
       </p>
     ) : searchState.games.length === 0 ? (
@@ -233,7 +233,7 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
             <li key={game.id}>
               <button
                 aria-pressed={isSelected}
-                className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors enabled:hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors enabled:hover:bg-brand-bright/30 enabled:hover:text-brand-ink disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={submitting || isSelected || !hasReleaseDate}
                 onClick={() => {
                   selectGame(game);
@@ -260,7 +260,7 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
                     {platformSummary(game.platforms)} · {formatReleaseDate(game.releaseDate)}
                   </span>
                 </span>
-                <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-brand-bright">
+                <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-brand">
                   {isSelected ? (
                     <>
                       <Check aria-hidden="true" size={18} strokeWidth={1.5} /> Adicionado
@@ -284,7 +284,7 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto px-3 py-4 sm:px-6 sm:py-8">
       <button
         aria-label="Fechar ao clicar fora do modal"
-        className="absolute inset-0 size-full bg-black/75 disabled:cursor-not-allowed"
+        className="absolute inset-0 size-full bg-text-primary/75 disabled:cursor-not-allowed"
         disabled={submitting}
         onClick={close}
         tabIndex={-1}
@@ -295,7 +295,7 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
         aria-describedby={descriptionId}
         aria-labelledby={titleId}
         aria-modal="true"
-        className="relative z-10 my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-[1052px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface shadow-[0_14px_36px_#00000077] sm:max-h-[calc(100dvh-4rem)]"
+        className="relative z-10 my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-[1052px] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_14px_36px_#2b2b3066] sm:max-h-[calc(100dvh-4rem)]"
         ref={dialogRef}
         role="dialog"
         tabIndex={-1}
@@ -325,7 +325,7 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
             <label className="sr-only" htmlFor="game-search-input">
               Buscar jogos por nome
             </label>
-            <div className="flex min-h-12 items-center gap-3 rounded-xl border border-white/10 bg-bg-secondary px-4 focus-within:border-brand/70">
+            <div className="flex min-h-12 items-center gap-3 rounded-xl border border-border bg-bg-secondary px-4 focus-within:border-brand/70">
               <Search
                 aria-hidden="true"
                 className="shrink-0 text-text-muted"
@@ -352,7 +352,7 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
               />
             </div>
             {searchState.status === 'idle' && query.trim().length < MIN_SEARCH_LENGTH ? null : (
-              <div className="overflow-hidden rounded-xl border border-white/10 bg-bg-secondary">
+              <div className="overflow-hidden rounded-xl border border-border bg-bg-secondary">
                 {searchContent}
               </div>
             )}
@@ -367,7 +367,7 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
                 >
                   Jogos adicionados
                 </h3>
-                <span className="rounded-full bg-brand/15 px-2.5 py-1 text-xs font-semibold text-brand-bright">
+                <span className="rounded-full bg-brand/15 px-2.5 py-1 text-xs font-semibold text-brand">
                   {selectedGames.length} {selectedGames.length === 1 ? 'jogo' : 'jogos'}
                 </span>
               </div>
@@ -377,14 +377,14 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
             </div>
 
             {selectedGames.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-white/15 px-4 py-5 text-center text-sm text-text-muted">
+              <p className="rounded-xl border border-dashed border-border px-4 py-5 text-center text-sm text-text-muted">
                 Os jogos selecionados aparecerão aqui.
               </p>
             ) : (
               <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
                 {selectedGames.map((game) => (
                   <li
-                    className={`flex min-w-0 items-center gap-2 rounded-xl border border-white/10 bg-bg-secondary p-2.5 ${draggedGameId === game.id ? 'opacity-50' : ''}`}
+                    className={`flex min-w-0 items-center gap-2 rounded-xl border border-border bg-bg-secondary p-2.5 ${draggedGameId === game.id ? 'opacity-50' : ''}`}
                     key={game.id}
                     onDragOver={(event) => {
                       event.preventDefault();
@@ -437,7 +437,7 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
                     </span>
                     <button
                       aria-label={`Remover ${game.name}`}
-                      className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand-bright transition-colors enabled:hover:bg-brand/20 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-brand"
+                      className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand transition-colors enabled:hover:bg-brand/20 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-brand"
                       disabled={submitting}
                       onClick={() => {
                         removeGame(game.id);
@@ -453,15 +453,15 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
           </section>
 
           {submissionError === null ? null : (
-            <p className="text-sm text-brand-bright" role="alert">
+            <p className="text-sm text-brand" role="alert">
               {submissionError}
             </p>
           )}
         </div>
 
-        <div className="flex justify-end gap-2.5 border-t border-white/5 px-5 py-4 sm:px-7">
+        <div className="flex justify-end gap-2.5 border-t border-border px-5 py-4 sm:px-7">
           <button
-            className="min-h-11 rounded-xl border border-white/10 bg-bg-secondary px-4 text-sm font-semibold text-content-primary transition-colors enabled:hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+      className="min-h-11 rounded-xl border border-border bg-bg-secondary px-4 text-sm font-semibold text-content-primary transition-colors enabled:hover:bg-brand-bright/30 enabled:hover:text-brand-ink disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             disabled={submitting}
             onClick={close}
             type="button"
@@ -469,7 +469,7 @@ function AddGamesToListDialog({ list, onClose, onSave }: AddGamesToListModalProp
             Cancelar
           </button>
           <button
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand px-5 text-sm font-semibold text-white transition-colors enabled:hover:bg-brand-bright disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+      className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand px-5 text-sm font-semibold text-white transition-colors enabled:hover:bg-brand-hover enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             disabled={submitting || selectedGames.length === 0}
             onClick={() => void save()}
             type="button"

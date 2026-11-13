@@ -28,12 +28,12 @@ export function RecentReviewsSection() {
   }, [attempt]);
   return (
     <section aria-labelledby="recent-reviews-title" className="pt-10 sm:pt-14">
-      <p className="text-xs font-medium text-text-muted">Já disponíveis</p>
       <h2
         id="recent-reviews-title"
-        className="mt-1 mb-6 font-heading text-xl font-semibold text-text-primary sm:text-2xl"
+        className="mb-6 flex items-center gap-2 font-heading text-xl font-semibold text-text-primary sm:text-2xl"
       >
-        Últimos lançamentos avaliados
+        <span aria-hidden="true" className="h-6 w-1.5 shrink-0 -translate-y-0.5 rounded-full bg-brand" />
+        Notas da crítica
       </h2>
       {status === 'loading' ? (
         <HomeCarouselSkeleton variant="reviews" />
@@ -60,15 +60,23 @@ export function RecentReviewsSection() {
           nextLabel="Ver próximas avaliações"
         >
           {games.map((game) => {
-            const score = Math.round(game.criticScore ?? 0);
+            const score = game.criticScore === undefined ? null : Math.round(game.criticScore);
             const color =
-              score >= 75 ? 'bg-[#4cc38a]' : score >= 50 ? 'bg-[#e2b75d]' : 'bg-[#e8797e]';
+              score === null
+                ? 'bg-bg-secondary text-text-muted'
+                : score >= 75
+                  ? 'bg-[#4cc38a] text-black'
+                  : score >= 50
+                    ? 'bg-[#e2b75d] text-black'
+                    : 'bg-[#e8797e] text-black';
             const label =
-              score >= 75
-                ? 'Críticas favoráveis'
-                : score >= 50
-                  ? 'Críticas mistas'
-                  : 'Críticas desfavoráveis';
+              score === null
+                ? 'Sem nota da crítica'
+                : score >= 75
+                  ? 'Críticas favoráveis'
+                  : score >= 50
+                    ? 'Críticas mistas'
+                    : 'Críticas desfavoráveis';
             return (
               <li key={game.id} className="w-40 shrink-0 snap-start sm:w-44">
                 <Link
@@ -87,16 +95,20 @@ export function RecentReviewsSection() {
                   )}
                   <h3
                     title={game.name}
-                    className="mt-3 truncate text-sm font-medium text-text-primary transition-colors duration-150 group-hover:text-white"
+                    className="mt-3 truncate text-sm font-medium text-text-primary transition-colors duration-150 group-hover:text-brand"
                   >
                     {game.name}
                   </h3>
                   <div className="mt-2 flex items-center gap-2">
                     <span
-                      aria-label={'Nota da crítica: ' + String(score) + ' de 100'}
-                      className={'rounded-sm px-1.5 py-1 text-xs font-semibold tabular-nums text-black ' + color}
+                      aria-label={
+                        score === null
+                          ? 'Nota da crítica indisponível'
+                          : 'Nota da crítica: ' + String(score) + ' de 100'
+                      }
+                      className={'rounded-sm px-1.5 py-1 text-xs font-semibold tabular-nums ' + color}
                     >
-                      {score}
+                      {score === null ? '—' : score}
                     </span>
                     <span className="text-[11px] leading-4 text-text-muted">{label}</span>
                   </div>

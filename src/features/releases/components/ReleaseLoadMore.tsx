@@ -69,7 +69,7 @@ export function ReleaseLoadMore({
       <div className="mt-8 flex flex-col items-center gap-3 text-center" role="alert">
         <p className="text-sm text-text-muted">Não foi possível carregar mais jogos</p>
         <button
-          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-hover hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           onClick={onRetry}
           type="button"
         >
@@ -91,7 +91,7 @@ export function ReleaseLoadMore({
     return (
       <div className="mt-8 flex justify-center">
         <button
-          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-hover hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           onClick={onLoadMore}
           type="button"
         >

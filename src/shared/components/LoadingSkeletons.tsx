@@ -4,7 +4,7 @@ export function Skeleton({ className = '' }: Readonly<{ className?: string }>) {
   return (
     <div
       aria-hidden="true"
-      className={`animate-pulse rounded bg-white/10 motion-reduce:animate-none ${className}`}
+      className={`animate-pulse rounded bg-brand-bright/20 motion-reduce:animate-none ${className}`}
     />
   );
 }
@@ -28,7 +28,7 @@ export function ListCardsLoading({ tiers = false }: Readonly<{ tiers?: boolean }
       <div className="grid gap-x-3 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
           <div
-            className="overflow-hidden rounded-2xl border border-white/10 bg-surface"
+            className="overflow-hidden rounded-2xl border border-border bg-surface"
             key={index}
           >
             <div
@@ -84,7 +84,7 @@ export function HypeCardsLoading() {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 min-[900px]:grid-cols-3 lg:grid-cols-4">
         {Array.from({ length: 12 }, (_, index) => (
           <div
-            className="relative mx-auto flex min-h-[164px] w-full max-w-[320px] flex-col justify-between rounded-xl border border-white/10 bg-surface p-3"
+            className="relative mx-auto flex min-h-[164px] w-full max-w-[320px] flex-col justify-between rounded-xl border border-border bg-surface p-3"
             key={index}
           >
             <Skeleton className="absolute right-2 top-2 size-11 rounded-lg" />
@@ -110,7 +110,7 @@ export function ReviewsLoading() {
       <div className="grid gap-4 md:grid-cols-2">
         {[0, 1, 2, 3].map((index) => (
           <div
-            className="flex h-[280px] flex-col rounded-2xl border border-white/10 bg-surface p-5"
+            className="flex h-[280px] flex-col rounded-2xl border border-border bg-surface p-5"
             key={index}
           >
             <div className="flex flex-1 items-start gap-3 sm:gap-4">
@@ -127,7 +127,7 @@ export function ReviewsLoading() {
                 </div>
               </div>
             </div>
-            <div className="mt-4 flex h-9 items-center gap-2 border-t border-white/10 pt-3">
+            <div className="mt-4 flex h-9 items-center gap-2 border-t border-border pt-3">
               <Skeleton className="h-3 w-24" />
               <Skeleton className="h-3 w-20" />
             </div>
@@ -150,7 +150,7 @@ export function TierBoardLoading() {
       </div>
       <Skeleton className="mt-7 h-12 w-full rounded-xl" />
       <Skeleton className="mt-7 h-6 w-40" />
-      <div className="mt-3 flex min-h-24 gap-1 rounded-xl border border-dashed border-white/20 bg-surface/40 p-3">
+      <div className="mt-3 flex min-h-24 gap-1 rounded-xl border border-dashed border-border bg-surface/40 p-3">
         {[0, 1, 2].map((index) => (
           <Skeleton className="h-20 w-14" key={index} />
         ))}
@@ -158,7 +158,7 @@ export function TierBoardLoading() {
       <div className="mt-7 space-y-2">
         {[0, 1, 2, 3, 4].map((index) => (
           <div
-            className="flex min-h-24 overflow-hidden rounded-xl border border-white/10 bg-surface/40"
+            className="flex min-h-24 overflow-hidden rounded-xl border border-border bg-surface/40"
             key={index}
           >
             <Skeleton className="w-16 shrink-0 rounded-none sm:w-20" />
@@ -179,7 +179,7 @@ export function ProfileLoading() {
     <main className="site-container min-h-[calc(100dvh-3.5rem)] max-w-xl pb-28 pt-5 sm:pb-12 sm:pt-6 lg:pt-7">
       <LoadingPreview label="Carregando perfil">
         <Skeleton className="mb-4 h-11 w-20" />
-        <div className="rounded-2xl border border-white/10 bg-surface p-5 sm:p-6">
+        <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6">
           <Skeleton className="h-7 w-24 sm:h-9" />
           <div className="mt-5 grid grid-cols-[3rem_minmax(0,1fr)] items-start gap-x-4 gap-y-3 sm:grid-cols-[3rem_minmax(0,1fr)_auto]">
             <Skeleton className="size-12 shrink-0 rounded-full" />
@@ -189,7 +189,7 @@ export function ProfileLoading() {
             </div>
             <Skeleton className="col-start-2 h-11 w-20 sm:col-start-3 sm:row-start-1" />
           </div>
-          <div className="mt-6 border-t border-white/10 pt-5">
+          <div className="mt-6 border-t border-border pt-5">
             <Skeleton className="h-7 w-52 max-w-full" />
             <div className="mt-5 space-y-5">
               <div className="space-y-2">
@@ -205,7 +205,7 @@ export function ProfileLoading() {
             </div>
             <Skeleton className="ml-auto mt-5 h-11 w-full rounded-lg sm:w-44" />
           </div>
-          <div className="mt-6 border-t border-white/10 pt-5">
+          <div className="mt-6 border-t border-border pt-5">
             <Skeleton className="h-7 w-44 max-w-full" />
             <div className="mt-3 space-y-2">
               <Skeleton className="h-5 w-32" />
@@ -304,7 +304,7 @@ export function ProtectedPageLoading({ pathname }: Readonly<{ pathname: string }
               {!creating && !reviews && <Skeleton className="h-11 w-28 rounded-xl" />}
             </div>
             {creating ? (
-              <div className="mt-8 space-y-6 rounded-2xl border border-white/10 bg-surface p-5 sm:p-7">
+              <div className="mt-8 space-y-6 rounded-2xl border border-border bg-surface p-5 sm:p-7">
                 {[0, 1].map((index) => (
                   <div className="space-y-2" key={index}>
                     <Skeleton className="h-4 w-28" />
@@ -319,7 +319,7 @@ export function ProtectedPageLoading({ pathname }: Readonly<{ pathname: string }
               </div>
             ) : reviews ? (
               <>
-                <div className="mt-6 rounded-2xl border border-white/10 bg-surface p-5">
+                <div className="mt-6 rounded-2xl border border-border bg-surface p-5">
                   <Skeleton className="mb-2 h-5 w-32" />
                   <Skeleton className="h-12 w-full rounded-lg" />
                   <Skeleton className="mt-2 h-4 w-48 max-w-full" />

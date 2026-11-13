@@ -30,15 +30,15 @@ import { PageHeading } from '@/shared/components/page-heading/PageHeading';
 
 const resultsId = 'release-results';
 
-function releaseSubtitle(selectedDate: string | null, state: ReleasesState): string {
-  if (selectedDate === null) return 'Descubra os games que estão chegando';
+function releaseSubtitle(selectedDate: string | null, state: ReleasesState): string | undefined {
+  if (selectedDate === null) return undefined;
   const date = formatReleaseDate(selectedDate, false);
   if (state.status === 'success') {
     const count = state.response.data.length;
     return `${String(count)} ${count === 1 ? 'lançamento encontrado' : 'lançamentos encontrados'} em ${date}`;
   }
   if (state.status === 'empty') return `Nenhum lançamento encontrado em ${date}`;
-  return 'Descubra os games que estão chegando';
+  return undefined;
 }
 
 export function ReleasesPage() {
@@ -187,7 +187,8 @@ export function ReleasesPage() {
         <PageHeading
           title="Próximos lançamentos"
           subtitle={releaseSubtitle(selectedDate, state)}
-          titleClassName="font-heading text-2xl leading-tight font-semibold text-content-primary sm:text-[28px] lg:text-[32px]"
+          titleAccent
+          titleClassName="font-heading text-xl font-semibold text-text-primary sm:text-2xl"
         />
         <ReleaseCalendarControl
           controlsId={resultsId}

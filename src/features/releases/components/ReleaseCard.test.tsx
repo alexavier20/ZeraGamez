@@ -665,7 +665,7 @@ describe('ReleaseCard', () => {
     });
     for (const button of [selectedDesktopButton, selectedMobileButton]) {
       expect(button).toHaveAttribute('aria-pressed', 'true');
-      expect(button).toHaveClass('bg-[#175736]');
+      expect(button).toHaveClass('bg-brand');
       expect(button.querySelector('svg.lucide-circle-check')).toBeInTheDocument();
     }
 
@@ -679,7 +679,7 @@ describe('ReleaseCard', () => {
     });
     for (const button of [restoredDesktopButton, restoredMobileButton]) {
       expect(button).toHaveAttribute('aria-pressed', 'false');
-      expect(button).not.toHaveClass('bg-[#175736]');
+      expect(button).not.toHaveClass('bg-brand');
       expect(button.querySelector('svg.lucide-gamepad-2')).toBeInTheDocument();
       expect(button.querySelector('svg.lucide-circle-check')).not.toBeInTheDocument();
     }

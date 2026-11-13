@@ -40,7 +40,7 @@ function ContextAction({ action }: Readonly<{ action: HeaderContextAction }>) {
   return (
     <button
       aria-label={action.label}
-      className="grid min-h-10 min-w-10 place-items-center rounded-lg px-2 text-sm font-semibold text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary"
+      className="grid min-h-10 min-w-10 place-items-center rounded-lg px-2 text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
       onClick={action.onClick}
       type="button"
     >
@@ -60,17 +60,17 @@ export function MobileContextHeader(props: MobileContextHeaderProps) {
         {props.account?.status === 'authenticated' ? (
           <Link
             aria-label={`Abrir perfil de ${props.account.user.name}`}
-            className="flex min-w-0 items-center gap-2 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary"
+            className="flex min-w-0 items-center gap-2 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             onClick={props.onProfileClick}
             to={headerRoutes.profile}
           >
             <UserAvatar
               avatarUrl={props.account.user.avatarUrl ?? null}
-              className="size-9 border border-white text-[11px]"
+              className="size-9 border border-white/50 text-[11px]"
               initials={props.account.user.initials}
               name={props.account.user.name}
             />
-            <span className="max-w-28 truncate text-sm font-semibold text-content-primary">
+            <span className="max-w-28 truncate text-sm font-semibold text-white">
               Olá, {props.account.user.name}
             </span>
           </Link>
@@ -83,7 +83,7 @@ export function MobileContextHeader(props: MobileContextHeaderProps) {
     props.variant === 'detail' ? (
       <button
         aria-label="Voltar"
-        className="grid size-10 place-items-center rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary"
+        className="grid size-10 place-items-center rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         onClick={props.onBack}
         type="button"
       >
@@ -92,7 +92,7 @@ export function MobileContextHeader(props: MobileContextHeaderProps) {
     ) : (
       <button
         aria-label="Fechar"
-        className="grid size-10 place-items-center rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary"
+        className="grid size-10 place-items-center rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         onClick={props.onClose}
         type="button"
       >
@@ -102,7 +102,7 @@ export function MobileContextHeader(props: MobileContextHeaderProps) {
 
   return (
     <div
-      className="grid h-[58px] grid-cols-[4rem_1fr_4rem] items-center text-text-primary"
+      className="grid h-[58px] grid-cols-[4rem_1fr_4rem] items-center text-white"
       data-testid="mobile-context-header"
     >
       {leadingAction}

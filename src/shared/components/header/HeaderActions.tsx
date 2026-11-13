@@ -1,3 +1,4 @@
+import { UserRound } from 'lucide-react';
 import { Link } from 'react-router';
 
 import { UserAvatar } from '@/features/auth/components/UserAvatar';
@@ -16,10 +17,12 @@ export function HeaderActions({ account, onProfileClick }: Readonly<HeaderAction
     return (
       <div className="ml-auto flex shrink-0 items-center gap-3">
         <Link
-          className="flex h-8 items-center rounded-lg border border-white/25 bg-app px-3 text-sm font-medium text-text-primary transition-colors hover:bg-bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary"
+          aria-label="Entrar"
+          className="grid size-10 place-items-center rounded-full text-white transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          title="Entrar"
           to="/entrar"
         >
-          Entrar
+          <UserRound aria-hidden="true" size={22} strokeWidth={1.7} />
         </Link>
       </div>
     );
@@ -31,19 +34,19 @@ export function HeaderActions({ account, onProfileClick }: Readonly<HeaderAction
     <div className="ml-auto flex shrink-0 items-center gap-2">
       <Link
         aria-label={`Abrir perfil de ${user.name}`}
-        className="rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary"
+        className="rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         onClick={onProfileClick}
         title={user.name}
         to={headerRoutes.profile}
       >
         <UserAvatar
           avatarUrl={user.avatarUrl ?? null}
-          className="size-8 border border-white text-[10px]"
+          className="size-8 border border-white/50 text-[10px]"
           initials={user.initials}
           name={user.name}
         />
       </Link>
-      <span className="hidden max-w-40 truncate text-sm font-medium text-content-primary xl:inline">
+      <span className="hidden max-w-40 truncate text-sm font-medium text-white xl:inline">
         Olá, {user.name}
       </span>
     </div>

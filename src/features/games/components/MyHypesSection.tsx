@@ -59,7 +59,11 @@ function HypeCountdown({
   const today = todayInSaoPaulo(new Date(now));
   const isReleased = releaseDate < today;
   if (isReleased) {
-    return <p className="mt-3 text-[11px] leading-4 font-medium text-text-muted">Já lançado</p>;
+    return (
+      <span className="mt-3 inline-flex w-fit rounded-md bg-brand-bright px-2 py-1 text-xs leading-4 font-semibold text-brand-ink">
+        Já lançado
+      </span>
+    );
   }
 
   const labels = [
@@ -71,12 +75,12 @@ function HypeCountdown({
   return (
     <div className="mt-3">
       {releaseDate === today ? (
-        <p className="text-[11px] leading-4 font-medium text-[#4cc38a]">Lançamento hoje</p>
+        <p className="text-[11px] leading-4 font-medium text-brand">Lançamento hoje</p>
       ) : null}
       <dl aria-label="Tempo até o lançamento" className="mt-2 grid grid-cols-3 gap-2">
         {labels.map(({ label, value }) => (
           <div
-            className={`min-h-12 rounded-lg border ${releaseDate === today ? 'border-green-400/60' : 'border-[#aaa69e]/30'} bg-black/75 px-1.5 py-1 text-center`}
+            className={`min-h-12 rounded-lg border ${releaseDate === today ? 'border-brand' : 'border-border'} bg-bg-secondary px-1.5 py-1 text-center`}
             key={label}
           >
             <dd className="font-heading text-base leading-5 font-semibold tabular-nums text-content-primary">
@@ -224,7 +228,7 @@ function AuthenticatedMyHypesSection({ userId }: Readonly<{ userId: string }>) {
     searchState.status === 'loading' ? (
       <GameRowsLoading />
     ) : searchState.status === 'error' ? (
-      <p className="px-4 py-3 text-sm text-red-200" role="alert">
+      <p className="px-4 py-3 text-sm text-red-700" role="alert">
         Não foi possível buscar jogos. Tente novamente.
       </p>
     ) : searchState.status === 'success' && searchState.games.length === 0 ? (
@@ -237,7 +241,7 @@ function AuthenticatedMyHypesSection({ userId }: Readonly<{ userId: string }>) {
             <li key={game.id}>
               <button
                 aria-pressed={isAdded}
-                className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors enabled:hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors enabled:hover:bg-brand-bright/30 enabled:hover:text-brand-ink disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={isAdded || savingGameId !== null}
                 onClick={() => void addGame(game)}
                 type="button"
@@ -293,7 +297,7 @@ function AuthenticatedMyHypesSection({ userId }: Readonly<{ userId: string }>) {
         <label className="sr-only" htmlFor="my-hypes-search">
           Buscar jogos para adicionar aos Meus Hypes
         </label>
-        <div className="flex min-h-12 items-center gap-3 rounded-xl border border-white/10 bg-bg-secondary px-4 focus-within:border-brand/70">
+        <div className="flex min-h-12 items-center gap-3 rounded-xl border border-border bg-bg-secondary px-4 focus-within:border-brand/70">
           <Search
             aria-hidden="true"
             className="shrink-0 text-text-muted"
@@ -319,14 +323,14 @@ function AuthenticatedMyHypesSection({ userId }: Readonly<{ userId: string }>) {
           />
         </div>
         {queryIsLongEnough ? (
-          <div className="overflow-hidden rounded-xl border border-white/10 bg-bg-secondary">
+          <div className="overflow-hidden rounded-xl border border-border bg-bg-secondary">
             {searchContent}
           </div>
         ) : null}
       </div>
 
       {actionError === null ? null : (
-        <p className="text-sm text-brand-bright" role="alert">
+        <p className="text-sm text-brand" role="alert">
           {actionError}
         </p>
       )}
@@ -338,9 +342,9 @@ function AuthenticatedMyHypesSection({ userId }: Readonly<{ userId: string }>) {
           className="rounded-xl border border-red-400/30 bg-red-500/10 px-5 py-5 text-center"
           role="alert"
         >
-          <p className="text-sm text-red-100">Não foi possível carregar seus jogos hypados.</p>
+          <p className="text-sm text-red-700">Não foi possível carregar seus jogos hypados.</p>
           <button
-            className="mt-3 min-h-11 rounded-lg border border-red-200/30 px-4 py-2 text-sm font-semibold text-white"
+            className="mt-3 min-h-11 rounded-lg border border-red-200/30 px-4 py-2 text-sm font-semibold text-red-700"
             onClick={() => {
               setRetryKey((value) => value + 1);
             }}
@@ -351,7 +355,7 @@ function AuthenticatedMyHypesSection({ userId }: Readonly<{ userId: string }>) {
         </div>
       ) : games.length === 0 ? (
         <p
-          className="rounded-xl border border-dashed border-white/15 px-5 py-7 text-center text-sm text-text-muted"
+          className="rounded-xl border border-dashed border-border px-5 py-7 text-center text-sm text-text-muted"
           role="status"
         >
           Sua lista está vazia. Busque um jogo para acompanhar o lançamento.
@@ -364,11 +368,11 @@ function AuthenticatedMyHypesSection({ userId }: Readonly<{ userId: string }>) {
           >
             {visibleGames.map((game) => (
               <li className="mx-auto h-full w-full max-w-[320px]" key={game.igdbId}>
-                <article className="group isolate relative flex h-full min-h-[164px] min-w-0 overflow-hidden rounded-xl border border-white/10 bg-surface transition-colors duration-150 hover:border-white/25">
+                <article className="group isolate relative flex h-full min-h-[164px] min-w-0 overflow-hidden rounded-xl border border-border bg-surface transition-colors duration-150 hover:border-border">
                   {game.coverUrl === null ? (
                     <span
                       aria-hidden="true"
-                      className="absolute inset-0 grid place-items-center text-white/10"
+                      className="absolute inset-0 grid place-items-center text-brand/20"
                     >
                       <Gamepad2 size={64} />
                     </span>
@@ -383,14 +387,14 @@ function AuthenticatedMyHypesSection({ userId }: Readonly<{ userId: string }>) {
                   )}
                   <span
                     aria-hidden="true"
-                    className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/65 to-black/35"
+                    className="absolute inset-0 bg-gradient-to-r from-text-primary/85 via-text-primary/65 to-text-primary/35"
                   />
                   <Link
                     className="relative z-10 flex min-w-0 flex-1 flex-col rounded-xl p-3 focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-brand"
                     to={`/jogos/${String(game.igdbId)}`}
                   >
                     <span className="block min-w-0 pr-12">
-                      <span className="block line-clamp-2 text-sm font-semibold leading-tight text-content-primary">
+                      <span className="block line-clamp-2 text-sm font-semibold leading-tight text-white">
                         {game.name}
                       </span>
                       <span className="mt-1 block truncate text-xs text-white/85">
@@ -405,7 +409,7 @@ function AuthenticatedMyHypesSection({ userId }: Readonly<{ userId: string }>) {
                   </Link>
                   <button
                     aria-label={`Remover ${game.name} dos Meus Hypes`}
-                    className="absolute right-2 top-2 z-20 grid size-11 place-items-center rounded-lg bg-black/25 text-white/75 transition-colors hover:bg-black/60 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-brand"
+                    className="absolute right-2 top-2 z-20 flex size-11 items-center justify-center rounded-lg text-white transition-colors duration-150 hover:text-brand-bright disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                     disabled={removingGameId !== null || savingGameId !== null}
                     onClick={() => void removeGame(game)}
                     type="button"
@@ -413,12 +417,17 @@ function AuthenticatedMyHypesSection({ userId }: Readonly<{ userId: string }>) {
                     {removingGameId === game.igdbId ? (
                       <LoaderCircle
                         aria-hidden="true"
-                        className="animate-spin"
-                        size={18}
+                        className="animate-spin drop-shadow-[0_1px_2px_rgba(43,43,48,0.9)]"
+                        size={24}
                         strokeWidth={1.5}
                       />
                     ) : (
-                      <X aria-hidden="true" size={18} strokeWidth={1.5} />
+                      <X
+                        aria-hidden="true"
+                        className="drop-shadow-[0_1px_2px_rgba(43,43,48,0.9)]"
+                        size={24}
+                        strokeWidth={2}
+                      />
                     )}
                   </button>
                 </article>
@@ -432,7 +441,7 @@ function AuthenticatedMyHypesSection({ userId }: Readonly<{ userId: string }>) {
             >
               <button
                 aria-label="Página anterior"
-                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-white/10 px-3 text-sm font-semibold text-content-primary transition-colors enabled:hover:border-white/25 enabled:hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+        className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 text-sm font-semibold text-content-primary transition-colors enabled:hover:border-border enabled:hover:bg-brand-bright/30 enabled:hover:text-brand-ink disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                 disabled={currentPage === 0}
                 onClick={() => {
                   setPage((value) => Math.max(0, value - 1));
@@ -447,7 +456,7 @@ function AuthenticatedMyHypesSection({ userId }: Readonly<{ userId: string }>) {
               </span>
               <button
                 aria-label="Próxima página"
-                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-white/10 px-3 text-sm font-semibold text-content-primary transition-colors enabled:hover:border-white/25 enabled:hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+        className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 text-sm font-semibold text-content-primary transition-colors enabled:hover:border-border enabled:hover:bg-brand-bright/30 enabled:hover:text-brand-ink disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                 disabled={currentPage >= pageCount - 1}
                 onClick={() => {
                   setPage((value) => Math.min(pageCount - 1, value + 1));
@@ -469,7 +478,7 @@ export function MyHypesSection() {
   const { state } = useAuth();
 
   return (
-    <section aria-labelledby="my-hypes-title" className="mt-12 border-t border-white/10 pt-8">
+    <section aria-labelledby="my-hypes-title" className="mt-12 border-t border-border pt-8">
       <div>
         <h2
           className="mt-1 font-heading text-xl font-semibold text-content-primary sm:text-2xl"
@@ -487,9 +496,9 @@ export function MyHypesSection() {
           <HypeCardsLoading />
         </div>
       ) : state.status === 'anonymous' ? (
-        <p className="mt-5 rounded-xl border border-dashed border-white/15 px-5 py-6 text-center text-sm text-text-muted">
+        <p className="mt-5 rounded-xl border border-dashed border-border px-5 py-6 text-center text-sm text-text-muted">
           <Link
-            className="font-semibold text-brand-bright underline underline-offset-4"
+            className="font-semibold text-brand underline underline-offset-4"
             to="/entrar"
           >
             Entre na sua conta

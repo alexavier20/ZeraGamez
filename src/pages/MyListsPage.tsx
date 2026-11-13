@@ -9,15 +9,10 @@ import { isListsOperationCancelled, useLists } from '@/features/lists/context/Li
 import { TierListsSection } from '@/features/tier-lists/components/TierListsSection';
 import { headerRoutes } from '@/shared/components/header/header.config';
 import { ListCardsLoading } from '@/shared/components/LoadingSkeletons';
-import { PageHeading } from '@/shared/components/page-heading/PageHeading';
 
 import type { CreateListInput, UserListSummary } from '@/features/lists/model/lists';
 
 type ListModalMode = 'add-games' | 'details';
-
-function gameCountLabel(count: number): string {
-  return `${String(count)} ${count === 1 ? 'jogo' : 'jogos'}`;
-}
 
 interface ListSummaryProps {
   readonly list: UserListSummary;
@@ -60,7 +55,7 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
   }, [settingsOpen]);
 
   return (
-    <article className="relative rounded-2xl border border-white/10 bg-surface transition-colors duration-150 hover:border-white/25">
+    <article className="relative rounded-2xl border border-border bg-surface transition-colors duration-150 hover:border-border">
       <button
         aria-haspopup="dialog"
         aria-label={`Abrir detalhes da lista ${list.name}`}
@@ -72,7 +67,7 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
       >
         {covers.length > 0 ? (
           <div
-            className={`grid aspect-[3/1] w-full shrink-0 overflow-hidden bg-bg-secondary ${coverColumnClass}`}
+            className={`grid aspect-[9/4] w-full shrink-0 overflow-hidden bg-bg-secondary ${coverColumnClass}`}
           >
             {covers.map((cover, index) => (
               <img
@@ -84,33 +79,22 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
             ))}
           </div>
         ) : (
-          <div aria-hidden="true" className="aspect-[3/1] w-full shrink-0 bg-bg-secondary" />
+          <div aria-hidden="true" className="aspect-[9/4] w-full shrink-0 bg-bg-secondary" />
         )}
-        <div className="w-full flex-1 space-y-2 p-4">
-          <div className="flex items-start justify-between gap-3">
-            <h2 className="flex min-h-10 min-w-0 flex-1 items-start gap-2 font-heading text-sm leading-5 font-semibold text-content-primary">
-              {list.systemKey === null ? null : (
-                <Pin
-                  aria-hidden="true"
-                  className="mt-0.5 shrink-0 text-text-muted"
-                  size={18}
-                  strokeWidth={1.5}
-                />
-              )}
-              <span className="line-clamp-2 break-words" title={list.name}>
-                {list.name}
-              </span>
-            </h2>
-            <span className="shrink-0 pt-0.5 text-[11px] leading-5 font-medium tabular-nums text-text-muted">
-              {gameCountLabel(list.gameCount)}
+        <div className="w-full flex-1 p-4">
+          <h2 className="flex min-h-10 min-w-0 items-center gap-2 font-heading text-sm leading-5 font-semibold text-content-primary">
+            {list.systemKey === null ? null : (
+              <Pin
+                aria-hidden="true"
+                className="shrink-0 text-text-muted"
+                size={18}
+                strokeWidth={1.5}
+              />
+            )}
+            <span className="line-clamp-2 break-words" title={list.name}>
+              {list.name}
             </span>
-          </div>
-          <p
-            className="line-clamp-2 min-h-10 break-words text-xs leading-5 text-text-muted"
-            title={list.description ?? undefined}
-          >
-            {list.description}
-          </p>
+          </h2>
         </div>
       </button>
       {list.systemKey === null ? (
@@ -119,24 +103,29 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
             aria-controls={settingsMenuId}
             aria-expanded={settingsOpen}
             aria-label={`Configurações da lista ${list.name}`}
-            className="flex size-11 items-center justify-center rounded-lg border border-white/15 bg-black/75 text-white transition-colors duration-150 hover:border-white/30 hover:bg-bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            className="flex size-11 items-center justify-center rounded-lg text-white transition-colors duration-150 hover:text-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             onClick={() => {
               setSettingsOpen((open) => !open);
             }}
             ref={settingsButtonRef}
             type="button"
           >
-            <Settings aria-hidden="true" size={18} strokeWidth={1.5} />
+            <Settings
+              aria-hidden="true"
+              className="drop-shadow-[0_1px_2px_rgba(43,43,48,0.9)]"
+              size={24}
+              strokeWidth={2}
+            />
           </button>
           {settingsOpen ? (
             <div
-              className="absolute top-12 right-0 min-w-40 overflow-hidden rounded-xl border border-white/10 bg-surface p-2 shadow-lg shadow-black/20"
+              className="absolute top-12 right-0 min-w-40 overflow-hidden rounded-xl border border-border bg-surface p-2 shadow-lg shadow-text-primary/20"
               id={settingsMenuId}
               aria-label={`Opções da lista ${list.name}`}
               role="group"
             >
               <button
-                className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-content-primary transition-colors duration-150 hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-brand"
+        className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-content-primary transition-colors duration-150 hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-brand"
                 onClick={() => {
                   setSettingsOpen(false);
                   onSelect(list);
@@ -146,7 +135,7 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
                 Editar
               </button>
               <button
-                className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-red-200 transition-colors duration-150 hover:bg-red-500/15 focus-visible:outline-2 focus-visible:outline-red-300"
+                className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-red-700 transition-colors duration-150 hover:bg-red-500/15 focus-visible:outline-2 focus-visible:outline-red-300"
                 onClick={() => {
                   setSettingsOpen(false);
                   onDelete(list);
@@ -257,13 +246,15 @@ export function MyListsPage() {
   return (
     <main className="site-container min-h-[calc(100dvh-3.5rem)] pb-28 pt-5 sm:pb-12 sm:pt-6 lg:pt-7">
       <div className="flex items-start justify-between gap-4">
-        <PageHeading
-          title="Minhas listas"
-          subtitle="Organize os jogos do seu jeito"
-          titleClassName="font-heading text-2xl leading-tight font-semibold text-content-primary sm:text-[28px] lg:text-[32px]"
-        />
+        <h1 className="flex items-center gap-2 font-heading text-xl font-semibold text-text-primary sm:text-2xl">
+          <span
+            aria-hidden="true"
+            className="h-6 w-1.5 shrink-0 -translate-y-0.5 rounded-full bg-brand"
+          />
+          Minhas listas
+        </h1>
         <Link
-          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-medium text-white transition-colors duration-150 hover:bg-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+     className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-medium text-white transition-colors duration-150 hover:bg-brand-hover hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           to={headerRoutes.createList}
         >
           <Plus aria-hidden="true" size={18} strokeWidth={1.5} />
@@ -276,11 +267,11 @@ export function MyListsPage() {
           <ListCardsLoading />
         ) : listsState.status === 'error' ? (
           <div className="rounded-2xl border border-red-400/30 bg-red-500/10 p-6 text-center">
-            <p className="text-sm text-red-100" role="alert">
+            <p className="text-sm text-red-700" role="alert">
               {listsState.message}
             </p>
             <button
-              className="mt-4 rounded-xl border border-red-200/30 px-4 py-2 text-sm font-medium text-white"
+              className="mt-4 rounded-xl border border-red-200/30 px-4 py-2 text-sm font-medium text-red-700"
               onClick={() => void loadLists()}
               type="button"
             >
@@ -290,10 +281,10 @@ export function MyListsPage() {
         ) : (
           <div>
             {displayedLists.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-white/20 bg-surface p-8 text-center">
+              <div className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center">
                 <p className="text-text-muted">Você ainda não criou nenhuma lista.</p>
                 <Link
-                  className="mt-5 inline-flex rounded-xl bg-brand px-4 py-2.5 text-sm font-medium text-white"
+                  className="mt-5 inline-flex rounded-xl bg-brand px-4 py-2.5 text-sm font-medium text-white transition-colors duration-150 hover:bg-brand-hover hover:text-white"
                   to={headerRoutes.createList}
                 >
                   Criar minha primeira lista

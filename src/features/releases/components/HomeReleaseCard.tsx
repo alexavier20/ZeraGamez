@@ -44,7 +44,7 @@ export function HomeReleaseCard({ item }: HomeReleaseCardProps) {
           title={item.name}
         >
           <Link
-            className="rounded-sm hover:text-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            className="rounded-sm hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             to={`/jogos/${String(item.id)}`}
           >
             {item.name}
@@ -54,7 +54,7 @@ export function HomeReleaseCard({ item }: HomeReleaseCardProps) {
           <ul aria-label={`Plataformas de ${item.name}`} className="mt-2 flex flex-wrap gap-1.5">
             {platforms.map((platform, index) => (
               <li
-                className="rounded-md bg-white/10 px-2 py-1 text-[11px] font-medium text-text-muted"
+                className="rounded-md bg-brand-bright/20 px-2 py-1 text-[11px] font-medium text-text-muted"
                 key={`${String(item.platforms[index]?.id ?? platform)}-${platform}`}
               >
                 {platform}

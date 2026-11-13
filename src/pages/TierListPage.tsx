@@ -45,11 +45,11 @@ type SearchState =
 
 const tierStyles: Record<TierLabel, { readonly background: string; readonly foreground: string }> =
   {
-    S: { background: 'bg-[#ff7a7a]', foreground: 'text-[#241112]' },
-    A: { background: 'bg-[#ffbf7a]', foreground: 'text-[#241a10]' },
-    B: { background: 'bg-[#ffe07a]', foreground: 'text-[#241f10]' },
-    C: { background: 'bg-[#ffff83]', foreground: 'text-[#22220b]' },
-    D: { background: 'bg-[#b7ff87]', foreground: 'text-[#17220e]' },
+    S: { background: 'bg-brand', foreground: 'text-white' },
+    A: { background: 'bg-brand-bright', foreground: 'text-brand-ink' },
+    B: { background: 'bg-bg-secondary', foreground: 'text-text-primary' },
+    C: { background: 'bg-app', foreground: 'text-text-primary' },
+    D: { background: 'bg-border', foreground: 'text-text-primary' },
   };
 
 function nextPosition(items: readonly TierListItem[]): number {
@@ -151,7 +151,7 @@ function TierRow({
   const style = tierStyles[tier];
 
   return (
-    <div className="grid min-h-28 grid-cols-[76px_minmax(0,1fr)] overflow-hidden rounded-xl border border-white/10 bg-[#1a1a1a] sm:grid-cols-[96px_minmax(0,1fr)]">
+    <div className="grid min-h-28 grid-cols-[76px_minmax(0,1fr)] overflow-hidden rounded-xl border border-border bg-bg-secondary sm:grid-cols-[96px_minmax(0,1fr)]">
       <div
         className={`grid place-items-center font-heading text-xl font-bold ${style.background} ${style.foreground}`}
       >
@@ -159,7 +159,7 @@ function TierRow({
       </div>
       <div
         aria-label={`Tier ${tier}. Solte jogos aqui`}
-        className="flex min-h-28 flex-wrap content-start items-start gap-1 border-l border-black/30 p-2 transition-colors hover:bg-brand/5 sm:p-2.5"
+        className="flex min-h-28 flex-wrap content-start items-start gap-1 border-l border-border p-2 transition-colors hover:bg-brand/5 sm:p-2.5"
         onDragOver={(event) => {
           event.preventDefault();
           event.dataTransfer.dropEffect = 'move';
@@ -292,7 +292,7 @@ function TierListEditor({
     searchState.status === 'loading' ? (
       <GameRowsLoading />
     ) : searchState.status === 'error' ? (
-      <p className="px-4 py-3 text-sm text-brand-bright" role="alert">
+      <p className="px-4 py-3 text-sm text-brand" role="alert">
         Não foi possível buscar jogos. Tente novamente.
       </p>
     ) : searchState.status === 'success' && searchState.games.length === 0 ? (
@@ -332,7 +332,7 @@ function TierListEditor({
                       : formatReleaseDate(game.releaseDate)}
                   </span>
                 </span>
-                <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-brand-bright">
+                <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-brand">
                   {isAdded ? (
                     'Adicionado'
                   ) : (
@@ -394,7 +394,7 @@ function TierListEditor({
 
       {actionError === null ? null : (
         <p
-          className="rounded-xl border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-100"
+          className="rounded-xl border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-700"
           role="alert"
         >
           {actionError}
@@ -413,7 +413,7 @@ function TierListEditor({
         </div>
         <div
           aria-label="Jogos sem tier. Solte aqui para retirar um jogo de sua categoria"
-          className="flex min-h-24 flex-wrap content-start gap-1 rounded-xl border border-dashed border-white/20 bg-surface/40 p-2 transition-colors hover:border-brand/50 hover:bg-brand/5 sm:p-3"
+          className="flex min-h-24 flex-wrap content-start gap-1 rounded-xl border border-dashed border-border bg-surface/40 p-2 transition-colors hover:border-brand/50 hover:bg-brand/5 sm:p-3"
           onDragOver={(event) => {
             event.preventDefault();
             event.dataTransfer.dropEffect = 'move';
@@ -588,16 +588,16 @@ export function TierListPage() {
         <TierBoardLoading />
       ) : pageState.status === 'not-found' ? (
         <div className="py-16 text-center">
-          <TriangleAlert aria-hidden="true" className="mx-auto text-brand-bright" size={32} />
+          <TriangleAlert aria-hidden="true" className="mx-auto text-brand" size={32} />
           <p className="mt-3 text-sm text-text-muted">Esta Tier List não foi encontrada.</p>
         </div>
       ) : pageState.status === 'error' ? (
         <div className="py-16 text-center">
-          <p className="text-sm text-red-100" role="alert">
+          <p className="text-sm text-red-700" role="alert">
             Não foi possível carregar esta Tier List.
           </p>
           <button
-            className="mt-4 rounded-xl border border-white/15 px-4 py-2 text-sm font-bold text-content-primary"
+            className="mt-4 rounded-xl border border-border px-4 py-2 text-sm font-bold text-content-primary"
             onClick={() => {
               setRetryKey((value) => value + 1);
             }}
@@ -639,7 +639,7 @@ export function TierListPage() {
           </div>
           {editingMetadata ? (
             <form
-              className="mt-6 space-y-4 rounded-2xl border border-white/10 bg-surface p-5 sm:p-6"
+              className="mt-6 space-y-4 rounded-2xl border border-border bg-surface p-5 sm:p-6"
               onSubmit={(event) => {
                 void saveMetadata(event);
               }}
@@ -652,7 +652,7 @@ export function TierListPage() {
                   Nome da lista
                 </label>
                 <input
-                  className="min-h-11 w-full rounded-xl border border-white/15 bg-bg-secondary px-4 text-content-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/30"
+                  className="min-h-11 w-full rounded-xl border border-border bg-bg-secondary px-4 text-content-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/30"
                   disabled={savingMetadata}
                   id="tier-list-edit-name"
                   maxLength={80}
@@ -671,7 +671,7 @@ export function TierListPage() {
                   Descrição
                 </label>
                 <textarea
-                  className="min-h-24 w-full resize-y rounded-xl border border-white/15 bg-bg-secondary px-4 py-3 text-content-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/30"
+                  className="min-h-24 w-full resize-y rounded-xl border border-border bg-bg-secondary px-4 py-3 text-content-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/30"
                   disabled={savingMetadata}
                   id="tier-list-edit-description"
                   maxLength={500}
@@ -683,7 +683,7 @@ export function TierListPage() {
               </div>
               {editError === null ? null : (
                 <p
-                  className="rounded-xl border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-100"
+                  className="rounded-xl border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-700"
                   role="alert"
                 >
                   {editError}
@@ -704,7 +704,7 @@ export function TierListPage() {
                   Cancelar
                 </button>
                 <button
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-bold text-white transition-colors duration-150 hover:bg-brand-hover hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
                   disabled={savingMetadata}
                   type="submit"
                 >
@@ -717,7 +717,7 @@ export function TierListPage() {
             </form>
           ) : null}
           {repository === null || userId === null ? (
-            <p className="mt-6 text-sm text-red-100" role="alert">
+            <p className="mt-6 text-sm text-red-700" role="alert">
               O serviço de Tier Lists não está disponível.
             </p>
           ) : (

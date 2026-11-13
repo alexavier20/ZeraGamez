@@ -12,9 +12,9 @@ import {
 import type { GameSearchResult } from '../../../../shared/contracts/game-search';
 
 const rankings = [
-  { metric: 'peak-players', description: 'Maior pico de jogadores em 24 horas' },
-  { metric: 'positive-reviews', description: 'Destaques em avaliações positivas' },
-  { metric: 'top-sellers', description: 'Líderes globais de vendas' },
+  { metric: 'peak-players' },
+  { metric: 'positive-reviews' },
+  { metric: 'top-sellers' },
 ] as const;
 
 type RankingState =
@@ -22,10 +22,7 @@ type RankingState =
   | { status: 'error' }
   | { status: 'success'; games: readonly GameSearchResult[] };
 
-function SteamRankingCard({
-  metric,
-  description,
-}: Readonly<{ metric: SteamRankingMetric; description: string }>) {
+function SteamRankingCard({ metric }: Readonly<{ metric: SteamRankingMetric }>) {
   const [state, setState] = useState<RankingState>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
 
@@ -46,17 +43,15 @@ function SteamRankingCard({
   return (
     <section
       aria-labelledby={`steam-${metric}`}
-      className="overflow-hidden rounded-xl border border-white/10 bg-bg-secondary"
+      className="overflow-hidden rounded-xl border border-border bg-bg-secondary"
     >
-      <div className="border-b border-white/10 px-4 py-5">
-        <p className="mb-2 text-xs font-medium text-text-muted">Top 5 · Steam</p>
+      <div className="border-b border-border px-4 py-5">
         <h3
           className="font-heading text-base font-semibold text-content-primary"
           id={`steam-${metric}`}
         >
           {steamRankingLabels[metric]}
         </h3>
-        <p className="mt-1 text-xs text-text-muted">{description}</p>
       </div>
       {state.status === 'loading' ? (
         <div
@@ -70,13 +65,13 @@ function SteamRankingCard({
               className="flex min-h-20 animate-pulse items-center gap-3 px-1 py-3 motion-reduce:animate-none"
               key={index}
             >
-              <div className="h-5 w-5 shrink-0 rounded bg-white/10" />
-              <div className="h-14 w-10 shrink-0 rounded bg-white/10" />
+              <div className="h-5 w-5 shrink-0 rounded bg-brand-bright/20" />
+              <div className="h-14 w-10 shrink-0 rounded bg-brand-bright/20" />
               <div className="min-w-0 flex-1 space-y-2">
-                <div className="h-3.5 w-4/5 rounded bg-white/10" />
-                <div className="h-3.5 w-1/2 rounded bg-white/10" />
+                <div className="h-3.5 w-4/5 rounded bg-brand-bright/20" />
+                <div className="h-3.5 w-1/2 rounded bg-brand-bright/20" />
               </div>
-              <div className="size-4 shrink-0 rounded bg-white/10" />
+              <div className="size-4 shrink-0 rounded bg-brand-bright/20" />
             </div>
           ))}
         </div>
@@ -84,7 +79,7 @@ function SteamRankingCard({
         <div className="px-4 py-8 text-center" role="alert">
           <p className="text-sm text-text-muted">Não foi possível carregar este ranking.</p>
           <button
-            className="mt-4 min-h-11 rounded-lg border border-white/15 px-4 text-xs font-medium text-content-primary hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-brand"
+      className="mt-4 min-h-11 rounded-lg border border-border px-4 text-xs font-medium text-content-primary transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-brand"
             onClick={() => {
               setState({ status: 'loading' });
               setAttempt((value) => value + 1);
@@ -101,11 +96,11 @@ function SteamRankingCard({
           {state.games.map((game, index) => (
             <li key={game.id}>
               <Link
-                className="group flex min-h-20 items-center gap-3 rounded-lg px-1 py-3 transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-brand"
+        className="group flex min-h-20 items-center gap-3 rounded-lg px-1 py-3 transition-colors hover:bg-brand-bright hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-brand"
                 to={`/jogos/${String(game.id)}`}
               >
                 <span
-                  className={`w-5 shrink-0 text-center font-heading text-lg font-semibold tabular-nums ${index === 0 ? 'text-brand-bright' : 'text-text-muted'}`}
+                  className={`w-5 shrink-0 text-center font-heading text-lg font-semibold tabular-nums ${index === 0 ? 'text-brand' : 'text-text-muted'}`}
                 >
                   {String(index + 1).padStart(2, '0')}
                 </span>
@@ -126,7 +121,7 @@ function SteamRankingCard({
                 </span>
                 <ArrowUpRight
                   aria-hidden="true"
-                  className="shrink-0 text-text-muted transition-colors group-hover:text-brand-bright"
+                  className="shrink-0 text-text-muted transition-colors group-hover:text-brand"
                   size={18}
                   strokeWidth={1.5}
                 />
@@ -143,11 +138,11 @@ export function SteamRankingsSection() {
   return (
     <section aria-labelledby="steam-rankings-title" className="pt-10 sm:pt-14">
       <div className="mb-6">
-        <p className="text-xs font-medium text-text-muted">Em alta no PC</p>
         <h2
-          className="mt-1 flex items-center gap-2 font-heading text-xl font-semibold text-content-primary sm:text-2xl"
+          className="flex items-center gap-2 font-heading text-xl font-semibold text-content-primary sm:text-2xl"
           id="steam-rankings-title"
         >
+          <span aria-hidden="true" className="h-6 w-1.5 shrink-0 -translate-y-0.5 rounded-full bg-brand" />
           Rankings Steam
         </h2>
       </div>

@@ -78,7 +78,7 @@ export function DeleteListModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-3 py-4 sm:px-6">
       <button
         aria-label="Cancelar exclusão da lista"
-        className="absolute inset-0 size-full bg-black/75 disabled:cursor-not-allowed"
+        className="absolute inset-0 size-full bg-text-primary/75 disabled:cursor-not-allowed"
         disabled={isDeleting}
         onClick={onClose}
         tabIndex={-1}
@@ -89,7 +89,7 @@ export function DeleteListModal({
         aria-describedby={descriptionId}
         aria-labelledby={titleId}
         aria-modal="true"
-        className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-surface p-6 shadow-[0_14px_36px_#00000077] sm:p-7"
+        className="relative z-10 w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-[0_14px_36px_#2b2b3066] sm:p-7"
         ref={dialogRef}
         role="alertdialog"
         tabIndex={-1}
@@ -103,7 +103,7 @@ export function DeleteListModal({
         >
           <X aria-hidden="true" size={18} strokeWidth={1.5} />
         </button>
-        <div className="flex size-12 items-center justify-center rounded-xl bg-red-500/15 text-red-200">
+        <div className="flex size-12 items-center justify-center rounded-xl bg-red-500/15 text-red-700">
           <Trash2 aria-hidden="true" size={18} strokeWidth={1.5} />
         </div>
         <h2
@@ -118,13 +118,13 @@ export function DeleteListModal({
           preservados. Esta ação não pode ser desfeita.
         </p>
         {errorMessage === null ? null : (
-          <p className="mt-4 text-sm text-red-200" role="alert">
+          <p className="mt-4 text-sm text-red-700" role="alert">
             {errorMessage}
           </p>
         )}
         <div className="mt-6 flex justify-end gap-2">
           <button
-            className="min-h-11 rounded-xl border border-white/10 px-4 text-sm font-semibold text-content-primary disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-brand"
+            className="min-h-11 rounded-xl border border-border px-4 text-sm font-semibold text-content-primary disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-brand"
             disabled={isDeleting}
             onClick={onClose}
             ref={cancelButtonRef}

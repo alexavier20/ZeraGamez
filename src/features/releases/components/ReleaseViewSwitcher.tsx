@@ -29,7 +29,7 @@ export function ReleaseViewSwitcher({
   return (
     <div
       aria-label="Filtrar por data"
-      className="flex w-fit max-w-full items-center gap-1 rounded-xl border border-white/10 bg-bg-secondary p-1"
+      className="flex w-fit max-w-full items-center gap-1 rounded-xl border border-border bg-bg-secondary p-1"
       role="group"
     >
       <button
@@ -38,7 +38,7 @@ export function ReleaseViewSwitcher({
         aria-pressed={value === 'list'}
         className={`${optionClassName} ${
           value === 'list'
-            ? 'bg-white/10 text-content-primary ring-1 ring-inset ring-white/15'
+            ? 'bg-brand-bright/20 text-content-primary ring-1 ring-inset ring-border'
             : 'bg-transparent text-text-muted ring-1 ring-inset ring-transparent hover:text-content-primary'
         }`}
         onClick={() => {
@@ -58,7 +58,7 @@ export function ReleaseViewSwitcher({
         aria-pressed={value === 'calendar'}
         className={`${optionClassName} ${
           value === 'calendar'
-            ? 'bg-white/10 text-content-primary ring-1 ring-inset ring-white/15'
+            ? 'bg-brand-bright/20 text-content-primary ring-1 ring-inset ring-border'
             : 'bg-transparent text-text-muted ring-1 ring-inset ring-transparent hover:text-content-primary'
         }`}
         onClick={() => {

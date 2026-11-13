@@ -83,14 +83,14 @@ export function ReleaseFilters({
       <div className="flex items-center gap-2 sm:hidden" data-testid="release-filters-mobile">
         <FilterSelect
           ariaLabel="Plataforma"
-          className={`${compactChipClassName} flex-1 ${value.platform === 'all' ? 'border-white/10 bg-surface text-text-muted' : 'border-brand bg-filter-active text-filter-active-text'}`}
+          className={`${compactChipClassName} flex-1 ${value.platform === 'all' ? 'border-border bg-surface text-text-muted' : 'border-brand bg-filter-active text-filter-active-text'}`}
           onChange={onPlatformChange}
           options={releasePlatformOptions}
           value={value.platform}
         />
         <FilterSelect
           ariaLabel="Gênero"
-          className={`${compactChipClassName} flex-1 ${value.genre === 'all' ? 'border-white/10 bg-surface text-text-muted' : 'border-brand bg-filter-active text-filter-active-text'}`}
+          className={`${compactChipClassName} flex-1 ${value.genre === 'all' ? 'border-border bg-surface text-text-muted' : 'border-brand bg-filter-active text-filter-active-text'}`}
           onChange={onGenreChange}
           options={releaseGenreOptions}
           value={value.genre}
@@ -112,14 +112,14 @@ export function ReleaseFilters({
       >
         <FilterSelect
           ariaLabel="Plataforma"
-          className={`${compactChipClassName} max-w-[190px] ${value.platform === 'all' ? 'border-white/10 bg-surface text-text-muted' : 'border-brand bg-filter-active text-filter-active-text'}`}
+          className={`${compactChipClassName} max-w-[190px] ${value.platform === 'all' ? 'border-border bg-surface text-text-muted' : 'border-brand bg-filter-active text-filter-active-text'}`}
           onChange={onPlatformChange}
           options={releasePlatformOptions}
           value={value.platform}
         />
         <FilterSelect
           ariaLabel="Gênero"
-          className={`${compactChipClassName} max-w-[170px] ${value.genre === 'all' ? 'border-white/10 bg-surface text-text-muted' : 'border-brand bg-filter-active text-filter-active-text'}`}
+          className={`${compactChipClassName} max-w-[170px] ${value.genre === 'all' ? 'border-border bg-surface text-text-muted' : 'border-brand bg-filter-active text-filter-active-text'}`}
           onChange={onGenreChange}
           options={releaseGenreOptions}
           value={value.genre}
@@ -139,25 +139,16 @@ export function ReleaseFilters({
         className="hidden flex-wrap items-center gap-2 lg:flex"
         data-testid="release-filters-desktop"
       >
-        {releasePlatformOptions.map((option) => {
-          const selected = option.key === value.platform;
-          return (
-            <button
-              aria-pressed={selected}
-              className={`${desktopChipClassName} ${selected ? 'border-brand bg-filter-active font-semibold text-filter-active-text' : 'border-white/10 bg-bg-secondary font-medium text-text-muted'}`}
-              key={option.key}
-              onClick={() => {
-                onPlatformChange(option.key);
-              }}
-              type="button"
-            >
-              {option.label}
-            </button>
-          );
-        })}
+        <FilterSelect
+          ariaLabel="Plataforma"
+          className={`${desktopChipClassName} relative max-w-[200px] focus-within:ring-2 focus-within:ring-brand ${value.platform === 'all' ? 'border-border bg-bg-secondary font-medium text-text-muted' : 'border-brand bg-filter-active font-semibold text-filter-active-text'}`}
+          onChange={onPlatformChange}
+          options={releasePlatformOptions}
+          value={value.platform}
+        />
         <FilterSelect
           ariaLabel="Gênero"
-          className={`${desktopChipClassName} relative focus-within:ring-2 focus-within:ring-brand ${value.genre === 'all' ? 'border-white/10 bg-bg-secondary font-medium text-text-muted' : 'border-brand bg-filter-active font-semibold text-filter-active-text'}`}
+          className={`${desktopChipClassName} relative focus-within:ring-2 focus-within:ring-brand ${value.genre === 'all' ? 'border-border bg-bg-secondary font-medium text-text-muted' : 'border-brand bg-filter-active font-semibold text-filter-active-text'}`}
           onChange={onGenreChange}
           options={releaseGenreOptions}
           value={value.genre}

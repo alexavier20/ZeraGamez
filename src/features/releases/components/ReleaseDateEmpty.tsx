@@ -16,7 +16,7 @@ export function ReleaseDateEmpty({ date, onClearDate }: ReleaseDateEmptyProps): 
       className="flex h-[360px] flex-col items-center justify-center text-center"
       role="status"
     >
-      <div className="grid size-14 place-items-center rounded-2xl border border-white/10 bg-bg-secondary text-text-muted">
+      <div className="grid size-14 place-items-center rounded-2xl border border-border bg-bg-secondary text-text-muted">
         <CalendarX aria-hidden="true" size={18} strokeWidth={1.5} />
       </div>
       <h2 className="mt-4 font-heading text-[22px] font-semibold text-content-primary">
@@ -27,7 +27,7 @@ export function ReleaseDateEmpty({ date, onClearDate }: ReleaseDateEmptyProps): 
         limpe o filtro.
       </p>
       <button
-        className="mt-4 flex min-h-11 items-center gap-2 rounded-lg border border-white/10 bg-surface px-4 text-xs font-semibold text-content-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className="mt-4 flex min-h-11 items-center gap-2 rounded-lg border border-border bg-surface px-4 text-xs font-semibold text-content-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         onClick={onClearDate}
         type="button"
       >

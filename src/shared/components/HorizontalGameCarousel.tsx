@@ -68,7 +68,7 @@ export function HorizontalGameCarousel({
   }
 
   const buttonClass =
-    'absolute top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full border border-white/20 bg-bg-secondary/95 text-white transition-colors duration-150 hover:border-white/40 hover:bg-surface disabled:cursor-default disabled:opacity-30 disabled:hover:border-white/20 disabled:hover:bg-bg-secondary/95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand';
+    'absolute top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full border border-border bg-bg-secondary/95 text-text-primary transition-colors duration-150 hover:border-border hover:bg-brand-bright/30 disabled:cursor-default disabled:opacity-30 disabled:hover:border-border disabled:hover:bg-bg-secondary/95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand';
 
   return (
     <div className="relative">

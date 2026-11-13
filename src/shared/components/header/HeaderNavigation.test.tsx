@@ -15,10 +15,7 @@ describe('Header navigation', () => {
 
     const brandLink = screen.getByRole('link', { name: 'Zera GameZ' });
     expect(brandLink).toHaveAttribute('href', '/');
-    expect(brandLink.querySelector('img')).toHaveAttribute(
-      'src',
-      '/assets/images/zera-gamez-z-icon-white-header.png',
-    );
+    expect(brandLink.querySelector('.brand-mark')).toHaveClass('bg-brand');
   });
 
   it('marca a rota principal ativa', () => {

@@ -15,8 +15,8 @@ describe('Header', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByTestId('header-desktop')).toHaveClass('lg:flex');
-    expect(screen.getByTestId('header-tablet')).toHaveClass('sm:flex', 'lg:hidden');
+    expect(screen.getByTestId('header-desktop')).toHaveClass('2xl:flex');
+    expect(screen.getByTestId('header-tablet')).toHaveClass('sm:grid', '2xl:hidden');
     expect(screen.getByTestId('header-mobile')).toHaveClass('sm:hidden');
     expect(screen.queryByTestId('mobile-bottom-nav')).not.toBeInTheDocument();
 

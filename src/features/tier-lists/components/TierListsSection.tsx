@@ -14,11 +14,11 @@ type TierListsState =
   | { readonly status: 'success'; readonly lists: readonly TierListSummary[] };
 
 const sampleTiers = [
-  { label: 'S', color: 'bg-[#ff7a7a]' },
-  { label: 'A', color: 'bg-[#ffbf7a]' },
-  { label: 'B', color: 'bg-[#ffe07a]' },
-  { label: 'C', color: 'bg-[#ffff83]' },
-  { label: 'D', color: 'bg-[#b7ff87]' },
+  { label: 'S', color: 'bg-brand text-white' },
+  { label: 'A', color: 'bg-brand-bright text-brand-ink' },
+  { label: 'B', color: 'bg-bg-secondary text-text-primary' },
+  { label: 'C', color: 'bg-app text-text-primary' },
+  { label: 'D', color: 'bg-border text-text-primary' },
 ] as const;
 
 export function TierListsSection() {
@@ -56,9 +56,13 @@ export function TierListsSection() {
   return (
     <section aria-labelledby="tier-lists-heading" className="mt-10">
       <h2
-        className="mb-4 font-heading text-xl font-semibold sm:text-2xl text-text-primary"
+        className="mb-4 flex items-center gap-2 font-heading text-xl font-semibold text-text-primary sm:text-2xl"
         id="tier-lists-heading"
       >
+        <span
+          aria-hidden="true"
+          className="h-6 w-1.5 shrink-0 -translate-y-0.5 rounded-full bg-brand"
+        />
         Minhas Tier Lists
       </h2>
 
@@ -66,11 +70,11 @@ export function TierListsSection() {
         <ListCardsLoading tiers />
       ) : state.status !== 'success' || repository === null ? (
         <div className="rounded-2xl border border-red-400/30 bg-red-500/10 p-5 text-center">
-          <p className="text-sm text-red-100" role="alert">
+          <p className="text-sm text-red-700" role="alert">
             Não foi possível carregar suas Tier Lists.
           </p>
           <button
-            className="mt-3 rounded-xl border border-red-200/30 px-4 py-2 text-sm font-semibold text-white"
+            className="mt-3 rounded-xl border border-red-200/30 px-4 py-2 text-sm font-semibold text-red-700"
             onClick={() => {
               setRetryKey((value) => value + 1);
             }}
@@ -80,10 +84,10 @@ export function TierListsSection() {
           </button>
         </div>
       ) : state.lists.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-white/20 bg-surface p-8 text-center">
+        <div className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center">
           <p className="text-text-muted">Você ainda não criou nenhuma Tier List.</p>
           <Link
-            className="mt-5 inline-flex rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-bright"
+      className="mt-5 inline-flex rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-hover hover:text-white"
             to="/minhas-listas/nova"
           >
             Criar Tier List
@@ -93,14 +97,14 @@ export function TierListsSection() {
         <div className="grid gap-x-3 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
           {state.lists.map((list) => (
             <Link
-              className="group overflow-hidden rounded-2xl border border-white/10 bg-surface transition-colors duration-150 hover:border-white/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              className="group overflow-hidden rounded-2xl border border-border bg-surface transition-colors duration-150 hover:border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
               key={list.id}
               to={`/minhas-listas/tier/${String(list.id)}`}
             >
               <div aria-hidden="true" className="grid aspect-[3/1] grid-cols-5 overflow-hidden">
                 {sampleTiers.map((tier) => (
                   <span
-                    className={`${tier.color} grid place-items-center font-heading text-sm font-semibold text-black/75`}
+                    className={`${tier.color} grid place-items-center font-heading text-sm font-semibold`}
                     key={tier.label}
                   >
                     {tier.label}

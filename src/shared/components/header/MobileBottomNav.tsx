@@ -1,4 +1,4 @@
-import { Compass, House, Library, User, type LucideIcon } from 'lucide-react';
+import { Compass, House, Library, Star, User, type LucideIcon } from 'lucide-react';
 import { NavLink } from 'react-router';
 
 import { headerCopy, headerRoutes, mobileNavItems } from './header.config';
@@ -9,6 +9,7 @@ const mobileIcons: Readonly<Record<MobileNavigationItem['icon'], LucideIcon>> = 
   home: House,
   explore: Compass,
   lists: Library,
+  reviews: Star,
   profile: User,
 };
 
@@ -30,7 +31,7 @@ export function MobileBottomNav({ onProfileClick }: Readonly<MobileBottomNavProp
             className={({ isActive }) =>
               `flex min-w-0 flex-col items-center justify-center gap-2 rounded-xl text-[11px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand ${
                 isActive
-                  ? 'font-semibold text-brand-bright underline decoration-1 underline-offset-2'
+                  ? 'font-semibold text-brand underline decoration-1 underline-offset-2'
                   : 'text-text-muted hover:text-text-primary'
               }`
             }
