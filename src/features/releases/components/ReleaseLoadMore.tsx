@@ -51,7 +51,7 @@ export function ReleaseLoadMore({
         <div className="grid grid-cols-1 gap-x-3 gap-y-6 sm:grid-cols-2 sm:gap-x-4 sm:gap-y-8 xl:grid-cols-4">
           {[0, 1, 2, 3].map((index) => (
             <div key={index}>
-              <Skeleton className="aspect-video rounded-xl" />
+              <Skeleton className="aspect-video" />
               <Skeleton className="mt-3 h-10 w-3/4" />
               <div className="mt-3 flex gap-2">
                 <Skeleton className="h-5 w-10" />
@@ -69,7 +69,7 @@ export function ReleaseLoadMore({
       <div className="mt-8 flex flex-col items-center gap-3 text-center" role="alert">
         <p className="text-sm text-text-muted">Não foi possível carregar mais jogos</p>
         <button
-          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-hover hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="cut-corner-button bg-brand px-4 py-2 text-sm font-semibold text-brand-ink transition-colors duration-150 hover:bg-brand-hover hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
           onClick={onRetry}
           type="button"
         >
@@ -91,7 +91,7 @@ export function ReleaseLoadMore({
     return (
       <div className="mt-8 flex justify-center">
         <button
-          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-hover hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="cut-corner-button bg-brand px-4 py-2 text-sm font-semibold text-brand-ink transition-colors duration-150 hover:bg-brand-hover hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
           onClick={onLoadMore}
           type="button"
         >

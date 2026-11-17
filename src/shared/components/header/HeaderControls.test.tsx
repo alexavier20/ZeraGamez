@@ -43,7 +43,7 @@ describe('Header controls', () => {
     expect(screen.queryByRole('button', { name: 'Abrir notificações' })).not.toBeInTheDocument();
   });
 
-  it('exibe o perfil autenticado sem notificações e mantém a saudação ao lado do avatar', async () => {
+  it('exibe o nome do perfil autenticado sem saudação ou notificações', async () => {
     const user = userEvent.setup();
     const onProfileClick = vi.fn();
     render(
@@ -59,7 +59,8 @@ describe('Header controls', () => {
     await user.click(profileLink);
 
     expect(screen.queryByRole('button', { name: /notificações/i })).not.toBeInTheDocument();
-    expect(screen.getByText('Olá, Alex')).toBeInTheDocument();
+    expect(screen.getByText('Alex')).toBeInTheDocument();
+    expect(screen.queryByText('Olá, Alex')).not.toBeInTheDocument();
     expect(onProfileClick).toHaveBeenCalledOnce();
     expect(profileLink).toHaveAttribute('href', '/perfil');
   });

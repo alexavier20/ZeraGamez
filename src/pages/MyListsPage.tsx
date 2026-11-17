@@ -1,6 +1,6 @@
-import { Pin, Plus, Settings } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pin, Plus, Settings } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, Outlet } from 'react-router';
 
 import { AddGamesToListModal } from '@/features/lists/components/AddGamesToListModal';
 import { DeleteListModal } from '@/features/lists/components/DeleteListModal';
@@ -13,6 +13,7 @@ import { ListCardsLoading } from '@/shared/components/LoadingSkeletons';
 import type { CreateListInput, UserListSummary } from '@/features/lists/model/lists';
 
 type ListModalMode = 'add-games' | 'details';
+const LISTS_PER_PAGE = 10;
 
 interface ListSummaryProps {
   readonly list: UserListSummary;
@@ -55,11 +56,11 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
   }, [settingsOpen]);
 
   return (
-    <article className="relative rounded-2xl border border-border bg-surface transition-colors duration-150 hover:border-border">
+    <article className="group relative cut-corner-card bg-brand p-[10px] transition-colors duration-200 ease-out hover:bg-red-600">
       <button
         aria-haspopup="dialog"
         aria-label={`Abrir detalhes da lista ${list.name}`}
-        className="flex h-full w-full flex-col overflow-hidden rounded-2xl text-left focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-brand"
+        className="cut-corner-card-content flex h-full w-full flex-col overflow-hidden bg-surface text-left focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-brand-bright"
         onClick={() => {
           onSelect(list);
         }}
@@ -67,7 +68,7 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
       >
         {covers.length > 0 ? (
           <div
-            className={`grid aspect-[9/4] w-full shrink-0 overflow-hidden bg-bg-secondary ${coverColumnClass}`}
+            className={`grid aspect-[2/1] w-full shrink-0 overflow-hidden bg-bg-secondary ${coverColumnClass}`}
           >
             {covers.map((cover, index) => (
               <img
@@ -79,22 +80,27 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
             ))}
           </div>
         ) : (
-          <div aria-hidden="true" className="aspect-[9/4] w-full shrink-0 bg-bg-secondary" />
+          <div aria-hidden="true" className="aspect-[2/1] w-full shrink-0 bg-bg-secondary" />
         )}
-        <div className="w-full flex-1 p-4">
-          <h2 className="flex min-h-10 min-w-0 items-center gap-2 font-heading text-sm leading-5 font-semibold text-content-primary">
-            {list.systemKey === null ? null : (
-              <Pin
-                aria-hidden="true"
-                className="shrink-0 text-text-muted"
-                size={18}
-                strokeWidth={1.5}
-              />
-            )}
-            <span className="line-clamp-2 break-words" title={list.name}>
-              {list.name}
+        <div className="w-full flex-1 bg-brand px-4 py-2 text-brand-ink transition-colors duration-200 ease-out group-hover:bg-red-600">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="flex min-h-8 min-w-0 flex-1 items-center gap-2 font-heading text-sm leading-5 font-semibold text-brand-ink transition-colors duration-200 ease-out group-hover:text-text-primary">
+              {list.systemKey === null ? null : (
+                <Pin
+                  aria-hidden="true"
+                  className="shrink-0 text-brand-ink transition-colors duration-200 ease-out group-hover:text-text-primary"
+                  size={18}
+                  strokeWidth={1.5}
+                />
+              )}
+              <span className="line-clamp-2 break-words" title={list.name}>
+                {list.name}
+              </span>
+            </h2>
+            <span className="shrink-0 text-[11px] leading-5 font-medium tabular-nums text-brand-ink transition-colors duration-200 ease-out group-hover:text-text-primary">
+              {String(list.gameCount)} {list.gameCount === 1 ? 'jogo' : 'jogos'}
             </span>
-          </h2>
+          </div>
         </div>
       </button>
       {list.systemKey === null ? (
@@ -103,7 +109,7 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
             aria-controls={settingsMenuId}
             aria-expanded={settingsOpen}
             aria-label={`Configurações da lista ${list.name}`}
-            className="flex size-11 items-center justify-center rounded-lg text-white transition-colors duration-150 hover:text-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            className="flex size-11 items-center justify-center rounded-lg text-white transition-colors duration-150 hover:text-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
             onClick={() => {
               setSettingsOpen((open) => !open);
             }}
@@ -119,13 +125,13 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
           </button>
           {settingsOpen ? (
             <div
-              className="absolute top-12 right-0 min-w-40 overflow-hidden rounded-xl border border-border bg-surface p-2 shadow-lg shadow-text-primary/20"
+              className="absolute top-12 right-0 min-w-40 overflow-hidden rounded-xl border border-border bg-surface p-2 shadow-lg shadow-black/50"
               id={settingsMenuId}
               aria-label={`Opções da lista ${list.name}`}
               role="group"
             >
               <button
-        className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-content-primary transition-colors duration-150 hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-brand"
+                className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-content-primary transition-colors duration-150 hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-brand-bright"
                 onClick={() => {
                   setSettingsOpen(false);
                   onSelect(list);
@@ -135,7 +141,7 @@ function ListSummary({ list, onDelete, onSelect }: ListSummaryProps) {
                 Editar
               </button>
               <button
-                className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-red-700 transition-colors duration-150 hover:bg-red-500/15 focus-visible:outline-2 focus-visible:outline-red-300"
+                className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-red-700 transition-colors duration-150 hover:bg-red-800/15 focus-visible:outline-2 focus-visible:outline-red-300"
                 onClick={() => {
                   setSettingsOpen(false);
                   onDelete(list);
@@ -166,6 +172,7 @@ export function MyListsPage() {
   } | null>(null);
   const [isDeletingList, setIsDeletingList] = useState(false);
   const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
+  const [listsPage, setListsPage] = useState(0);
   const activeDeleteList = deleteTarget?.scopeVersion === scopeVersion ? deleteTarget.list : null;
   const activeList =
     selectedList?.scopeVersion === scopeVersion
@@ -182,6 +189,16 @@ export function MyListsPage() {
       ? listsState.lists.filter((list) => list.systemKey === null)
       : [];
   const displayedLists = [...systemLists, ...userLists];
+  const pageCount = Math.ceil(displayedLists.length / LISTS_PER_PAGE);
+  const currentPage = Math.min(listsPage, Math.max(0, pageCount - 1));
+  const visibleLists = displayedLists.slice(
+    currentPage * LISTS_PER_PAGE,
+    (currentPage + 1) * LISTS_PER_PAGE,
+  );
+
+  useEffect(() => {
+    setListsPage((page) => Math.min(page, Math.max(0, pageCount - 1)));
+  }, [pageCount]);
 
   const closeModal = useCallback(() => {
     setSelectedList(null);
@@ -254,11 +271,16 @@ export function MyListsPage() {
           Minhas listas
         </h1>
         <Link
-     className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-medium text-white transition-colors duration-150 hover:bg-brand-hover hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="group inline-flex min-h-11 shrink-0 items-center gap-2 cut-corner-button cut-corner-button-outline px-4 py-2.5 text-sm font-semibold text-text-primary transition-colors duration-150 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
           to={headerRoutes.createList}
         >
-          <Plus aria-hidden="true" size={18} strokeWidth={1.5} />
-          Criar lista
+          <Plus
+            aria-hidden="true"
+            className="text-brand group-hover:text-brand-ink"
+            size={18}
+            strokeWidth={1.5}
+          />
+          <span>Nova lista</span>
         </Link>
       </div>
 
@@ -281,32 +303,69 @@ export function MyListsPage() {
         ) : (
           <div>
             {displayedLists.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center">
-                <p className="text-text-muted">Você ainda não criou nenhuma lista.</p>
-                <Link
-                  className="mt-5 inline-flex rounded-xl bg-brand px-4 py-2.5 text-sm font-medium text-white transition-colors duration-150 hover:bg-brand-hover hover:text-white"
-                  to={headerRoutes.createList}
-                >
-                  Criar minha primeira lista
-                </Link>
-              </div>
-            ) : (
-              <div className="grid gap-x-3 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
-                {displayedLists.map((list) => (
-                  <ListSummary
-                    key={list.id}
-                    list={list}
-                    onDelete={(selected) => {
-                      setDeleteErrorMessage(null);
-                      setDeleteTarget({ list: selected, scopeVersion });
-                    }}
-                    onSelect={(selected) => {
-                      setSelectedList({ list: selected, mode: 'details', scopeVersion });
-                    }}
-                  />
-                ))}
-              </div>
+              <p className="mb-5 text-sm text-text-muted">Você ainda não criou nenhuma lista.</p>
             )}
+            <div className="grid gap-x-3 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
+              {visibleLists.map((list) => (
+                <ListSummary
+                  key={list.id}
+                  list={list}
+                  onDelete={(selected) => {
+                    setDeleteErrorMessage(null);
+                    setDeleteTarget({ list: selected, scopeVersion });
+                  }}
+                  onSelect={(selected) => {
+                    setSelectedList({ list: selected, mode: 'details', scopeVersion });
+                  }}
+                />
+              ))}
+              <Link
+                className="group flex min-h-[190px] w-full flex-col items-center justify-center gap-3 border-2 border-dashed border-border bg-transparent text-text-muted transition-colors duration-150 hover:border-brand hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
+                to={headerRoutes.createList}
+              >
+                <span
+                  aria-hidden="true"
+                  className="grid size-16 place-items-center rounded-full bg-surface transition-colors duration-150 group-hover:bg-surface-hover"
+                >
+                  <Plus className="text-brand" size={32} strokeWidth={1.8} />
+                </span>
+                <span className="text-sm font-medium">Nova lista</span>
+              </Link>
+            </div>
+            {pageCount > 1 ? (
+              <nav
+                aria-label="Paginação das listas"
+                className="mt-5 flex flex-wrap items-center justify-center gap-3"
+              >
+                <button
+                  aria-label="Página anterior"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 text-sm font-semibold text-content-primary transition-colors enabled:hover:border-border enabled:hover:bg-brand-bright/30 enabled:hover:text-brand-ink disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
+                  disabled={currentPage === 0}
+                  onClick={() => {
+                    setListsPage((page) => Math.max(0, page - 1));
+                  }}
+                  type="button"
+                >
+                  <ChevronLeft aria-hidden="true" size={18} strokeWidth={1.5} />
+                  Anterior
+                </button>
+                <span aria-live="polite" className="text-xs tabular-nums text-text-muted sm:text-sm">
+                  Página {String(currentPage + 1)} de {String(pageCount)}
+                </span>
+                <button
+                  aria-label="Próxima página"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 text-sm font-semibold text-content-primary transition-colors enabled:hover:border-border enabled:hover:bg-brand-bright/30 enabled:hover:text-brand-ink disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
+                  disabled={currentPage >= pageCount - 1}
+                  onClick={() => {
+                    setListsPage((page) => Math.min(pageCount - 1, page + 1));
+                  }}
+                  type="button"
+                >
+                  Próxima
+                  <ChevronRight aria-hidden="true" size={18} strokeWidth={1.5} />
+                </button>
+              </nav>
+            ) : null}
           </div>
         )}
       </section>
@@ -337,6 +396,7 @@ export function MyListsPage() {
           }}
         />
       )}
+      <Outlet />
     </main>
   );
 }

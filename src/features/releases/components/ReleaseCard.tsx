@@ -71,11 +71,11 @@ function WantToPlayButton({
         selected ? `Remover ${gameName} de Quero jogar` : `Marcar ${gameName} como quero jogar`
       }
       aria-pressed={selected}
-      className={`inline-flex shrink-0 items-center justify-center border transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${
+      className={`inline-flex shrink-0 items-center justify-center border transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright ${
         compact ? 'size-9 rounded-lg' : 'min-h-9 gap-2 rounded-lg px-3 text-xs font-medium'
       } ${
         selected
-          ? 'border-brand bg-brand text-white hover:bg-brand-hover hover:text-white'
+          ? 'border-brand bg-brand text-brand-ink hover:bg-brand-hover hover:text-brand-ink'
           : 'border-transparent bg-app/80 text-content-primary hover:bg-app'
       }`}
       disabled={disabled}
@@ -101,7 +101,7 @@ function AddToListsButton({ buttonRef, disabled, gameName, onClick }: AddToLists
   return (
     <button
       aria-label={`Adicionar ${gameName} à lista`}
-      className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-app/85 text-content-primary transition-colors hover:border-brand/50 hover:bg-app focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-60"
+      className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-app/85 text-content-primary transition-colors hover:border-brand/50 hover:bg-app focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright disabled:opacity-60"
       disabled={disabled}
       onClick={onClick}
       ref={buttonRef}
@@ -274,20 +274,20 @@ function ReleaseCardDesktop({
       <div className="relative">
         <Link
           aria-label={`Ver detalhes de ${item.name}`}
-          className="block aspect-[16/9] w-full overflow-hidden rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="block aspect-[16/9] w-full overflow-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
           to={`/jogos/${String(item.id)}`}
         >
           {item.coverUrl ? (
             <img
               alt={`Capa de ${item.name}`}
-              className="size-full rounded-xl object-cover transition-opacity duration-150 hover:opacity-90"
+              className="size-full object-cover transition-opacity duration-150 hover:opacity-90"
               loading="lazy"
               src={item.coverUrl}
             />
           ) : (
             <div
               aria-label={`Capa indisponível de ${item.name}`}
-              className="flex size-full items-center justify-center rounded-xl bg-bg-secondary text-text-muted"
+              className="flex size-full items-center justify-center bg-bg-secondary text-text-muted"
               role="img"
             >
               <Gamepad2 aria-hidden="true" size={32} />
@@ -321,7 +321,7 @@ function ReleaseCardDesktop({
           title={item.name}
         >
           <Link
-            className="rounded-sm hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            className="rounded-sm hover:text-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
             to={`/jogos/${String(item.id)}`}
           >
             {item.name}
@@ -350,20 +350,20 @@ function ReleaseCardMobile({
       <div className="relative">
         <Link
           aria-label={`Ver detalhes de ${item.name}`}
-          className="block aspect-[16/9] w-full overflow-hidden rounded-[10px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="block aspect-[16/9] w-full overflow-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
           to={`/jogos/${String(item.id)}`}
         >
           {item.coverUrl ? (
             <img
               alt={`Capa de ${item.name}`}
-              className="size-full rounded-[10px] object-cover transition-opacity duration-150 hover:opacity-90"
+              className="size-full object-cover transition-opacity duration-150 hover:opacity-90"
               loading="lazy"
               src={item.coverUrl}
             />
           ) : (
             <div
               aria-label={`Capa indisponível de ${item.name}`}
-              className="flex size-full items-center justify-center rounded-[10px] bg-bg-secondary text-text-muted"
+              className="flex size-full items-center justify-center bg-bg-secondary text-text-muted"
               role="img"
             >
               <Gamepad2 aria-hidden="true" size={24} />
@@ -399,7 +399,7 @@ function ReleaseCardMobile({
             title={item.name}
           >
             <Link
-              className="rounded-sm hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              className="rounded-sm hover:text-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
               to={`/jogos/${String(item.id)}`}
             >
               {item.name}

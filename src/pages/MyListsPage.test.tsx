@@ -99,12 +99,11 @@ describe('MyListsPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Minhas listas' })).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'RPGs' })).toBeInTheDocument();
-    expect(screen.getByText('2 jogos')).toBeInTheDocument();
-    expect(screen.getByText('Campanhas longas')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Criar lista' })).toHaveAttribute(
-      'href',
-      '/minhas-listas/nova',
-    );
+    const addListLinks = screen.getAllByRole('link', { name: 'Nova lista' });
+    expect(addListLinks).toHaveLength(2);
+    for (const link of addListLinks) {
+      expect(link).toHaveAttribute('href', '/minhas-listas/nova');
+    }
   });
 
   it('shows a named loading skeleton while summaries are pending', async () => {
@@ -135,7 +134,8 @@ describe('MyListsPage', () => {
       .mockResolvedValueOnce([rpgList]);
     renderMyLists(createRepository(listSummaries));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
+    const listsSection = await screen.findByRole('region', { name: 'Suas listas' });
+    expect(await within(listsSection).findByRole('alert')).toHaveTextContent(
       'Não foi possível carregar suas listas. Tente novamente.',
     );
     await user.click(

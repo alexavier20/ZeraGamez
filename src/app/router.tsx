@@ -73,8 +73,9 @@ export function AppRouter({ authService, listsRepository }: AppRouterProps) {
               <Route path="/entrar" element={<LoginPage />} />
               <Route element={<ProtectedRoute />}>
                 <Route path={headerRoutes.reviews} element={<ReviewsPage />} />
-                <Route path={headerRoutes.lists} element={<MyListsPage />} />
-                <Route path={headerRoutes.createList} element={<CreateListPage />} />
+                <Route path={headerRoutes.lists} element={<MyListsPage />}>
+                  <Route path="nova" element={<CreateListPage />} />
+                </Route>
                 <Route path="/minhas-listas/tier/:tierListId" element={<TierListPage />} />
                 <Route path={headerRoutes.profile} element={<ProfilePage />} />
               </Route>

@@ -17,7 +17,7 @@ export function HomeReleaseCard({ item }: HomeReleaseCardProps) {
     <article className="min-w-0">
       <Link
         aria-label={`Ver detalhes de ${item.name}`}
-        className="group block overflow-hidden rounded-xl bg-bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+        className="group block overflow-hidden bg-bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
         to={`/jogos/${String(item.id)}`}
       >
         {item.coverUrl ? (
@@ -44,7 +44,7 @@ export function HomeReleaseCard({ item }: HomeReleaseCardProps) {
           title={item.name}
         >
           <Link
-            className="rounded-sm hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            className="rounded-sm hover:text-brand-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
             to={`/jogos/${String(item.id)}`}
           >
             {item.name}

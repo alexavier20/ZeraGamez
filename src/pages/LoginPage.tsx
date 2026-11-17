@@ -171,7 +171,7 @@ export function LoginPage() {
     <main className="flex min-h-[calc(100dvh-62px)] items-center justify-center bg-app px-4 pt-8 pb-28 text-text-primary sm:min-h-[calc(100dvh-52px)] sm:pb-12 lg:py-10">
       <section
         aria-labelledby="login-title"
-        className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 sm:p-8"
+        className="w-full max-w-md border border-border bg-surface p-6 sm:p-8"
       >
         <p className="font-heading text-sm font-medium text-text-muted">Zera GameZ</p>
         <h1
@@ -213,7 +213,7 @@ export function LoginPage() {
                 }
                 aria-invalid={message?.field === 'email' && message.type === 'error'}
                 autoComplete="email"
-                className="h-12 w-full min-w-0 rounded-lg border border-border bg-app px-3 outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/30"
+                className="h-12 w-full min-w-0 rounded-lg border border-border bg-app px-3 outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand-bright/30"
                 disabled={unavailable}
                 id="login-email"
                 onChange={(event) => {
@@ -225,7 +225,7 @@ export function LoginPage() {
               />
             </div>
             <button
-              className="h-12 w-full rounded-lg bg-brand text-sm font-medium text-white transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand hover:bg-brand-hover hover:text-white disabled:cursor-not-allowed disabled:bg-bg-secondary disabled:text-text-muted disabled:opacity-100"
+              className="h-12 w-full cut-corner-button bg-brand text-sm font-medium text-brand-ink transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright hover:bg-brand-hover hover:text-brand-ink disabled:cursor-not-allowed disabled:bg-bg-secondary disabled:text-text-muted disabled:opacity-100"
               disabled={submitting || unavailable}
               type="submit"
             >
@@ -253,7 +253,7 @@ export function LoginPage() {
                 }
                 aria-invalid={message?.field === 'code' && message.type === 'error'}
                 autoComplete="one-time-code"
-                className="h-12 w-full min-w-0 rounded-lg border border-border bg-app px-3 text-center font-heading text-xl tracking-[0.16em] tabular-nums outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/30"
+                className="h-12 w-full min-w-0 rounded-lg border border-border bg-app px-3 text-center font-heading text-xl tracking-[0.16em] tabular-nums outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand-bright/30"
                 disabled={unavailable}
                 id="login-code"
                 inputMode="numeric"
@@ -266,7 +266,7 @@ export function LoginPage() {
               />
             </div>
             <button
-              className="h-12 w-full rounded-lg bg-brand text-sm font-medium text-white transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand hover:bg-brand-hover hover:text-white disabled:cursor-not-allowed disabled:bg-bg-secondary disabled:text-text-muted disabled:opacity-100"
+              className="h-12 w-full cut-corner-button bg-brand text-sm font-medium text-brand-ink transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright hover:bg-brand-hover hover:text-brand-ink disabled:cursor-not-allowed disabled:bg-bg-secondary disabled:text-text-muted disabled:opacity-100"
               disabled={submitting || unavailable}
               type="submit"
             >
@@ -274,7 +274,7 @@ export function LoginPage() {
             </button>
             <div className="grid gap-2 sm:grid-cols-2">
               <button
-        className="min-h-11 w-full rounded-lg text-sm font-medium text-text-muted transition-colors duration-150 hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60"
+        className="min-h-11 w-full rounded-lg text-sm font-medium text-text-muted transition-colors duration-150 hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={submitting || unavailable}
                 onClick={() => void resendCode()}
                 type="button"
@@ -282,7 +282,7 @@ export function LoginPage() {
                 {submission === 'resend' ? 'Reenviando código…' : 'Reenviar código'}
               </button>
               <button
-        className="min-h-11 w-full rounded-lg text-sm font-medium text-text-muted transition-colors duration-150 hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60"
+        className="min-h-11 w-full rounded-lg text-sm font-medium text-text-muted transition-colors duration-150 hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={submitting || unavailable}
                 onClick={changeEmail}
                 type="button"
@@ -330,7 +330,7 @@ export function LoginPage() {
           <span className="h-px flex-1 bg-border" />
         </div>
         <button
-          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-border bg-app text-sm font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand hover:bg-bg-secondary disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-border bg-app text-sm font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright hover:bg-bg-secondary disabled:cursor-not-allowed disabled:opacity-60"
           disabled={submitting || unavailable}
           onClick={() => void startGoogleLogin()}
           type="button"

@@ -29,8 +29,6 @@ function RankingList({
     >
       {games.map((game, index) => {
         const rank = start + index;
-        const isPodium = rank <= 3;
-        const rankToneClassName = isPodium ? 'text-brand' : 'text-text-muted';
         const releaseDate = game.releaseDate
           ? formatReleaseDate(game.releaseDate)
           : 'Data indisponível';
@@ -39,26 +37,26 @@ function RankingList({
           <li key={game.id}>
             <Link
               aria-label={`${String(rank)}º lugar: ${game.name}. Lançamento: ${releaseDate}`}
-       className="group flex min-h-[60px] min-w-0 items-center gap-2 rounded-xl border border-border bg-transparent p-2 transition-colors duration-150 hover:border-border hover:bg-brand-bright hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:gap-3"
+              className="group flex min-h-[60px] min-w-0 items-center gap-2 border border-border bg-brand-bright p-2 text-brand-ink transition-[filter] duration-300 ease-out hover:brightness-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright sm:gap-3"
               to={`/jogos/${String(game.id)}`}
             >
               <span
                 aria-hidden="true"
-                className={`w-8 shrink-0 text-center font-heading text-2xl font-semibold tabular-nums sm:w-10 sm:text-3xl ${rankToneClassName}`}
+                className={`w-8 shrink-0 text-center font-heading text-2xl font-semibold tabular-nums sm:w-10 sm:text-3xl ${rank <= 3 ? 'text-secondary' : 'text-brand-ink'}`}
               >
                 {rank}
               </span>
               {game.coverUrl ? (
                 <img
                   alt=""
-                  className="size-10 shrink-0 rounded-lg bg-bg-secondary object-cover sm:size-12"
+                  className="size-10 shrink-0 bg-bg-secondary object-cover sm:size-12"
                   loading="lazy"
                   src={game.coverUrl}
                 />
               ) : (
                 <span
                   aria-hidden="true"
-                  className="grid size-10 shrink-0 place-items-center rounded-lg bg-bg-secondary text-text-muted sm:size-12"
+                  className="grid size-10 shrink-0 place-items-center bg-bg-secondary text-brand-ink sm:size-12"
                 >
                   <Gamepad2 aria-hidden="true" size={18} strokeWidth={1.5} />
                 </span>
@@ -66,11 +64,11 @@ function RankingList({
               <span className="min-w-0 flex-1">
                 <span
                   title={game.name}
-                  className="line-clamp-1 text-sm font-semibold leading-tight text-content-primary transition-colors group-hover:text-brand sm:text-base"
+                  className="line-clamp-1 text-sm font-semibold leading-tight text-brand-ink transition-colors duration-300 ease-out group-hover:text-secondary sm:text-base"
                 >
                   {game.name}
                 </span>
-                <span className="mt-0.5 block truncate text-xs leading-4 text-text-muted">
+                <span className="mt-0.5 block truncate text-xs leading-4 text-brand-ink">
                   {releaseDate}
                 </span>
               </span>
@@ -109,7 +107,8 @@ export function HypeRankingPage() {
       <PageHeading
         subtitle="Os 10 jogos mais aguardados"
         title="Tô no Hype"
-        titleClassName="font-heading text-2xl leading-tight font-semibold text-content-primary sm:text-[28px] lg:text-[32px]"
+        titleAccent
+        titleClassName="font-heading text-2xl font-semibold text-content-primary"
       />
 
       <section aria-label="Ranking dos jogos mais hypados" className="mt-6">
@@ -125,11 +124,11 @@ export function HypeRankingPage() {
                   {column.map((item) => (
                     <li
                       aria-hidden="true"
-                      className="flex min-h-[60px] items-center gap-2 rounded-xl border border-border p-2 sm:gap-3"
+                      className="flex min-h-[60px] items-center gap-2 border border-border p-2 sm:gap-3"
                       key={item}
                     >
                       <Skeleton className="h-8 w-8 shrink-0 sm:w-10" />
-                      <Skeleton className="size-10 shrink-0 rounded-lg sm:size-12" />
+                      <Skeleton className="size-10 shrink-0 sm:size-12" />
                       <div className="flex-1 space-y-2">
                         <Skeleton className="h-4 w-3/4" />
                         <Skeleton className="h-3 w-1/2" />
@@ -147,7 +146,7 @@ export function HypeRankingPage() {
           >
             <p className="text-sm text-red-700">Não foi possível carregar o ranking agora.</p>
             <button
-              className="mt-4 min-h-11 rounded-lg border border-red-200/30 px-4 py-2 text-sm font-semibold text-red-700 transition-colors duration-150 hover:bg-red-500/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              className="mt-4 min-h-11 rounded-lg border border-red-200/30 px-4 py-2 text-sm font-semibold text-red-700 transition-colors duration-150 hover:bg-red-800/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
               onClick={() => {
                 setState({ status: 'loading' });
                 setRetryKey((value) => value + 1);

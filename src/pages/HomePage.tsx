@@ -1,5 +1,4 @@
 import { ArrowRight } from 'lucide-react';
-import { Link } from 'react-router';
 
 import { MostAnticipatedSection } from '@/features/games/components/MostAnticipatedSection';
 import { RecentReviewsSection } from '@/features/games/components/RecentReviewsSection';
@@ -8,9 +7,11 @@ import { DailyReleasesCarousel } from '@/features/releases/components/DailyRelea
 import { useReleases } from '@/features/releases/hooks/use-releases';
 import { todayInSaoPaulo } from '@/features/releases/model/release-calendar';
 import { headerRoutes } from '@/shared/components/header/header.config';
+import { DiagonalSwipeButton } from '@/shared/components/DiagonalSwipeButton';
 import { HomeCarouselSkeleton } from '@/shared/components/HomeCarouselSkeleton';
 import { HomeFooter } from '@/shared/components/HomeFooter';
 import { HomeHeroCarousel } from '@/shared/components/HomeHeroCarousel';
+import { HomeSectionHeading } from '@/shared/components/HomeSectionHeading';
 
 const HOME_DAILY_RELEASE_PREVIEW_LIMIT = 8;
 
@@ -19,24 +20,16 @@ function DailyReleasesSection() {
 
   return (
     <section aria-labelledby="today-releases-title" className="pt-10 sm:pt-14">
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2
-            className="flex items-center gap-2 font-heading text-xl font-semibold text-text-primary sm:text-2xl"
-            id="today-releases-title"
-          >
-            <span aria-hidden="true" className="h-6 w-1.5 shrink-0 -translate-y-0.5 rounded-full bg-brand" />
-            Lançamentos do dia
-          </h2>
-        </div>
-        <Link
-          className="inline-flex min-h-9 w-fit items-center gap-2 rounded-lg border border-brand bg-brand px-3 py-1.5 text-xs font-medium text-white transition-colors duration-150 hover:bg-brand-hover hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-          to={headerRoutes.releases}
-        >
-          Ver calendário completo
-          <ArrowRight aria-hidden="true" size={18} strokeWidth={1.5} />
-        </Link>
-      </div>
+      <HomeSectionHeading
+        action={
+          <DiagonalSwipeButton size="compact" to={headerRoutes.releases}>
+            Ver calendário
+            <ArrowRight aria-hidden="true" size={18} strokeWidth={1.5} />
+          </DiagonalSwipeButton>
+        }
+        id="today-releases-title"
+        title="Lançamentos do dia"
+      />
 
       {state.status === 'loading' ? (
         <HomeCarouselSkeleton variant="releases" />
@@ -47,7 +40,7 @@ function DailyReleasesSection() {
         >
           <p className="text-sm text-red-700">Não foi possível carregar os lançamentos de hoje.</p>
           <button
-            className="mt-4 rounded-lg border border-red-200/30 px-4 py-2 text-sm font-medium text-red-700 transition-colors duration-150 hover:bg-red-500/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            className="mt-4 rounded-lg border border-red-200/30 px-4 py-2 text-sm font-medium text-red-700 transition-colors duration-150 hover:bg-red-800/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
             onClick={retry}
             type="button"
           >

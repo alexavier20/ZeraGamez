@@ -177,7 +177,7 @@ export function GlobalSearch({ className = '', onSearch }: Readonly<GlobalSearch
                 <li key={game.id}>
                   <Link
                     aria-label={`Abrir detalhes de ${game.name}`}
-                    className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand"
+                    className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-bright"
                     onClick={() => {
                       setIsOpen(false);
                     }}

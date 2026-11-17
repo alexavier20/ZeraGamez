@@ -147,7 +147,7 @@ export function ReleaseDatePicker({
           <div className="flex items-center gap-2">
             <button
               aria-label="Mês anterior"
-       className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-bright/10 transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+       className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-bright/10 transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-bright focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
               onClick={() => {
                 moveToHeaderMonth(-1);
               }}
@@ -158,7 +158,7 @@ export function ReleaseDatePicker({
             </button>
             <button
               aria-label="Próximo mês"
-       className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-bright/10 transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+       className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-bright/10 transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-bright focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
               onClick={() => {
                 moveToHeaderMonth(1);
               }}
@@ -169,7 +169,7 @@ export function ReleaseDatePicker({
             </button>
             <button
               aria-label="Fechar calendário"
-       className="grid size-9 place-items-center rounded-lg text-text-muted transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-brand"
+       className="grid size-9 place-items-center rounded-lg text-text-muted transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-brand-bright"
               onClick={onRequestClose}
               onKeyDown={handleEscape}
               type="button"
@@ -202,7 +202,7 @@ export function ReleaseDatePicker({
                 const today = day.date === currentDate;
                 const knownRelease = knownReleaseDates.has(day.date);
                 const dayClassName = selected
-                  ? 'bg-brand font-semibold text-white hover:bg-brand-hover'
+                  ? 'bg-brand font-semibold text-brand-ink hover:bg-brand-hover'
                   : today
                     ? 'border border-brand bg-transparent font-medium text-content-primary'
                     : day.inCurrentMonth
@@ -215,7 +215,7 @@ export function ReleaseDatePicker({
                       aria-current={today ? 'date' : undefined}
                       aria-label={formatCalendarLongDate(day.date)}
                       aria-pressed={selected}
-                      className={`relative grid min-h-11 w-full place-items-center rounded-lg text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface ${dayClassName}`}
+                      className={`relative grid min-h-11 w-full place-items-center rounded-lg text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-bright focus-visible:ring-offset-2 focus-visible:ring-offset-surface ${dayClassName}`}
                       data-calendar-day="true"
                       data-today={today || undefined}
                       onClick={() => {

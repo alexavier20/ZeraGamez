@@ -1,9 +1,6 @@
 import { ArrowLeft, Ellipsis, Share2, X } from 'lucide-react';
-import { Link } from 'react-router';
 
-import { UserAvatar } from '@/features/auth/components/UserAvatar';
-
-import { headerRoutes } from './header.config';
+import { HeaderActions } from './HeaderActions';
 import { HeaderBrand } from './HeaderBrand';
 
 import type { HeaderAccount, HeaderContextAction } from './header.types';
@@ -13,6 +10,7 @@ type MobileContextHeaderProps =
       variant: 'default';
       account?: HeaderAccount;
       onProfileClick?: () => void;
+      onSignOut?: () => Promise<void>;
     }>
   | Readonly<{
       variant: 'detail';
@@ -58,22 +56,12 @@ export function MobileContextHeader(props: MobileContextHeaderProps) {
       >
         <HeaderBrand compact />
         {props.account?.status === 'authenticated' ? (
-          <Link
-            aria-label={`Abrir perfil de ${props.account.user.name}`}
-            className="flex min-w-0 items-center gap-2 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-            onClick={props.onProfileClick}
-            to={headerRoutes.profile}
-          >
-            <UserAvatar
-              avatarUrl={props.account.user.avatarUrl ?? null}
-              className="size-9 border border-white/50 text-[11px]"
-              initials={props.account.user.initials}
-              name={props.account.user.name}
-            />
-            <span className="max-w-28 truncate text-sm font-semibold text-white">
-              Olá, {props.account.user.name}
-            </span>
-          </Link>
+          <HeaderActions
+            account={props.account}
+            compact
+            onProfileClick={props.onProfileClick}
+            onSignOut={props.onSignOut}
+          />
         ) : null}
       </div>
     );

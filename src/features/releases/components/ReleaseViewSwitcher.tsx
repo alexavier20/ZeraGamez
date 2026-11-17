@@ -15,7 +15,7 @@ type ReleaseViewSwitcherProps = Readonly<{
 }>;
 
 const optionClassName =
-  'flex min-h-11 items-center gap-2 rounded-lg px-3 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand';
+  'flex min-h-11 items-center gap-2 rounded-lg px-3 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright';
 
 export function ReleaseViewSwitcher({
   calendarButtonRef,

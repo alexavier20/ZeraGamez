@@ -6,8 +6,19 @@ import {
   Plus,
   Search,
   TriangleAlert,
+  X,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type DragEvent, type SyntheticEvent } from 'react';
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+  type FocusEvent,
+  type SyntheticEvent,
+} from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useParams } from 'react-router';
 import { ZodError } from 'zod';
 
@@ -43,62 +54,260 @@ type SearchState =
   | { readonly status: 'error' }
   | { readonly status: 'success'; readonly games: readonly GameSearchResult[] };
 
+type DropEdge = 'before' | 'after';
+
+interface TierGameTooltipPosition {
+  readonly above: boolean;
+  readonly left: number;
+  readonly top: number;
+}
+
 const tierStyles: Record<TierLabel, { readonly background: string; readonly foreground: string }> =
   {
-    S: { background: 'bg-brand', foreground: 'text-white' },
-    A: { background: 'bg-brand-bright', foreground: 'text-brand-ink' },
+    S: { background: 'bg-brand', foreground: 'text-brand-ink' },
+    A: { background: 'bg-secondary', foreground: 'text-brand-ink' },
     B: { background: 'bg-bg-secondary', foreground: 'text-text-primary' },
-    C: { background: 'bg-app', foreground: 'text-text-primary' },
-    D: { background: 'bg-border', foreground: 'text-text-primary' },
+    C: { background: 'bg-border', foreground: 'text-text-primary' },
+    D: { background: 'bg-app', foreground: 'text-text-primary' },
   };
 
 function nextPosition(items: readonly TierListItem[]): number {
   return items.reduce((maximum, item) => Math.max(maximum, item.position), -1) + 1;
 }
 
+function reorderTierItems(
+  items: readonly TierListItem[],
+  gameId: number,
+  targetTier: TierLabel | null,
+  targetPosition: number,
+): readonly TierListItem[] | null {
+  const game = items.find((item) => item.igdbId === gameId);
+  if (game === undefined) return null;
+
+  const sourceTier = game.tier;
+  const sourceItems = items
+    .filter((item) => item.tier === sourceTier && item.igdbId !== gameId)
+    .sort((left, right) => left.position - right.position);
+  const targetItems =
+    sourceTier === targetTier
+      ? sourceItems
+      : items
+          .filter((item) => item.tier === targetTier && item.igdbId !== gameId)
+          .sort((left, right) => left.position - right.position);
+  const position = Math.max(0, Math.min(targetPosition, targetItems.length));
+  const reorderedTarget = [...targetItems];
+  reorderedTarget.splice(position, 0, { ...game, tier: targetTier });
+  const targetPositions = new Map(
+    reorderedTarget.map((item, index) => [item.igdbId, index] as const),
+  );
+  const sourcePositions = new Map(sourceItems.map((item, index) => [item.igdbId, index] as const));
+
+  return items.map((item) => {
+    if (item.igdbId === gameId || item.tier === targetTier) {
+      return { ...item, tier: targetTier, position: targetPositions.get(item.igdbId) ?? position };
+    }
+    if (sourceTier !== targetTier && item.tier === sourceTier) {
+      return { ...item, position: sourcePositions.get(item.igdbId) ?? item.position };
+    }
+    return item;
+  });
+}
+
+function getTierGameTooltipPosition(element: HTMLElement): TierGameTooltipPosition {
+  const bounds = element.getBoundingClientRect();
+  const above = bounds.top > 340;
+  return {
+    above,
+    left: Math.max(112, Math.min(window.innerWidth - 112, bounds.left + bounds.width / 2)),
+    top: above ? bounds.top - 10 : bounds.bottom + 10,
+  };
+}
+
 function TierGameTile({
   disabled,
   dragging,
+  dropEdge,
   game,
   onDragEnd,
+  onDragOverGame,
+  onDropOnGame,
+  onRemove,
   onDragStart,
+  removing,
 }: Readonly<{
   disabled: boolean;
   dragging: boolean;
+  dropEdge: DropEdge | null;
   game: TierListItem;
   onDragEnd: () => void;
+  onDragOverGame: (event: DragEvent<HTMLDivElement>, gameId: number, edge: DropEdge) => void;
+  onDropOnGame: (event: DragEvent<HTMLDivElement>, gameId: number, edge: DropEdge) => void;
+  onRemove: (gameId: number) => void;
   onDragStart: (event: DragEvent<HTMLButtonElement>, gameId: number) => void;
+  removing: boolean;
 }>) {
+  const tileRef = useRef<HTMLDivElement>(null);
+  const tooltipTimerRef = useRef<number | null>(null);
+  const tooltipId = useId();
+  const [tooltipVisible, setTooltipVisible] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState<TierGameTooltipPosition | null>(null);
+
+  const hideTooltip = () => {
+    if (tooltipTimerRef.current !== null) {
+      window.clearTimeout(tooltipTimerRef.current);
+      tooltipTimerRef.current = null;
+    }
+    setTooltipVisible(false);
+  };
+
+  const scheduleTooltip = () => {
+    if (tooltipTimerRef.current !== null) window.clearTimeout(tooltipTimerRef.current);
+    tooltipTimerRef.current = window.setTimeout(() => {
+      const tile = tileRef.current;
+      if (tile === null) return;
+      setTooltipPosition(getTierGameTooltipPosition(tile));
+      setTooltipVisible(true);
+      tooltipTimerRef.current = null;
+    }, 650);
+  };
+
+  useEffect(
+    () => () => {
+      if (tooltipTimerRef.current !== null) window.clearTimeout(tooltipTimerRef.current);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!tooltipVisible) return;
+    const updatePosition = () => {
+      const tile = tileRef.current;
+      if (tile !== null) setTooltipPosition(getTierGameTooltipPosition(tile));
+    };
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [tooltipVisible]);
+
+  const handleBlur = (event: FocusEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) hideTooltip();
+  };
+
   return (
-    <button
-      aria-label={`Arraste ${game.name} para um tier`}
-      className={`group flex w-[76px] shrink-0 flex-col items-center gap-1 rounded-lg p-1 text-center transition-[opacity,transform] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${dragging ? 'scale-95 cursor-grabbing opacity-40' : 'cursor-grab active:cursor-grabbing'} disabled:cursor-not-allowed disabled:opacity-50`}
-      disabled={disabled}
-      draggable={!disabled}
-      onDragEnd={onDragEnd}
-      onDragStart={(event) => {
-        onDragStart(event, game.igdbId);
+    <div
+      className="group relative w-[96px] shrink-0"
+      onBlur={handleBlur}
+      onDragOver={(event) => {
+        if (disabled || dragging) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        const edge =
+          event.clientX <
+          event.currentTarget.getBoundingClientRect().left +
+            event.currentTarget.getBoundingClientRect().width / 2
+            ? 'before'
+            : 'after';
+        onDragOverGame(event, game.igdbId, edge);
       }}
-      title={game.name}
-      type="button"
+      onDrop={(event) => {
+        const bounds = event.currentTarget.getBoundingClientRect();
+        const edge = event.clientX < bounds.left + bounds.width / 2 ? 'before' : 'after';
+        onDropOnGame(event, game.igdbId, edge);
+      }}
+      onFocus={() => {
+        scheduleTooltip();
+      }}
+      onMouseEnter={scheduleTooltip}
+      onMouseLeave={hideTooltip}
+      ref={tileRef}
     >
-      {game.coverUrl === null ? (
-        <span className="grid size-[68px] place-items-center rounded-md bg-bg-secondary text-text-muted">
-          <Gamepad2 aria-hidden="true" size={24} />
-        </span>
-      ) : (
-        <img
-          alt=""
-          className="size-[68px] rounded-md object-cover transition group-hover:brightness-110"
-          draggable={false}
-          loading="lazy"
-          src={game.coverUrl}
+      {dropEdge === null ? null : (
+        <span
+          aria-hidden="true"
+          className={`pointer-events-none absolute inset-y-1 z-20 w-1 rounded-full bg-brand shadow-[0_0_0_2px_#fff] ${dropEdge === 'before' ? 'left-0' : 'right-0'}`}
         />
       )}
-      <span className="w-full truncate text-[10px] font-semibold text-content-primary">
-        {game.name}
-      </span>
-    </button>
+      <button
+        aria-describedby={tooltipVisible ? tooltipId : undefined}
+        aria-label={`Arraste ${game.name} para um tier ou para reordenar os jogos`}
+        className={`flex w-full flex-col items-center gap-1 p-1 text-center transition-[opacity,transform] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright ${dragging ? 'scale-95 cursor-grabbing opacity-40' : 'cursor-grab active:cursor-grabbing'} disabled:cursor-not-allowed disabled:opacity-50`}
+        disabled={disabled}
+        draggable={!disabled}
+        onDragEnd={onDragEnd}
+        onDragStart={(event) => {
+          hideTooltip();
+          onDragStart(event, game.igdbId);
+        }}
+        type="button"
+      >
+        {game.coverUrl === null ? (
+          <span className="grid size-[88px] place-items-center bg-bg-secondary text-text-muted">
+            <Gamepad2 aria-hidden="true" size={24} />
+          </span>
+        ) : (
+          <img
+            alt=""
+            className="size-[88px] object-cover transition group-hover:brightness-110"
+            draggable={false}
+            loading="lazy"
+            src={game.coverUrl}
+          />
+        )}
+        <span className="w-full truncate text-[10px] font-semibold text-content-primary">
+          {game.name}
+        </span>
+      </button>
+      <button
+        aria-label={`Remover ${game.name} da Tier List`}
+        className="absolute right-1 top-1 z-10 grid size-7 place-items-center rounded-full border border-white bg-red-600 text-white shadow-md transition-colors hover:bg-red-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright disabled:cursor-not-allowed disabled:opacity-60"
+        disabled={disabled}
+        onClick={() => {
+          onRemove(game.igdbId);
+        }}
+        title={`Remover ${game.name}`}
+        type="button"
+      >
+        {removing ? (
+          <LoaderCircle aria-hidden="true" className="animate-spin" size={16} />
+        ) : (
+          <X aria-hidden="true" size={16} strokeWidth={2.5} />
+        )}
+      </button>
+      {tooltipVisible && tooltipPosition !== null
+        ? createPortal(
+            <div
+              className="pointer-events-none fixed z-[80] w-44 border border-border bg-surface p-2 shadow-[0_14px_36px_#00000080] sm:w-52"
+              id={tooltipId}
+              role="tooltip"
+              style={{
+                left: tooltipPosition.left,
+                top: tooltipPosition.top,
+                transform: tooltipPosition.above ? 'translate(-50%, -100%)' : 'translate(-50%, 0)',
+              }}
+            >
+              {game.coverUrl === null ? (
+                <span className="grid aspect-square max-h-[50dvh] place-items-center bg-bg-secondary text-text-muted">
+                  <Gamepad2 aria-hidden="true" size={32} />
+                </span>
+              ) : (
+                <img
+                  alt=""
+                  className="aspect-square max-h-[50dvh] w-full object-cover"
+                  draggable={false}
+                  src={game.coverUrl}
+                />
+              )}
+              <p className="mt-2 line-clamp-2 text-sm font-bold text-content-primary">
+                {game.name}
+              </p>
+            </div>,
+            document.body,
+          )
+        : null}
+    </div>
   );
 }
 
@@ -110,7 +319,7 @@ function startGameDrag(event: DragEvent<HTMLButtonElement>, gameId: number) {
 function handleGameDrop(
   event: DragEvent<HTMLDivElement>,
   tier: TierLabel | null,
-  onMove: (gameId: number, tier: TierLabel | null) => void,
+  onMove: (gameId: number, tier: TierLabel | null, position?: number) => void,
 ) {
   event.preventDefault();
   const gameId = Number(event.dataTransfer.getData('text/plain'));
@@ -136,30 +345,40 @@ function TierRow({
   draggedGameId,
   items,
   onDragEnd,
+  dropTarget,
+  onDragOverGame,
+  onDropOnGame,
+  onRemove,
   onDragStart,
   onMove,
+  removingGameId,
   tier,
 }: Readonly<{
   disabled: boolean;
   draggedGameId: number | null;
+  dropTarget: { readonly edge: DropEdge; readonly gameId: number } | null;
   items: readonly TierListItem[];
   onDragEnd: () => void;
+  onDragOverGame: (event: DragEvent<HTMLDivElement>, gameId: number, edge: DropEdge) => void;
+  onDropOnGame: (event: DragEvent<HTMLDivElement>, gameId: number, edge: DropEdge) => void;
+  onRemove: (gameId: number) => void;
   onDragStart: (event: DragEvent<HTMLButtonElement>, gameId: number) => void;
-  onMove: (gameId: number, tier: TierLabel | null) => void;
+  onMove: (gameId: number, tier: TierLabel | null, position?: number) => void;
+  removingGameId: number | null;
   tier: TierLabel;
 }>) {
   const style = tierStyles[tier];
 
   return (
-    <div className="grid min-h-28 grid-cols-[76px_minmax(0,1fr)] overflow-hidden rounded-xl border border-border bg-bg-secondary sm:grid-cols-[96px_minmax(0,1fr)]">
+    <div className="grid min-h-36 grid-cols-[76px_minmax(0,1fr)] overflow-hidden border border-border bg-bg-secondary sm:grid-cols-[96px_minmax(0,1fr)]">
       <div
         className={`grid place-items-center font-heading text-xl font-bold ${style.background} ${style.foreground}`}
       >
         {tier}
       </div>
       <div
-        aria-label={`Tier ${tier}. Solte jogos aqui`}
-        className="flex min-h-28 flex-wrap content-start items-start gap-1 border-l border-border p-2 transition-colors hover:bg-brand/5 sm:p-2.5"
+        aria-label={`Tier ${tier}. Solte jogos aqui ou antes e depois de outro jogo para ordenar`}
+        className="flex min-h-36 flex-wrap content-start items-start gap-1 border-l border-border p-2 transition-colors hover:bg-brand/5 sm:p-2.5"
         onDragOver={(event) => {
           event.preventDefault();
           event.dataTransfer.dropEffect = 'move';
@@ -177,10 +396,15 @@ function TierRow({
             <TierGameTile
               disabled={disabled}
               dragging={draggedGameId === game.igdbId}
+              dropEdge={dropTarget?.gameId === game.igdbId ? dropTarget.edge : null}
               game={game}
               key={game.igdbId}
               onDragEnd={onDragEnd}
+              onDragOverGame={onDragOverGame}
+              onDropOnGame={onDropOnGame}
+              onRemove={onRemove}
               onDragStart={onDragStart}
+              removing={removingGameId === game.igdbId}
             />
           ))
         )}
@@ -192,18 +416,25 @@ function TierRow({
 function TierListEditor({
   list,
   onGameAdded,
+  onGameRemoved,
   repository,
 }: Readonly<{
   list: TierListDetails;
   onGameAdded: () => void;
+  onGameRemoved: () => void;
   repository: TierListsRepository;
 }>) {
   const [items, setItems] = useState(list.items);
   const [query, setQuery] = useState('');
   const [searchState, setSearchState] = useState<SearchState>({ status: 'idle' });
   const [addingGameId, setAddingGameId] = useState<number | null>(null);
+  const [removingGameId, setRemovingGameId] = useState<number | null>(null);
   const [movingGameId, setMovingGameId] = useState<number | null>(null);
   const [draggedGameId, setDraggedGameId] = useState<number | null>(null);
+  const [dropTarget, setDropTarget] = useState<{
+    readonly edge: DropEdge;
+    readonly gameId: number;
+  } | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -228,7 +459,7 @@ function TierListEditor({
   }, [query]);
 
   const addGame = async (game: GameSearchResult) => {
-    if (addingGameId !== null || movingGameId !== null) return;
+    if (addingGameId !== null || movingGameId !== null || removingGameId !== null) return;
     setAddingGameId(game.id);
     setActionError(null);
 
@@ -254,36 +485,107 @@ function TierListEditor({
     }
   };
 
-  const moveGame = async (gameId: number, targetTier: TierLabel | null) => {
-    if (movingGameId !== null || addingGameId !== null) return;
+  const moveGame = async (
+    gameId: number,
+    targetTier: TierLabel | null,
+    requestedPosition?: number,
+  ) => {
+    if (movingGameId !== null || addingGameId !== null || removingGameId !== null) return;
     const game = items.find((item) => item.igdbId === gameId);
-    if (game === undefined || game.tier === targetTier) return;
+    if (game === undefined) return;
+
+    const targetItems = items
+      .filter((item) => item.tier === targetTier && item.igdbId !== gameId)
+      .sort((left, right) => left.position - right.position);
+    const position = Math.max(
+      0,
+      Math.min(requestedPosition ?? targetItems.length, targetItems.length),
+    );
+    const nextItems = reorderTierItems(items, gameId, targetTier, position);
+    if (nextItems === null) return;
+    const orderChanged = nextItems.some(
+      (item, index) =>
+        item.igdbId !== items[index]?.igdbId ||
+        item.tier !== items[index]?.tier ||
+        item.position !== items[index]?.position,
+    );
+    if (!orderChanged) return;
 
     setMovingGameId(gameId);
     setActionError(null);
-    const targetItems = items.filter((item) => item.tier === targetTier && item.igdbId !== gameId);
-    const position = nextPosition(targetItems);
 
     try {
       await repository.moveGame(list.id, gameId, targetTier, position);
-      setItems((current) =>
-        current.map((item) =>
-          item.igdbId === gameId ? { ...item, tier: targetTier, position } : item,
-        ),
-      );
+      setItems(nextItems);
     } catch {
-      setActionError('Não foi possível mover o jogo. Tente novamente.');
+      setActionError('Não foi possível alterar a ordem dos jogos. Tente novamente.');
     } finally {
       setMovingGameId(null);
     }
   };
 
+  const handleGameDragOver = (event: DragEvent<HTMLDivElement>, gameId: number, edge: DropEdge) => {
+    if (draggedGameId === null || draggedGameId === gameId) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    setDropTarget((current) =>
+      current?.gameId === gameId && current.edge === edge ? current : { gameId, edge },
+    );
+  };
+
+  const handleGameDropOnTile = (
+    event: DragEvent<HTMLDivElement>,
+    targetGameId: number,
+    edge: DropEdge,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const droppedId = Number(event.dataTransfer.getData('text/plain'));
+    const sourceGameId = draggedGameId ?? droppedId;
+    const targetGame = items.find((item) => item.igdbId === targetGameId);
+    const targetItems = items
+      .filter((item) => item.tier === targetGame?.tier && item.igdbId !== sourceGameId)
+      .sort((left, right) => left.position - right.position);
+    const targetIndex = targetItems.findIndex((item) => item.igdbId === targetGameId);
+
+    if (
+      Number.isSafeInteger(sourceGameId) &&
+      sourceGameId > 0 &&
+      targetGame !== undefined &&
+      targetIndex >= 0
+    ) {
+      void moveGame(sourceGameId, targetGame.tier, targetIndex + (edge === 'after' ? 1 : 0));
+    }
+    setDropTarget(null);
+    stopDraggingGame();
+  };
+
+  const removeGame = async (gameId: number) => {
+    if (movingGameId !== null || addingGameId !== null || removingGameId !== null) return;
+    const game = items.find((item) => item.igdbId === gameId);
+    if (game === undefined) return;
+
+    setRemovingGameId(gameId);
+    setActionError(null);
+    try {
+      await repository.removeGame(list.id, gameId);
+      setItems((current) => current.filter((item) => item.igdbId !== gameId));
+      onGameRemoved();
+    } catch {
+      setActionError('Não foi possível remover o jogo da Tier List. Tente novamente.');
+    } finally {
+      setRemovingGameId(null);
+    }
+  };
+
   const startDraggingGame = (event: DragEvent<HTMLButtonElement>, gameId: number) => {
     startGameDrag(event, gameId);
+    setDropTarget(null);
     setDraggedGameId(gameId);
   };
 
   const stopDraggingGame = () => {
+    setDropTarget(null);
     setDraggedGameId(null);
   };
 
@@ -292,7 +594,7 @@ function TierListEditor({
     searchState.status === 'loading' ? (
       <GameRowsLoading />
     ) : searchState.status === 'error' ? (
-      <p className="px-4 py-3 text-sm text-brand" role="alert">
+      <p className="px-4 py-3 text-sm text-brand-bright" role="alert">
         Não foi possível buscar jogos. Tente novamente.
       </p>
     ) : searchState.status === 'success' && searchState.games.length === 0 ? (
@@ -306,7 +608,12 @@ function TierListEditor({
               <button
                 aria-pressed={isAdded}
                 className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors enabled:hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={isAdded || addingGameId !== null || movingGameId !== null}
+                disabled={
+                  isAdded ||
+                  addingGameId !== null ||
+                  movingGameId !== null ||
+                  removingGameId !== null
+                }
                 onClick={() => void addGame(game)}
                 type="button"
               >
@@ -332,7 +639,7 @@ function TierListEditor({
                       : formatReleaseDate(game.releaseDate)}
                   </span>
                 </span>
-                <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-brand">
+                <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-brand-bright">
                   {isAdded ? (
                     'Adicionado'
                   ) : (
@@ -353,7 +660,7 @@ function TierListEditor({
   const unrankedItems = items
     .filter((item) => item.tier === null)
     .sort((left, right) => left.position - right.position);
-  const disabled = addingGameId !== null || movingGameId !== null;
+  const disabled = addingGameId !== null || movingGameId !== null || removingGameId !== null;
 
   return (
     <div
@@ -409,11 +716,11 @@ function TierListEditor({
           >
             Jogos sem tier
           </h2>
-          <span className="text-xs text-text-muted">Arraste para uma categoria</span>
+          <span className="text-xs text-text-muted">Arraste para mudar o tier ou a ordem</span>
         </div>
         <div
-          aria-label="Jogos sem tier. Solte aqui para retirar um jogo de sua categoria"
-          className="flex min-h-24 flex-wrap content-start gap-1 rounded-xl border border-dashed border-border bg-surface/40 p-2 transition-colors hover:border-brand/50 hover:bg-brand/5 sm:p-3"
+          aria-label="Jogos sem tier. Solte aqui para retirar um jogo de sua categoria ou ordene entre os jogos"
+          className="flex min-h-32 flex-wrap content-start gap-1 border border-dashed border-border bg-surface/40 p-2 transition-colors hover:border-brand/50 hover:bg-brand/5 sm:p-3"
           onDragOver={(event) => {
             event.preventDefault();
             event.dataTransfer.dropEffect = 'move';
@@ -433,10 +740,15 @@ function TierListEditor({
               <TierGameTile
                 disabled={disabled}
                 dragging={draggedGameId === game.igdbId}
+                dropEdge={dropTarget?.gameId === game.igdbId ? dropTarget.edge : null}
                 game={game}
                 key={game.igdbId}
                 onDragEnd={stopDraggingGame}
+                onDragOverGame={handleGameDragOver}
+                onDropOnGame={handleGameDropOnTile}
+                onRemove={removeGame}
                 onDragStart={startDraggingGame}
+                removing={removingGameId === game.igdbId}
               />
             ))
           )}
@@ -448,13 +760,18 @@ function TierListEditor({
           <TierRow
             disabled={disabled}
             draggedGameId={draggedGameId}
+            dropTarget={dropTarget}
             items={items
               .filter((item) => item.tier === tier)
               .sort((left, right) => left.position - right.position)}
             key={tier}
             onDragEnd={stopDraggingGame}
+            onDragOverGame={handleGameDragOver}
+            onDropOnGame={handleGameDropOnTile}
+            onRemove={removeGame}
             onDragStart={startDraggingGame}
             onMove={moveGame}
+            removingGameId={removingGameId}
             tier={tier}
           />
         ))}
@@ -467,6 +784,11 @@ function TierListEditor({
       {addingGameId === null ? null : (
         <p className="sr-only" role="status">
           Adicionando jogo…
+        </p>
+      )}
+      {removingGameId === null ? null : (
+        <p className="sr-only" role="status">
+          Removendo jogo da Tier List…
         </p>
       )}
     </div>
@@ -577,7 +899,7 @@ export function TierListPage() {
   return (
     <main className="site-container min-h-[calc(100dvh-3.5rem)] pb-28 pt-5 sm:pb-12 sm:pt-6 lg:pt-7">
       <Link
-        className="mb-5 inline-flex items-center gap-2 rounded-md text-sm font-semibold text-text-muted transition-colors hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
+        className="mb-5 inline-flex items-center gap-2 rounded-md text-sm font-semibold text-text-muted transition-colors hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-bright"
         to="/minhas-listas"
       >
         <ArrowLeft aria-hidden="true" size={17} />
@@ -588,7 +910,7 @@ export function TierListPage() {
         <TierBoardLoading />
       ) : pageState.status === 'not-found' ? (
         <div className="py-16 text-center">
-          <TriangleAlert aria-hidden="true" className="mx-auto text-brand" size={32} />
+          <TriangleAlert aria-hidden="true" className="mx-auto text-icon" size={32} />
           <p className="mt-3 text-sm text-text-muted">Esta Tier List não foi encontrada.</p>
         </div>
       ) : pageState.status === 'error' ? (
@@ -623,7 +945,7 @@ export function TierListPage() {
               </span>
               {editingMetadata ? null : (
                 <button
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-border-brand bg-bg-secondary px-3 text-sm font-bold text-content-primary transition hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-border-brand bg-bg-secondary px-3 text-sm font-bold text-content-primary transition hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
                   disabled={repository === null || savingMetadata}
                   onClick={() => {
                     setEditError(null);
@@ -639,7 +961,7 @@ export function TierListPage() {
           </div>
           {editingMetadata ? (
             <form
-              className="mt-6 space-y-4 rounded-2xl border border-border bg-surface p-5 sm:p-6"
+              className="mt-6 space-y-4 border border-border bg-surface p-5 sm:p-6"
               onSubmit={(event) => {
                 void saveMetadata(event);
               }}
@@ -652,7 +974,7 @@ export function TierListPage() {
                   Nome da lista
                 </label>
                 <input
-                  className="min-h-11 w-full rounded-xl border border-border bg-bg-secondary px-4 text-content-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/30"
+                  className="min-h-11 w-full rounded-xl border border-border bg-bg-secondary px-4 text-content-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand-bright/30"
                   disabled={savingMetadata}
                   id="tier-list-edit-name"
                   maxLength={80}
@@ -671,7 +993,7 @@ export function TierListPage() {
                   Descrição
                 </label>
                 <textarea
-                  className="min-h-24 w-full resize-y rounded-xl border border-border bg-bg-secondary px-4 py-3 text-content-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/30"
+                  className="min-h-24 w-full resize-y rounded-xl border border-border bg-bg-secondary px-4 py-3 text-content-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand-bright/30"
                   disabled={savingMetadata}
                   id="tier-list-edit-description"
                   maxLength={500}
@@ -704,7 +1026,7 @@ export function TierListPage() {
                   Cancelar
                 </button>
                 <button
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-bold text-white transition-colors duration-150 hover:bg-brand-hover hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex min-h-10 items-center justify-center gap-2 cut-corner-button bg-brand px-4 text-sm font-bold text-brand-ink transition-colors duration-150 hover:bg-brand-hover hover:text-brand-ink disabled:cursor-not-allowed disabled:opacity-60"
                   disabled={savingMetadata}
                   type="submit"
                 >
@@ -726,6 +1048,9 @@ export function TierListPage() {
               list={pageState.list}
               onGameAdded={() => {
                 setGameCount((count) => count + 1);
+              }}
+              onGameRemoved={() => {
+                setGameCount((count) => Math.max(0, count - 1));
               }}
               repository={repository}
             />

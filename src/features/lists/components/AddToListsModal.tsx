@@ -40,7 +40,7 @@ function ListOptionCard({ disabled, list, onToggle, selected }: ListOptionCardPr
     <button
       aria-label={list.name}
       aria-pressed={selected}
-      className={`relative flex h-[126px] min-w-0 flex-col gap-2 overflow-hidden rounded-xl border bg-bg-secondary p-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 sm:h-[116px] ${
+      className={`relative flex h-[126px] min-w-0 flex-col gap-2 overflow-hidden border bg-bg-secondary p-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 sm:h-[116px] ${
         selected
           ? 'border-2 border-brand bg-list-selected'
           : 'border-border-brand enabled:hover:border-brand/60'
@@ -55,13 +55,13 @@ function ListOptionCard({ disabled, list, onToggle, selected }: ListOptionCardPr
         aria-hidden="true"
         className={`absolute right-2.5 top-2.5 z-10 flex size-[22px] items-center justify-center rounded-[7px] border ${
           selected
-            ? 'border-brand bg-brand text-white'
+            ? 'border-brand bg-brand text-brand-ink'
             : 'border-border bg-bg-secondary text-transparent'
         }`}
       >
         <Check size={13} />
       </span>
-      <span className="flex h-[72px] w-full shrink-0 gap-0.5 overflow-hidden rounded-lg">
+      <span className="flex h-[72px] w-full shrink-0 gap-0.5 overflow-hidden">
         {list.covers.slice(0, 3).map((cover, index) => (
           <img
             alt=""
@@ -225,7 +225,7 @@ function AddToListsDialog({
           {listsState.message}
         </p>
         <button
-     className="h-11 rounded-[10px] bg-brand px-4 text-xs font-semibold text-white transition-colors hover:bg-brand-hover hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:h-10"
+     className="h-11 cut-corner-button bg-brand px-4 text-xs font-semibold text-brand-ink transition-colors hover:bg-brand-hover hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright sm:h-10"
           onClick={onRetry}
           type="button"
         >
@@ -234,7 +234,7 @@ function AddToListsDialog({
       </div>
     ) : lists.length === 0 ? (
       <div className="flex h-[236px] flex-col items-center justify-center gap-3 sm:h-[230px]">
-        <Library aria-hidden="true" className="text-brand" size={38} />
+        <Library aria-hidden="true" className="text-icon" size={38} />
         <h3 className="font-heading text-lg font-semibold text-content-primary">
           Sua biblioteca começa aqui
         </h3>
@@ -242,7 +242,7 @@ function AddToListsDialog({
           Crie uma lista para organizar os jogos que você quer acompanhar.
         </p>
         <Link
-     className="flex h-11 items-center rounded-[10px] bg-brand px-4 text-xs font-semibold text-white transition-colors hover:bg-brand-hover hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:h-10"
+     className="flex h-11 items-center cut-corner-button bg-brand px-4 text-xs font-semibold text-brand-ink transition-colors hover:bg-brand-hover hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright sm:h-10"
           onClick={close}
           to="/minhas-listas/nova"
         >
@@ -285,7 +285,7 @@ function AddToListsDialog({
             </span>
             <button
               aria-label="Próxima página"
-       className="flex size-11 items-center justify-center rounded-[11px] border border-border-brand bg-brand text-white transition-colors enabled:hover:bg-brand-hover enabled:hover:text-white  disabled:bg-bg-secondary disabled:text-text-muted disabled:opacity-55 sm:size-10 sm:rounded-[10px]"
+       className="flex size-11 items-center justify-center rounded-[11px] border border-border-brand bg-brand text-brand-ink transition-colors enabled:hover:bg-brand-hover enabled:hover:text-brand-ink  disabled:bg-bg-secondary disabled:text-text-muted disabled:opacity-55 sm:size-10 sm:rounded-[10px]"
               disabled={submitting || page === pageCount - 1}
               onClick={() => {
                 setSelection((current) => ({ ...current, page: current.page + 1 }));
@@ -298,14 +298,14 @@ function AddToListsDialog({
         ) : null}
 
         {submissionError === null ? null : (
-          <p className="text-sm text-brand" role="alert">
+          <p className="text-sm text-brand-bright" role="alert">
             {submissionError}
           </p>
         )}
 
         <div className="flex h-11 justify-end gap-2.5 sm:h-10">
           <button
-            className="rounded-[10px] bg-bg-secondary px-4 text-xs font-semibold text-content-primary transition-colors enabled:hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            className="rounded-[10px] bg-bg-secondary px-4 text-xs font-semibold text-content-primary transition-colors enabled:hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
             disabled={submitting}
             onClick={close}
             type="button"
@@ -313,7 +313,7 @@ function AddToListsDialog({
             Cancelar
           </button>
           <button
-      className="rounded-[10px] bg-brand px-4 text-xs font-semibold text-white transition-colors enabled:hover:bg-brand-hover enabled:hover:text-white  disabled:bg-bg-secondary disabled:text-text-muted"
+      className="cut-corner-button bg-brand px-4 text-xs font-semibold text-brand-ink transition-colors enabled:hover:bg-brand-hover enabled:hover:text-brand-ink  disabled:bg-bg-secondary disabled:text-text-muted"
             disabled={submitting || selectedIds.size === 0}
             onClick={() => {
               void confirm();
@@ -330,7 +330,7 @@ function AddToListsDialog({
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto px-4 py-[88px] sm:py-[160px]">
       <button
         aria-label="Fechar ao clicar fora do modal"
-        className="absolute inset-0 size-full bg-text-primary/70 disabled:cursor-not-allowed"
+        className="absolute inset-0 size-full bg-black/70 disabled:cursor-not-allowed"
         data-testid="add-to-lists-backdrop"
         disabled={submitting}
         onClick={close}
@@ -344,7 +344,7 @@ function AddToListsDialog({
         }
         aria-label={`Adicionar ${gameName} à lista`}
         aria-modal="true"
-        className="relative z-10 flex w-full max-w-[358px] flex-col gap-[18px] rounded-2xl border border-border-brand bg-surface p-5 shadow-[0_14px_36px_#2b2b3066] sm:max-w-[480px] sm:p-6"
+        className="modal-lower-right-cut relative z-10 flex w-full max-w-[358px] flex-col gap-[18px] border-l-4 border-l-brand-bright bg-modal p-5 shadow-[0_14px_36px_#00000080] sm:max-w-[480px] sm:p-6"
         ref={dialogRef}
         role="dialog"
         tabIndex={-1}
@@ -355,7 +355,7 @@ function AddToListsDialog({
           </h2>
           <button
             aria-label="Fechar modal"
-            className="flex size-11 items-center justify-center rounded-[11px] bg-bg-secondary text-text-muted transition-colors enabled:hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:size-[34px] sm:rounded-[9px]"
+            className="flex size-11 items-center justify-center rounded-[11px] bg-bg-secondary text-text-muted transition-colors enabled:hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright sm:size-[34px] sm:rounded-[9px]"
             disabled={submitting}
             onClick={close}
             ref={closeButtonRef}

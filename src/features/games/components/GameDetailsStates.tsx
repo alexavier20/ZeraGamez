@@ -70,7 +70,7 @@ export function GameDetailsError({ onRetry }: GameDetailsErrorProps) {
         className="flex min-h-64 flex-col items-center justify-center gap-4 text-center"
         role="alert"
       >
-        <AlertTriangle aria-hidden="true" className="text-brand" size={32} />
+        <AlertTriangle aria-hidden="true" className="text-icon" size={32} />
         <div>
           <h1 className="font-heading text-xl font-bold text-text-primary">
             Não foi possível carregar este jogo
@@ -80,7 +80,7 @@ export function GameDetailsError({ onRetry }: GameDetailsErrorProps) {
           </p>
         </div>
         <button
-          className="inline-flex h-10 items-center gap-2 rounded-lg border border-border-brand bg-surface px-4 text-sm font-semibold text-content-primary transition-colors hover:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="inline-flex h-10 items-center gap-2 rounded-lg border border-border-brand bg-surface px-4 text-sm font-semibold text-content-primary transition-colors hover:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
           onClick={onRetry}
           type="button"
         >
@@ -106,7 +106,7 @@ export function GameDetailsNotFound() {
           </p>
         </div>
         <button
-          className="inline-flex items-center gap-2 text-sm font-semibold text-content-primary underline decoration-brand underline-offset-4 hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-content-primary underline decoration-brand underline-offset-4 hover:text-brand-bright focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-bright"
           onClick={() => {
             const historyIndex = window.history.state?.idx;
             if (typeof historyIndex === 'number' && historyIndex > 0) {

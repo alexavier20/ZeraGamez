@@ -22,7 +22,8 @@ describe('Mobile Header', () => {
       'href',
       '/perfil',
     );
-    expect(screen.getByText('Olá, Alex')).toBeInTheDocument();
+    expect(screen.getByText('Alex')).toBeInTheDocument();
+    expect(screen.queryByText('Olá, Alex')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /notificações/i })).not.toBeInTheDocument();
   });
 

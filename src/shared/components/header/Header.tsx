@@ -1,9 +1,9 @@
 import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
+import { useLocation } from 'react-router';
 
 import { DesktopNavigation } from './DesktopNavigation';
-import { GlobalSearch } from './GlobalSearch';
-import { headerCopy } from './header.config';
+import { headerCopy, headerRoutes } from './header.config';
 import { HeaderActions } from './HeaderActions';
 import { HeaderBrand } from './HeaderBrand';
 import { MobileContextHeader } from './MobileContextHeader';
@@ -37,6 +37,7 @@ function renderMobileHeader(props: HeaderProps) {
     <MobileContextHeader
       account={props.account}
       onProfileClick={props.onProfileClick}
+      onSignOut={props.onSignOut}
       variant="default"
     />
   );
@@ -44,66 +45,63 @@ function renderMobileHeader(props: HeaderProps) {
 
 export function Header(props: HeaderProps) {
   const [isCompactMenuOpen, setIsCompactMenuOpen] = useState(false);
+  const isHomePage = useLocation().pathname === headerRoutes.home;
 
   return (
-    <header className="bg-brand text-white">
+    <header
+      className={`${isHomePage ? '' : 'mb-6'} border-b border-white/10 bg-app text-text-primary`}
+    >
       <div className="site-container relative">
-        <div className="hidden h-[72px] items-center gap-3 sm:flex">
-          <button
-            aria-controls="header-compact-navigation"
-            aria-expanded={isCompactMenuOpen}
-            aria-label={isCompactMenuOpen ? 'Fechar menu' : headerCopy.tabletMenuLabel}
-            className="grid size-10 shrink-0 place-items-center rounded-lg transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-            onClick={() => {
-              setIsCompactMenuOpen((isOpen) => !isOpen);
-              props.onTabletMenuClick?.();
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') setIsCompactMenuOpen(false);
-            }}
-            type="button"
-          >
-            {isCompactMenuOpen ? (
-              <X aria-hidden="true" size={22} />
-            ) : (
-              <Menu aria-hidden="true" size={22} />
-            )}
-          </button>
-
+        <div className="hidden h-16 items-center gap-3 sm:flex">
           <div
-            className="hidden min-w-0 flex-1 items-center gap-4 2xl:flex"
+            className="hidden min-w-0 flex-1 items-center gap-4 lg:flex 2xl:flex"
             data-testid="header-desktop"
           >
             <HeaderBrand />
-            <GlobalSearch className="min-w-0 flex-1" onSearch={props.onSearch} />
+            <DesktopNavigation />
             <HeaderActions
               account={props.account}
               onProfileClick={props.onProfileClick}
+              onSignOut={props.onSignOut}
             />
           </div>
 
           <div
-            className="hidden min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 sm:grid 2xl:hidden"
+            className="hidden min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:grid lg:hidden 2xl:hidden"
             data-testid="header-tablet"
           >
             <HeaderBrand />
-            <GlobalSearch className="w-full" onSearch={props.onSearch} />
+            <button
+              aria-controls="header-compact-navigation"
+              aria-expanded={isCompactMenuOpen}
+              aria-label={isCompactMenuOpen ? 'Fechar menu' : headerCopy.tabletMenuLabel}
+              className="grid size-11 place-items-center rounded-lg text-text-primary transition-colors hover:bg-brand-bright/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
+              onClick={() => {
+                setIsCompactMenuOpen((isOpen) => !isOpen);
+                props.onTabletMenuClick?.();
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') setIsCompactMenuOpen(false);
+              }}
+              type="button"
+            >
+              {isCompactMenuOpen ? (
+                <X aria-hidden="true" size={22} />
+              ) : (
+                <Menu aria-hidden="true" size={22} />
+              )}
+            </button>
             <HeaderActions
               account={props.account}
               onProfileClick={props.onProfileClick}
+              onSignOut={props.onSignOut}
             />
-          </div>
-        </div>
-
-        <div className="hidden py-0.5 sm:block">
-          <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <DesktopNavigation />
           </div>
         </div>
 
         {isCompactMenuOpen ? (
           <div
-            className="absolute inset-x-0 top-full z-50 border-t border-border bg-bg-secondary px-3 py-2 shadow-xl"
+            className="absolute inset-x-0 top-full z-50 border-t border-border bg-app px-3 py-2 shadow-xl lg:hidden"
             data-testid="header-compact-navigation"
             id="header-compact-navigation"
             onKeyDown={(event) => {

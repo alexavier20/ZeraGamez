@@ -27,6 +27,7 @@ interface HeaderBaseProps {
   readonly account: HeaderAccount;
   readonly onSearch?: (query: string) => void;
   readonly onProfileClick?: () => void;
+  readonly onSignOut?: () => Promise<void>;
   readonly onTabletMenuClick?: () => void;
 }
 

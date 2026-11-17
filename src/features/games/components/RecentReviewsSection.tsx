@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 
 import { HomeCarouselSkeleton } from '@/shared/components/HomeCarouselSkeleton';
+import { HomeSectionHeading } from '@/shared/components/HomeSectionHeading';
 import { HorizontalGameCarousel } from '@/shared/components/HorizontalGameCarousel';
 
 import { getRecentReviewedGames } from '../api/game-search-client';
@@ -28,13 +29,7 @@ export function RecentReviewsSection() {
   }, [attempt]);
   return (
     <section aria-labelledby="recent-reviews-title" className="pt-10 sm:pt-14">
-      <h2
-        id="recent-reviews-title"
-        className="mb-6 flex items-center gap-2 font-heading text-xl font-semibold text-text-primary sm:text-2xl"
-      >
-        <span aria-hidden="true" className="h-6 w-1.5 shrink-0 -translate-y-0.5 rounded-full bg-brand" />
-        Notas da crítica
-      </h2>
+      <HomeSectionHeading id="recent-reviews-title" title="Notas da crítica" />
       {status === 'loading' ? (
         <HomeCarouselSkeleton variant="reviews" />
       ) : status === 'error' ? (
@@ -68,7 +63,7 @@ export function RecentReviewsSection() {
                   ? 'bg-[#4cc38a] text-black'
                   : score >= 50
                     ? 'bg-[#e2b75d] text-black'
-                    : 'bg-[#e8797e] text-black';
+                    : 'bg-secondary text-black';
             const label =
               score === null
                 ? 'Sem nota da crítica'
@@ -81,21 +76,21 @@ export function RecentReviewsSection() {
               <li key={game.id} className="w-40 shrink-0 snap-start sm:w-44">
                 <Link
                   to={'/jogos/' + String(game.id)}
-                  className="group block rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
+                  className="group block focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-bright"
                 >
                   {game.coverUrl ? (
                     <img
                       src={game.coverUrl}
                       alt=""
                       loading="lazy"
-                      className="aspect-[2/3] w-full rounded-lg object-cover transition-opacity duration-150 group-hover:opacity-90"
+                      className="aspect-[2/3] w-full object-cover transition-opacity duration-150 group-hover:opacity-90"
                     />
                   ) : (
-                    <div className="aspect-[2/3] rounded-lg bg-surface" />
+                    <div className="aspect-[2/3] bg-surface" />
                   )}
                   <h3
                     title={game.name}
-                    className="mt-3 truncate text-sm font-medium text-text-primary transition-colors duration-150 group-hover:text-brand"
+                    className="mt-3 truncate text-sm font-medium text-text-primary transition-colors duration-150 group-hover:text-brand-bright"
                   >
                     {game.name}
                   </h3>

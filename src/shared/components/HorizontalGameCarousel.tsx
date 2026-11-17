@@ -68,7 +68,7 @@ export function HorizontalGameCarousel({
   }
 
   const buttonClass =
-    'absolute top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full border border-border bg-bg-secondary/95 text-text-primary transition-colors duration-150 hover:border-border hover:bg-brand-bright/30 disabled:cursor-default disabled:opacity-30 disabled:hover:border-border disabled:hover:bg-bg-secondary/95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand';
+    'absolute top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full border border-border bg-bg-secondary/95 text-text-primary transition-colors duration-150 hover:border-border hover:bg-brand-bright/30 disabled:cursor-default disabled:opacity-30 disabled:hover:border-border disabled:hover:bg-bg-secondary/95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright';
 
   return (
     <div className="relative">
@@ -76,7 +76,7 @@ export function HorizontalGameCarousel({
         ref={stripRef}
         id={stripId}
         aria-label={label}
-        className="snap-x snap-proximity scroll-px-1 overflow-x-auto overscroll-x-contain px-1 pt-1 pb-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
+        className="snap-x snap-proximity scroll-px-1 overflow-x-auto overscroll-x-contain px-1 pt-1 pb-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-bright"
         role="region"
         onScroll={updateEdges}
       >

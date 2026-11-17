@@ -1,4 +1,4 @@
-import { ArrowLeft, Pencil, Plus, X } from 'lucide-react';
+import { ArrowLeft, LoaderCircle, Pencil, Plus, Settings, Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -19,13 +19,13 @@ interface Review {
   updated_at: string;
 }
 const field =
-  'min-h-11 w-full rounded-lg border border-border bg-bg-secondary p-3 text-sm text-content-primary outline-none transition-colors duration-150 placeholder:text-text-muted focus:border-border focus:ring-2 focus:ring-brand/30';
+  'min-h-11 w-full rounded-lg border border-border bg-bg-secondary p-3 text-sm text-content-primary outline-none transition-colors duration-150 placeholder:text-text-muted focus:border-border focus:ring-2 focus:ring-brand-bright/30';
 const searchPageSize = 8;
 
 function scoreColor(score: number): string {
-  if (score < 5) return 'bg-[#d05158]';
-  if (score < 8) return 'bg-[#a98217]';
-  return 'bg-[#2a8c5a]';
+  if (score < 5) return 'bg-rose-800';
+  if (score < 8) return 'bg-amber-800';
+  return 'bg-emerald-800';
 }
 
 const scoreFormatter = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 });
@@ -100,7 +100,7 @@ function ReviewDetailsModal({
     <dialog
       ref={dialogRef}
       aria-labelledby="review-details-title"
-      className="fixed inset-0 m-auto max-h-[85dvh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-2xl border border-border bg-surface p-0 text-content-primary shadow-2xl backdrop:bg-text-primary/75"
+      className="modal-lower-right-cut fixed inset-0 m-auto max-h-[85dvh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto border-l-4 border-l-brand-bright bg-modal p-0 text-content-primary shadow-2xl backdrop:bg-black/75"
       onCancel={(event) => {
         event.preventDefault();
         onClose();
@@ -111,7 +111,7 @@ function ReviewDetailsModal({
           type="button"
           aria-label="Fechar avaliação"
           onClick={onClose}
-     className="absolute top-3 right-3 grid size-11 place-items-center rounded-lg text-text-muted hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-brand"
+     className="absolute top-3 right-3 grid size-11 place-items-center rounded-lg text-text-muted hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-brand-bright"
         >
           <X aria-hidden="true" size={18} strokeWidth={1.5} />
         </button>
@@ -181,19 +181,19 @@ function ReviewEditorModal({
     <dialog
       ref={dialogRef}
       aria-labelledby="review-editor-title"
-      className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-1rem)] max-w-4xl overflow-hidden rounded-2xl border border-border bg-surface p-0 text-content-primary shadow-2xl backdrop:bg-text-primary/75 sm:w-[calc(100%-2rem)]"
+      className="modal-lower-right-cut fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-1rem)] max-w-4xl overflow-hidden border-l-4 border-l-brand-bright bg-modal p-0 text-content-primary shadow-2xl backdrop:bg-black/75 sm:w-[calc(100%-2rem)]"
       onCancel={(event) => {
         event.preventDefault();
         onClose();
       }}
     >
       <div className="flex max-h-[90dvh] flex-col">
-        <header className="flex shrink-0 items-center justify-between gap-4 border-b border-border bg-surface px-4 py-3 sm:px-6 sm:py-4">
+        <header className="flex shrink-0 items-center justify-between gap-4 border-b border-border bg-modal px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex min-w-0 items-center gap-2">
             {onBack ? (
               <button
                 aria-label="Voltar para a busca"
-                className="grid size-10 shrink-0 place-items-center rounded-lg text-text-muted transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                className="grid size-10 shrink-0 place-items-center rounded-lg text-text-muted transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
                 onClick={onBack}
                 type="button"
               >
@@ -206,7 +206,7 @@ function ReviewEditorModal({
           </div>
           <button
             aria-label="Fechar avaliação"
-            className="grid size-10 shrink-0 place-items-center rounded-lg text-text-muted transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            className="grid size-10 shrink-0 place-items-center rounded-lg text-text-muted transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
             onClick={onClose}
             type="button"
           >
@@ -214,6 +214,81 @@ function ReviewEditorModal({
           </button>
         </header>
         <div className="overflow-y-auto p-4 sm:p-6">{children}</div>
+      </div>
+    </dialog>,
+    document.body,
+  );
+}
+
+function ReviewDeleteDialog({
+  busy,
+  error,
+  onCancel,
+  onConfirm,
+  review,
+}: Readonly<{
+  busy: boolean;
+  error: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+  review: Review;
+}>) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    const previousFocus = document.activeElement;
+    dialog?.showModal();
+    return () => {
+      dialog?.close();
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
+    };
+  }, []);
+
+  return createPortal(
+    <dialog
+      ref={dialogRef}
+      aria-labelledby="review-delete-title"
+      className="modal-lower-right-cut fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-md border-l-4 border-l-brand-bright bg-modal p-0 text-content-primary shadow-2xl backdrop:bg-black/75"
+      onCancel={(event) => {
+        event.preventDefault();
+        if (!busy) onCancel();
+      }}
+    >
+      <div className="space-y-5 p-5 sm:p-6">
+        <div>
+          <h2 id="review-delete-title" className="font-heading text-xl font-semibold">
+            Excluir avaliação?
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-text-muted">
+            A avaliação de <span className="font-semibold text-content-primary">{review.name}</span>{' '}
+            será removida permanentemente.
+          </p>
+        </div>
+        {error ? (
+          <p className="rounded-lg border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-700" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">
+          <button
+            className="min-h-10 rounded-lg border border-border px-4 text-sm font-semibold text-content-primary disabled:opacity-60"
+            disabled={busy}
+            onClick={onCancel}
+            type="button"
+          >
+            Cancelar
+          </button>
+          <button
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={busy}
+            onClick={onConfirm}
+            type="button"
+          >
+            {busy ? <LoaderCircle aria-hidden="true" className="animate-spin" size={16} /> : null}
+            {busy ? 'Excluindo…' : 'Excluir avaliação'}
+          </button>
+        </div>
       </div>
     </dialog>,
     document.body,
@@ -259,8 +334,12 @@ export function ReviewsPage() {
   const [isPublic, setIsPublic] = useState(true);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewsOwnerId, setReviewsOwnerId] = useState<string | null>(null);
+  const [openReviewMenuId, setOpenReviewMenuId] = useState<number | null>(null);
   const [viewedReview, setViewedReview] = useState<Review | null>(null);
   const [viewedReviewOwnerId, setViewedReviewOwnerId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Review | null>(null);
+  const [deletingReviewId, setDeletingReviewId] = useState<number | null>(null);
+  const [deleteError, setDeleteError] = useState('');
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
@@ -339,6 +418,28 @@ export function ReviewsPage() {
       active = false;
     };
   }, [client, userId, loadAttempt]);
+  useEffect(() => {
+    if (openReviewMenuId === null) return;
+    const menuId = `review-actions-${String(openReviewMenuId)}`;
+    const toggleId = `review-actions-toggle-${String(openReviewMenuId)}`;
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      const menu = document.getElementById(menuId);
+      if (menu !== null && event.target instanceof Node && !menu.contains(event.target)) {
+        setOpenReviewMenuId(null);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setOpenReviewMenuId(null);
+      document.getElementById(toggleId)?.focus();
+    };
+    document.addEventListener('pointerdown', closeOnOutsidePointer);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsidePointer);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [openReviewMenuId]);
   useEffect(() => {
     const controller = new AbortController();
     if (query.trim().length < 2) return;
@@ -427,6 +528,34 @@ export function ReviewsPage() {
       setSaving(false);
     }
   }
+  async function deleteReview(review: Review) {
+    if (!client || !userId || deletingReviewId !== null) return;
+    setDeletingReviewId(review.igdb_id);
+    setDeleteError('');
+    try {
+      const { data, error } = await client
+        .from('game_reviews')
+        .delete()
+        .eq('user_id', userId)
+        .eq('igdb_id', review.igdb_id)
+        .select('igdb_id')
+        .maybeSingle();
+      if (error) throw error;
+      if (data === null) throw new Error('A avaliação não foi encontrada.');
+
+      setReviews((current) => current.filter((item) => item.igdb_id !== review.igdb_id));
+      if (viewedReview?.igdb_id === review.igdb_id) {
+        setViewedReview(null);
+        setViewedReviewOwnerId(null);
+      }
+      setDeleteTarget(null);
+      setMessage('Avaliação excluída');
+    } catch {
+      setDeleteError('Não foi possível excluir a avaliação. Tente novamente.');
+    } finally {
+      setDeletingReviewId(null);
+    }
+  }
   return (
     <main className="site-container min-h-[calc(100dvh-3.5rem)] pb-28 pt-5 sm:pb-12 sm:pt-6 lg:pt-7">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -447,7 +576,7 @@ export function ReviewsPage() {
         </h1>
         <button
           aria-haspopup="dialog"
-          className="inline-flex min-h-11 w-fit items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="inline-flex min-h-11 w-fit items-center gap-2 cut-corner-button bg-brand px-4 py-2 text-sm font-semibold text-brand-ink transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
           onClick={openReviewModal}
           type="button"
         >
@@ -517,7 +646,7 @@ export function ReviewsPage() {
                       onClick={() => {
                         choose(game);
                       }}
-                      className="flex h-[104px] min-w-0 items-center gap-3 overflow-hidden rounded-xl border border-border p-3 text-left transition-colors duration-150 hover:border-border aria-pressed:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                      className="flex h-[104px] min-w-0 items-center gap-3 overflow-hidden rounded-xl border border-border p-3 text-left transition-colors duration-150 hover:border-border aria-pressed:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
                     >
                       {game.coverUrl ? (
                         <img
@@ -542,7 +671,7 @@ export function ReviewsPage() {
                     <button
                       type="button"
                       disabled={searchPage === 1}
-           className="min-h-11 rounded-lg border border-border px-3 text-sm transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-default disabled:opacity-40"
+           className="min-h-11 rounded-lg border border-border px-3 text-sm transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-brand-bright disabled:cursor-default disabled:opacity-40"
                       onClick={() => {
                         setSearchPage((page) => page - 1);
                       }}
@@ -556,7 +685,7 @@ export function ReviewsPage() {
                           type="button"
                           aria-label={`Página ${String(page)}`}
                           aria-current={searchPage === page ? 'page' : undefined}
-             className="grid size-11 place-items-center rounded-lg border border-border text-sm transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-brand aria-current:bg-brand aria-current:text-white aria-current:hover:bg-brand-hover aria-current:hover:text-white"
+             className="grid size-11 place-items-center rounded-lg border border-border text-sm transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-brand-bright aria-current:bg-brand aria-current:text-brand-ink aria-current:hover:bg-brand-hover aria-current:hover:text-brand-ink"
                           onClick={() => {
                             setSearchPage(page);
                           }}
@@ -568,7 +697,7 @@ export function ReviewsPage() {
                     <button
                       type="button"
                       disabled={searchPage === searchPageCount}
-           className="min-h-11 rounded-lg border border-border px-3 text-sm transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-default disabled:opacity-40"
+           className="min-h-11 rounded-lg border border-border px-3 text-sm transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-brand-bright disabled:cursor-default disabled:opacity-40"
                       onClick={() => {
                         setSearchPage((page) => page + 1);
                       }}
@@ -706,7 +835,7 @@ export function ReviewsPage() {
                         />
                         <span
                           aria-hidden="true"
-                          className={`block h-3 rounded-sm transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand ${
+                          className={`block h-3 rounded-sm transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand-bright ${
                             isFilled ? colorClass : displayedScore === null ? idleColorClass : 'bg-brand-bright/20'
                           }`}
                         />
@@ -734,13 +863,13 @@ export function ReviewsPage() {
             <div className="flex gap-3">
               <button
                 disabled={saving}
-        className="min-h-11 rounded-lg bg-brand px-4 text-sm font-medium text-white transition-colors duration-150 hover:bg-brand-hover hover:text-white disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+        className="min-h-11 cut-corner-button bg-brand px-4 text-sm font-medium text-brand-ink transition-colors duration-150 hover:bg-brand-hover hover:text-brand-ink disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
               >
                 {saving ? 'Salvando…' : 'Salvar avaliação'}
               </button>
               <button
                 type="button"
-        className="min-h-11 rounded-lg border border-border px-4 text-sm font-medium text-text-muted transition-colors duration-150 hover:bg-brand-bright/30 hover:text-brand-ink disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+        className="min-h-11 rounded-lg border border-border px-4 text-sm font-medium text-text-muted transition-colors duration-150 hover:bg-brand-bright/30 hover:text-brand-ink disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
                 disabled={saving}
                 onClick={closeReviewModal}
               >
@@ -759,7 +888,7 @@ export function ReviewsPage() {
             {client !== null && (
               <button
                 type="button"
-        className="mt-4 min-h-11 rounded-lg border border-border px-4 text-sm font-medium transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-brand"
+        className="mt-4 min-h-11 rounded-lg border border-border px-4 text-sm font-medium transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-brand-bright"
                 onClick={() => {
                   setLoadError('');
                   setLoading(true);
@@ -781,13 +910,13 @@ export function ReviewsPage() {
             {visibleReviews.map((review) => (
               <article
                 key={review.igdb_id}
-                className="relative flex h-[280px] min-w-0 flex-col rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-border"
+                className="relative flex h-[280px] min-w-0 flex-col border border-border bg-surface p-5 transition-colors hover:border-border"
               >
                 <button
                   type="button"
                   aria-label={`Ver avaliação completa de ${review.name}`}
                   aria-haspopup="dialog"
-                  className="absolute inset-0 rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                  className="absolute inset-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
                   onClick={() => {
                     setViewedReview(review);
                     setViewedReviewOwnerId(userId);
@@ -798,12 +927,12 @@ export function ReviewsPage() {
                     <img
                       src={review.cover_url}
                       alt=""
-                      className="aspect-[2/3] w-16 shrink-0 rounded-lg object-cover sm:w-20"
+                      className="aspect-[2/3] w-16 shrink-0 object-cover sm:w-20"
                     />
                   ) : (
                     <div
                       aria-hidden="true"
-                      className="aspect-[2/3] w-16 shrink-0 rounded-lg bg-brand-bright/10 sm:w-20"
+                      className="aspect-[2/3] w-16 shrink-0 bg-brand-bright/10 sm:w-20"
                     />
                   )}
                   <div className="min-w-0 flex-1">
@@ -833,17 +962,95 @@ export function ReviewsPage() {
                     <ReviewDate value={review.updated_at} />
                   </span>
                 </footer>
-                <button
-                  type="button"
-                  aria-label={`Editar avaliação de ${review.name}`}
-                  title="Editar avaliação"
-         className="absolute top-3 right-3 z-10 grid size-11 place-items-center rounded-lg text-text-muted transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-                  onClick={() => {
-                    choose({ id: review.igdb_id, name: review.name, coverUrl: review.cover_url });
-                  }}
-                >
-                  <Pencil aria-hidden="true" size={18} strokeWidth={1.5} />
-                </button>
+                <div className="absolute top-3 right-3 z-20">
+                  <button
+                    id={`review-actions-toggle-${String(review.igdb_id)}`}
+                    type="button"
+                    aria-label={`Opções da avaliação de ${review.name}`}
+                    aria-haspopup="menu"
+                    aria-expanded={openReviewMenuId === review.igdb_id}
+                    aria-controls={`review-actions-${String(review.igdb_id)}`}
+                    title="Configurações da avaliação"
+                    className="grid size-11 place-items-center rounded-lg text-text-muted transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setOpenReviewMenuId((current) =>
+                        current === review.igdb_id ? null : review.igdb_id,
+                      );
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+                      event.preventDefault();
+                      setOpenReviewMenuId(review.igdb_id);
+                      const index = event.key === 'ArrowDown' ? 0 : -1;
+                      window.requestAnimationFrame(() => {
+                        const menu = document.getElementById(
+                          `review-actions-${String(review.igdb_id)}`,
+                        );
+                        const items = menu?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]');
+                        if (items?.length) items[index === 0 ? 0 : items.length - 1]?.focus();
+                      });
+                    }}
+                  >
+                    <Settings aria-hidden="true" size={18} strokeWidth={1.75} />
+                  </button>
+                  {openReviewMenuId === review.igdb_id ? (
+                    <div
+                      id={`review-actions-${String(review.igdb_id)}`}
+                      aria-label={`Ações da avaliação de ${review.name}`}
+                      className="absolute top-12 right-0 z-30 min-w-48 rounded-xl border border-border bg-surface p-1.5 shadow-[0_14px_36px_#00000080]"
+                      onKeyDown={(event) => {
+                        if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+                        const items = Array.from(
+                          event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+                        );
+                        const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement);
+                        const nextIndex =
+                          event.key === 'Home'
+                            ? 0
+                            : event.key === 'End'
+                              ? items.length - 1
+                              : (currentIndex + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+                        event.preventDefault();
+                        items[nextIndex]?.focus();
+                      }}
+                      role="menu"
+                    >
+                      <button
+                        className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-content-primary transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-bright"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setOpenReviewMenuId(null);
+                          choose({
+                            id: review.igdb_id,
+                            name: review.name,
+                            coverUrl: review.cover_url,
+                          });
+                        }}
+                        role="menuitem"
+                        type="button"
+                      >
+                        <Pencil aria-hidden="true" size={16} />
+                        Editar avaliação
+                      </button>
+                      <button
+                        className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-red-700 transition-colors hover:bg-red-800/10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-bright"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setDeleteError('');
+                          document.getElementById(`review-actions-toggle-${String(review.igdb_id)}`)?.focus();
+                          setDeleteTarget(review);
+                          setOpenReviewMenuId(null);
+                        }}
+                        role="menuitem"
+                        type="button"
+                      >
+                        <Trash2 aria-hidden="true" size={16} />
+                        Excluir avaliação
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               </article>
             ))}
           </div>
@@ -859,6 +1066,20 @@ export function ReviewsPage() {
           }}
         />
       )}
+      {deleteTarget ? (
+        <ReviewDeleteDialog
+          busy={deletingReviewId === deleteTarget.igdb_id}
+          error={deleteError}
+          onCancel={() => {
+            setDeleteTarget(null);
+            setDeleteError('');
+          }}
+          onConfirm={() => {
+            void deleteReview(deleteTarget);
+          }}
+          review={deleteTarget}
+        />
+      ) : null}
     </main>
   );
 }

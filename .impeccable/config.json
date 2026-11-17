@@ -1,3 +1,33 @@
 {
-  "buildPath": "code"
+  "buildPath": "code",
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/features/games/components/MyHypesSection.tsx",
+          "src/features/lists/components/AddToListsModal.tsx",
+          "src/features/lists/components/DeleteListModal.tsx",
+          "src/pages/CreateListPage.tsx",
+          "src/pages/GameDetailsPage.tsx",
+          "src/pages/ReviewsPage.tsx"
+        ],
+        "createdAt": "2026-11-16T22:03:28.468Z",
+        "reason": "User confirmed: requested a blue side bar as a consistent style for all modals."
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/features/lists/components/AddGamesToListModal.tsx",
+          "src/features/lists/components/ListDetailsModal.tsx"
+        ],
+        "createdAt": "2026-11-16T22:15:19.257Z",
+        "reason": "User confirmed: requested a blue side bar as a consistent style for all modals."
+      }
+    ]
+  }
 }

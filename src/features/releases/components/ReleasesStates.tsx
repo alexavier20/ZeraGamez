@@ -47,7 +47,7 @@ export function ReleasesLoading(): React.ReactElement {
             data-testid="release-card-skeleton"
             key={index}
           >
-            <div className="aspect-[16/9] w-full rounded-xl bg-surface" />
+            <div className="aspect-[16/9] w-full bg-surface" />
             <div className="flex flex-col gap-3 pt-3">
               <div className="h-10 w-3/4 rounded bg-surface" />
               <div className="flex gap-2">
@@ -78,7 +78,7 @@ export function ReleasesError({ onRetry }: { readonly onRetry: () => void }): Re
     <StatePanel
       action={
         <button
-          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-hover hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="cut-corner-button bg-brand px-4 py-2 text-sm font-semibold text-brand-ink transition-colors hover:bg-brand-hover hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright"
           onClick={onRetry}
           type="button"
         >

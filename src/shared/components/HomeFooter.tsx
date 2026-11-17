@@ -9,7 +9,7 @@ export function HomeFooter() {
       <div className="site-container">
         <div className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
           <div className="max-w-xs">
-            <HeaderBrand />
+            <HeaderBrand tone="brand" />
           </div>
           <nav aria-label="Navegação do rodapé">
             <p className="mb-3 text-xs font-medium text-text-muted">Explore</p>
@@ -17,7 +17,7 @@ export function HomeFooter() {
               {desktopNavItems.map(({ label, to }) => (
                 <li key={to}>
                   <Link
-                    className="inline-flex min-h-11 items-center rounded text-sm text-text-muted transition-colors hover:text-content-primary focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
+                    className="inline-flex min-h-11 items-center rounded text-sm text-text-muted transition-colors hover:text-content-primary focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-bright"
                     to={to}
                   >
                     {label}

@@ -27,7 +27,7 @@ export function ReleaseDateEmpty({ date, onClearDate }: ReleaseDateEmptyProps): 
         limpe o filtro.
       </p>
       <button
-        className="mt-4 flex min-h-11 items-center gap-2 rounded-lg border border-border bg-surface px-4 text-xs font-semibold text-content-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className="mt-4 flex min-h-11 items-center gap-2 rounded-lg border border-border bg-surface px-4 text-xs font-semibold text-content-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-bright"
         onClick={onClearDate}
         type="button"
       >

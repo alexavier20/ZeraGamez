@@ -78,7 +78,7 @@ export function DeleteListModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-3 py-4 sm:px-6">
       <button
         aria-label="Cancelar exclusão da lista"
-        className="absolute inset-0 size-full bg-text-primary/75 disabled:cursor-not-allowed"
+        className="absolute inset-0 size-full bg-black/75 disabled:cursor-not-allowed"
         disabled={isDeleting}
         onClick={onClose}
         tabIndex={-1}
@@ -89,14 +89,14 @@ export function DeleteListModal({
         aria-describedby={descriptionId}
         aria-labelledby={titleId}
         aria-modal="true"
-        className="relative z-10 w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-[0_14px_36px_#2b2b3066] sm:p-7"
+        className="modal-lower-right-cut relative z-10 w-full max-w-md border-l-4 border-l-brand-bright bg-modal p-6 shadow-[0_14px_36px_#00000080] sm:p-7"
         ref={dialogRef}
         role="alertdialog"
         tabIndex={-1}
       >
         <button
           aria-label="Cancelar exclusão da lista"
-          className="absolute top-3 right-3 flex size-11 items-center justify-center rounded-xl bg-bg-secondary text-text-muted transition-colors hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-brand"
+          className="absolute top-3 right-3 flex size-11 items-center justify-center rounded-xl bg-bg-secondary text-text-muted transition-colors hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-brand-bright"
           disabled={isDeleting}
           onClick={onClose}
           type="button"
@@ -124,7 +124,7 @@ export function DeleteListModal({
         )}
         <div className="mt-6 flex justify-end gap-2">
           <button
-            className="min-h-11 rounded-xl border border-border px-4 text-sm font-semibold text-content-primary disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-brand"
+            className="min-h-11 rounded-xl border border-border px-4 text-sm font-semibold text-content-primary disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-brand-bright"
             disabled={isDeleting}
             onClick={onClose}
             ref={cancelButtonRef}
@@ -133,7 +133,7 @@ export function DeleteListModal({
             Cancelar
           </button>
           <button
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white transition-colors duration-150 hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-300"
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white transition-colors duration-150 hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-300"
             disabled={isDeleting}
             onClick={onConfirm}
             type="button"

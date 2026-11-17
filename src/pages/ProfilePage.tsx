@@ -131,7 +131,7 @@ function ProfileSettings({ auth, user }: ProfileSettingsProps) {
       </button>
       <section
         aria-labelledby="profile-title"
-        className="rounded-2xl border border-border bg-surface p-5 sm:p-6"
+        className="border border-border bg-surface p-5 sm:p-6"
       >
         <h1
           id="profile-title"
@@ -193,7 +193,7 @@ function ProfileSettings({ auth, user }: ProfileSettingsProps) {
               <input
                 autoComplete="nickname"
                 aria-describedby="profile-name-help"
-                className="min-h-11 w-full rounded-lg border border-border bg-app px-3 text-sm text-text-primary outline-none transition-colors focus:border-brand-bright focus:ring-2 focus:ring-brand/30"
+                className="min-h-11 w-full rounded-lg border border-border bg-app px-3 text-sm text-text-primary outline-none transition-colors focus:border-brand-bright focus:ring-2 focus:ring-brand-bright/30"
                 id="profile-name"
                 maxLength={50}
                 onChange={(event) => {
@@ -247,7 +247,7 @@ function ProfileSettings({ auth, user }: ProfileSettingsProps) {
           )}
           {success === null ? null : (
             <p
-              className="mt-5 flex items-center gap-2 rounded-lg border border-brand/30 bg-brand/5 p-3 text-sm text-brand"
+              className="mt-5 flex items-center gap-2 rounded-lg border border-brand/30 bg-brand/5 p-3 text-sm text-brand-bright"
               role="status"
             >
               <CheckCircle2 aria-hidden="true" className="shrink-0" size={18} strokeWidth={1.5} />
@@ -256,7 +256,7 @@ function ProfileSettings({ auth, user }: ProfileSettingsProps) {
           )}
           <div className="mt-5 flex justify-end">
             <button
-       className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-hover hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-44"
+       className="inline-flex min-h-11 w-full items-center justify-center gap-2 cut-corner-button bg-brand px-5 py-2 text-sm font-semibold text-brand-ink transition-colors hover:bg-brand-hover hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-44"
               disabled={saving}
               type="submit"
             >

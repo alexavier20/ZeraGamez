@@ -9,9 +9,9 @@ import {
 } from '@/features/releases/model/release-filter-options';
 
 const desktopChipClassName =
-  'flex h-10 items-center gap-2 rounded-lg border px-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand';
+  'flex h-10 items-center gap-2 rounded-lg border px-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-bright';
 const compactChipClassName =
-  'relative flex min-h-11 min-w-0 items-center rounded-lg border px-3 text-xs font-medium focus-within:ring-2 focus-within:ring-brand';
+  'relative flex min-h-11 min-w-0 items-center rounded-lg border px-3 text-xs font-medium focus-within:ring-2 focus-within:ring-brand-bright';
 
 interface FilterSelectProps<TKey extends string> {
   readonly ariaLabel: string;
@@ -76,7 +76,7 @@ export function ReleaseFilters({
   const hasActiveFilters =
     additionalFilterActive || value.platform !== 'all' || value.genre !== 'all';
   const clearClassName =
-    'shrink-0 font-medium text-text-muted transition-colors enabled:hover:text-content-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-40';
+    'shrink-0 font-medium text-text-muted transition-colors enabled:hover:text-content-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-bright disabled:opacity-40';
 
   return (
     <section aria-label="Filtros de lançamentos" className="mt-6">
@@ -141,14 +141,14 @@ export function ReleaseFilters({
       >
         <FilterSelect
           ariaLabel="Plataforma"
-          className={`${desktopChipClassName} relative max-w-[200px] focus-within:ring-2 focus-within:ring-brand ${value.platform === 'all' ? 'border-border bg-bg-secondary font-medium text-text-muted' : 'border-brand bg-filter-active font-semibold text-filter-active-text'}`}
+          className={`${desktopChipClassName} relative max-w-[200px] focus-within:ring-2 focus-within:ring-brand-bright ${value.platform === 'all' ? 'border-border bg-bg-secondary font-medium text-text-muted' : 'border-brand bg-filter-active font-semibold text-filter-active-text'}`}
           onChange={onPlatformChange}
           options={releasePlatformOptions}
           value={value.platform}
         />
         <FilterSelect
           ariaLabel="Gênero"
-          className={`${desktopChipClassName} relative focus-within:ring-2 focus-within:ring-brand ${value.genre === 'all' ? 'border-border bg-bg-secondary font-medium text-text-muted' : 'border-brand bg-filter-active font-semibold text-filter-active-text'}`}
+          className={`${desktopChipClassName} relative focus-within:ring-2 focus-within:ring-brand-bright ${value.genre === 'all' ? 'border-border bg-bg-secondary font-medium text-text-muted' : 'border-brand bg-filter-active font-semibold text-filter-active-text'}`}
           onChange={onGenreChange}
           options={releaseGenreOptions}
           value={value.genre}

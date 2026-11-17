@@ -1,48 +1,54 @@
-@import '@fontsource/chakra-petch/400.css';
-@import '@fontsource/chakra-petch/500.css';
-@import '@fontsource/chakra-petch/600.css';
-@import '@fontsource/chakra-petch/700.css';
-@import '@fontsource/oxanium/600.css';
-@import '@fontsource/oxanium/700.css';
+@import '@fontsource/source-sans-pro/latin-400.css';
+@import '@fontsource/source-sans-pro/latin-600.css';
+@import '@fontsource/source-sans-pro/latin-700.css';
 @import 'tailwindcss';
 
 @theme {
-  /* Palette sampled from the controller shell, D-pad, and X/Y and A/B buttons. */
-  --color-controller-shell: #b0b1b6;
-  --color-controller-panel: #9d9da7;
-  --color-controller-dpad: #565858;
-  --color-brand: #6e56b8;
-  --color-brand-hover: #775fbd;
-  --color-brand-bright: #a19ad0;
-  --color-brand-ink: #2b2b30;
-  --color-app: #f2f2f4;
-  --color-bg-secondary: #e1e0e5;
-  --color-surface: #e1e0e5;
-  --color-surface-hover: #a19ad0;
-  --color-border: #b0b1b6;
-  --color-filter-active: #a19ad0;
-  --color-filter-active-text: #2b2b30;
-  --color-list-selected: #a19ad040;
-  --color-success: #6e56b8;
-  --color-text-primary: #2b2b30;
-  --color-content-primary: #2b2b30;
-  --color-text-muted: #565858;
-  --color-header-text: #2b2b30;
-  --color-border-brand: #6e56b866;
-  --color-header-border: #b0b1b6;
-  --color-header-field-border: #b0b1b6;
-  --color-header-field: #f2f2f4;
-  --color-header-overlay: #e1e0e5e6;
-  --color-avatar-start: #6e56b8;
-  --color-avatar-end: #6e56b8;
-  --font-heading: 'Oxanium', sans-serif;
-  --font-body: 'Chakra Petch', sans-serif;
+  /* Brand palette: yellow, red, black, and white iconography. */
+  --color-brand: #fae800;
+  --color-brand-hover: #dfcf00;
+  --color-brand-bright: #fae800;
+  --color-logo: #fae800;
+  --color-icon: #ffffff;
+  --color-brand-ink: #0f0f0f;
+  --color-secondary: #ee3453;
+  --color-app: #0f0f0f;
+  --color-bg-secondary: #19191c;
+  --color-modal: #18181b;
+  --color-surface: #212124;
+  --color-surface-hover: #2c2c30;
+  --color-border: #3f3f46;
+  --color-filter-active: #fae800;
+  --color-filter-active-text: #0f0f0f;
+  --color-list-selected: #ee345324;
+  --color-success: #40cc84;
+  --color-text-primary: #ffffff;
+  --color-content-primary: #e4e4e7;
+  --color-text-muted: #a1a1aa;
+  --color-header-text: #ffffff;
+  --color-border-brand: #fae80099;
+  --color-header-border: #ffffff1a;
+  --color-header-field-border: #52525b;
+  --color-header-field: #18181b;
+  --color-header-overlay: #18181be6;
+  --color-avatar-start: #cbbd00;
+  --color-avatar-end: #fae800;
+  --color-red-200: #ffc1c9;
+  --color-red-300: #ff9daa;
+  --color-red-400: #ff7c8c;
+  --color-red-500: #e64b61;
+  --color-red-600: #bd2943;
+  --color-red-700: #ff8998;
+  --color-red-800: #8f1831;
+  --font-heading: 'Source Sans Pro', sans-serif;
+  --font-body: 'Source Sans Pro', sans-serif;
 }
 
 @layer base {
   html {
-    color-scheme: light;
+    color-scheme: dark;
     font-size: 15px;
+    scrollbar-color: var(--color-border) var(--color-app);
   }
 
   body {
@@ -51,13 +57,32 @@
     margin: 0;
     background: var(--color-app);
     color: var(--color-text-primary);
-    caret-color: var(--color-brand);
+    caret-color: var(--color-brand-bright);
     font-family: var(--font-body);
   }
 
   ::selection {
-    background: var(--color-brand);
-    color: var(--color-app);
+    background: var(--color-secondary);
+    color: var(--color-brand-ink);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--color-app);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border: 2px solid var(--color-app);
+    border-radius: 999px;
+    background: var(--color-border);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-surface-hover);
   }
 
   button,
@@ -75,6 +100,187 @@
 }
 
 @layer components {
+  .modal-lower-right-cut {
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 26px), calc(100% - 26px) 100%, 0 100%);
+  }
+
+  .cut-corner-button,
+  .diagonal-swipe-button[data-variant='solid'] {
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%);
+  }
+
+  .cut-corner-card {
+    --cut-corner-card-size: 24px;
+    --cut-corner-card-content-size: 18px;
+    isolation: isolate;
+    clip-path: polygon(
+      0 0,
+      100% 0,
+      100% calc(100% - var(--cut-corner-card-size)),
+      calc(100% - var(--cut-corner-card-size)) 100%,
+      0 100%
+    );
+  }
+
+  .cut-corner-card::before {
+    position: absolute;
+    z-index: 0;
+    inset: 1px;
+    background: var(--color-app);
+    clip-path: polygon(
+      0 0,
+      100% 0,
+      100% calc(100% - var(--cut-corner-card-size) + 1px),
+      calc(100% - var(--cut-corner-card-size) + 1px) 100%,
+      0 100%
+    );
+    content: '';
+  }
+
+  .cut-corner-card-content {
+    clip-path: polygon(
+      0 0,
+      100% 0,
+      100% calc(100% - var(--cut-corner-card-content-size)),
+      calc(100% - var(--cut-corner-card-content-size)) 100%,
+      0 100%
+    );
+  }
+
+  .cut-corner-card > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .cut-corner-button:focus-visible,
+  .diagonal-swipe-button[data-variant='solid']:focus-visible {
+    box-shadow: inset 0 0 0 2px var(--color-brand-ink);
+  }
+
+  .cut-corner-button-outline {
+    position: relative;
+    isolation: isolate;
+    background: var(--color-border);
+  }
+
+  .cut-corner-button-outline::before {
+    position: absolute;
+    z-index: 0;
+    inset: 1px;
+    background: var(--color-app);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 11px), calc(100% - 11px) 100%, 0 100%);
+    content: '';
+  }
+
+  .cut-corner-button-outline > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .cut-corner-button-outline:not(:disabled):hover,
+  .cut-corner-button-outline:not(:disabled):hover::before {
+    background: var(--color-brand);
+  }
+
+  .cut-corner-button-outline:focus-visible::before {
+    box-shadow: inset 0 0 0 2px var(--color-brand-bright);
+  }
+
+  .diagonal-swipe-button {
+    --button-background: transparent;
+    --button-border: var(--color-brand-bright);
+    --button-text: var(--color-brand-bright);
+
+    position: relative;
+    z-index: 0;
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    overflow: hidden;
+    border: 2px solid var(--button-border);
+    padding: 10px 20px;
+    background: var(--button-background);
+    color: var(--button-text);
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: normal;
+    line-height: 1.25;
+    text-decoration: none;
+    text-transform: none;
+    transition: color 1s;
+  }
+
+  .diagonal-swipe-button[data-variant='solid'] {
+    --button-background: var(--color-brand);
+    --button-border: var(--color-brand);
+    --button-text: var(--color-brand-ink);
+  }
+
+  .diagonal-swipe-button::before {
+    position: absolute;
+    z-index: -1;
+    top: 0;
+    bottom: 0;
+    left: -40px;
+    width: 0;
+    background-color: var(--color-secondary);
+    content: '';
+    transform: skewX(45deg);
+    transition: width 1s;
+  }
+
+  .diagonal-swipe-button:hover,
+  .diagonal-swipe-button:focus-visible {
+    color: var(--color-brand-ink);
+  }
+
+  .diagonal-swipe-button:hover::before,
+  .diagonal-swipe-button:focus-visible::before {
+    width: 160%;
+  }
+
+  .diagonal-swipe-button:focus-visible {
+    outline: 2px solid var(--color-secondary);
+    outline-offset: 4px;
+  }
+
+  .diagonal-swipe-button[data-tone='on-dark'] {
+    --button-border: var(--color-brand-bright);
+    --button-text: #fff;
+  }
+
+  .diagonal-swipe-button[data-variant='solid'][data-tone='on-dark'] {
+    --button-border: var(--color-brand-bright);
+    --button-text: var(--color-brand-ink);
+  }
+
+  .diagonal-swipe-button[data-size='compact'] {
+    min-height: 36px;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .diagonal-swipe-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  .diagonal-swipe-button:disabled::before {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .diagonal-swipe-button,
+    .diagonal-swipe-button::before {
+      transition: none;
+    }
+  }
+
   .release-card-strip {
     scrollbar-width: thin;
     scrollbar-color: var(--color-border) transparent;

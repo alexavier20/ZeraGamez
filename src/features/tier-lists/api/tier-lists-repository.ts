@@ -20,6 +20,7 @@ export interface TierListsRepository {
   createList(userId: string, input: CreateListInput): Promise<TierListSummary>;
   getList(userId: string, tierListId: number): Promise<TierListDetails | null>;
   listSummaries(userId: string): Promise<readonly TierListSummary[]>;
+  removeGame(tierListId: number, igdbId: number): Promise<void>;
   moveGame(
     tierListId: number,
     igdbId: number,
@@ -161,9 +162,20 @@ export function createSupabaseTierListsRepository(client: SupabaseClient): TierL
     },
 
     async moveGame(tierListId, igdbId, tier, position) {
+      const { error } = await client.rpc('move_tier_list_game', {
+        p_tier_list_id: tierListId,
+        p_igdb_id: igdbId,
+        p_tier: tier,
+        p_position: position,
+      });
+
+      if (error !== null) throw toDataError(error);
+    },
+
+    async removeGame(tierListId, igdbId) {
       const { error } = await client
         .from('tier_list_items')
-        .update({ tier, position })
+        .delete()
         .eq('tier_list_id', tierListId)
         .eq('igdb_id', igdbId);
 

@@ -17,9 +17,7 @@ export function HomeCarouselSkeleton({ variant }: HomeCarouselSkeletonProps) {
           key={index}
         >
           <div
-            className={
-              reviews ? 'aspect-[2/3] rounded-lg bg-surface' : 'aspect-[2/3] rounded-xl bg-surface'
-            }
+            className="aspect-[2/3] bg-surface"
           />
           {reviews ? (
             <>

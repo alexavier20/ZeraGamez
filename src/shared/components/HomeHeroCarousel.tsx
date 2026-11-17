@@ -1,8 +1,8 @@
 import { ArrowRight, ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
 
 import { headerRoutes } from '@/shared/components/header/header.config';
+import { DiagonalSwipeButton } from '@/shared/components/DiagonalSwipeButton';
 
 const slides = [
   { image: '/assets/images/home-hero-gta-vi.jpg', title: 'Grand Theft Auto VI' },
@@ -16,7 +16,7 @@ const slides = [
 
 const ROTATION_INTERVAL_MS = 6000;
 const controlClassName =
- 'grid size-11 shrink-0 place-items-center rounded-full text-brand transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand';
+ 'grid size-11 shrink-0 place-items-center rounded-full text-brand-bright transition-colors hover:bg-brand-bright/30 hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-bright';
 
 export function HomeHeroCarousel() {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -58,7 +58,7 @@ export function HomeHeroCarousel() {
     <section
       aria-label="Destaques do Zera GameZ"
       aria-roledescription="carrossel"
-      className="relative isolate w-full overflow-hidden bg-surface"
+      className="group relative isolate w-full overflow-hidden bg-surface"
       onFocusCapture={(event) => {
         if (!event.target.closest('[data-carousel-playback]')) setPaused(true);
       }}
@@ -79,10 +79,10 @@ export function HomeHeroCarousel() {
             src={slide.image}
           />
         ))}
-        <div className="absolute inset-0 bg-gradient-to-r from-text-primary/85 via-text-primary/55 to-text-primary/20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/20" />
       </div>
 
-      <div className="site-container relative flex min-h-[250px] flex-col justify-center py-10 sm:min-h-[300px] lg:min-h-[350px]">
+      <div className="site-container relative flex min-h-[250px] flex-col justify-center pt-10 pb-16 sm:min-h-[300px] lg:min-h-[350px]">
         <h1 className="max-w-2xl font-heading text-3xl font-semibold leading-tight text-white sm:text-5xl lg:text-6xl">
           Seu próximo jogo começa aqui
         </h1>
@@ -91,90 +91,90 @@ export function HomeHeroCarousel() {
           radar.
         </p>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <Link
-      className="inline-flex min-h-11 w-fit items-center justify-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-hover hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          <DiagonalSwipeButton
             to={headerRoutes.releases}
+            tone="on-dark"
+            variant="solid"
           >
             Explorar lançamentos
             <ArrowRight aria-hidden="true" size={18} strokeWidth={1.75} />
-          </Link>
-          <Link
-      className="inline-flex min-h-11 w-fit items-center justify-center rounded-lg border border-border px-5 py-2.5 text-sm font-semibold text-white transition-colors duration-150 hover:border-border hover:bg-brand-bright hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-            to={headerRoutes.lists}
-          >
+          </DiagonalSwipeButton>
+          <DiagonalSwipeButton to={headerRoutes.lists} tone="on-dark" variant="outline">
             Organizar minhas listas
-          </Link>
+          </DiagonalSwipeButton>
         </div>
       </div>
 
-      <div className="relative border-t border-border bg-bg-secondary">
-        <div className="site-container flex min-h-14 items-center justify-between gap-2">
-          <button
-            aria-label="Imagem anterior"
-            className={controlClassName}
-            onClick={() => {
-              changeSlide(-1);
-            }}
-            type="button"
-          >
-            <ChevronLeft aria-hidden="true" size={18} strokeWidth={1.5} />
-          </button>
-          <div className="flex flex-col items-center gap-1 py-2">
-            <p
-              aria-live={paused || reducedMotion ? 'polite' : 'off'}
-              aria-atomic="true"
-              className="text-xs font-medium text-brand"
-            >
-              {slides[activeIndex].title}
-            </p>
-            <div aria-label="Escolher imagem" className="flex items-center">
-              {slides.map((slide, index) => (
-                <button
-                  aria-label={`Mostrar imagem ${String(index + 1)}: ${slide.title}`}
-                  aria-pressed={index === activeIndex}
-                  className="grid size-6 place-items-center rounded focus-visible:outline-2 focus-visible:outline-brand"
-                  key={slide.image}
-                  onClick={() => {
-                    setActiveIndex(index);
-                  }}
-                  type="button"
-                >
-                  <span
-                    className={`h-1.5 w-5 rounded-full transition-colors duration-150 motion-reduce:transition-none ${index === activeIndex ? 'bg-brand-bright' : 'bg-brand-bright/40'}`}
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex items-center">
-            {!reducedMotion && (
-              <button
-                aria-label={paused ? 'Retomar carrossel' : 'Pausar carrossel'}
-                data-carousel-playback="true"
-                className={controlClassName}
-                onClick={() => {
-                  setPaused((value) => !value);
-                }}
-                type="button"
-              >
-                {paused ? (
-                  <Play aria-hidden="true" size={18} strokeWidth={1.5} />
-                ) : (
-                  <Pause aria-hidden="true" size={18} strokeWidth={1.5} />
-                )}
-              </button>
-            )}
+      <p
+        aria-live={paused || reducedMotion ? 'polite' : 'off'}
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {slides[activeIndex].title}
+      </p>
+
+      <button
+        aria-label="Imagem anterior"
+        className={`${controlClassName} pointer-events-none absolute top-1/2 left-4 z-20 -translate-y-1/2 bg-black/60 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100`}
+        onClick={() => {
+          changeSlide(-1);
+        }}
+        type="button"
+      >
+        <ChevronLeft aria-hidden="true" size={18} strokeWidth={1.5} />
+      </button>
+
+      {!reducedMotion && (
+        <button
+          aria-label={paused ? 'Retomar carrossel' : 'Pausar carrossel'}
+          data-carousel-playback="true"
+          className={`${controlClassName} pointer-events-none absolute top-4 right-4 z-20 bg-black/60 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100`}
+          onClick={() => {
+            setPaused((value) => !value);
+          }}
+          type="button"
+        >
+          {paused ? (
+            <Play aria-hidden="true" size={18} strokeWidth={1.5} />
+          ) : (
+            <Pause aria-hidden="true" size={18} strokeWidth={1.5} />
+          )}
+        </button>
+      )}
+
+      <button
+        aria-label="Próxima imagem"
+        className={`${controlClassName} pointer-events-none absolute top-1/2 right-4 z-20 -translate-y-1/2 bg-black/60 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100`}
+        onClick={() => {
+          changeSlide(1);
+        }}
+        type="button"
+      >
+        <ChevronRight aria-hidden="true" size={18} strokeWidth={1.5} />
+      </button>
+
+      <div className="absolute inset-x-0 bottom-2 z-10 flex justify-center">
+        <div
+          aria-label="Escolher imagem"
+          className="flex items-center rounded-full bg-black/55 px-1"
+          role="group"
+        >
+          {slides.map((slide, index) => (
             <button
-              aria-label="Próxima imagem"
-              className={controlClassName}
+              aria-label={`Mostrar imagem ${String(index + 1)}: ${slide.title}`}
+              aria-pressed={index === activeIndex}
+              className="grid size-6 place-items-center rounded focus-visible:outline-2 focus-visible:outline-brand-bright"
+              key={slide.image}
               onClick={() => {
-                changeSlide(1);
+                setActiveIndex(index);
               }}
               type="button"
             >
-              <ChevronRight aria-hidden="true" size={18} strokeWidth={1.5} />
+              <span
+                className={`h-1.5 w-5 rounded-full transition-colors duration-150 motion-reduce:transition-none ${index === activeIndex ? 'bg-brand-bright' : 'bg-brand-bright/40'}`}
+              />
             </button>
-          </div>
+          ))}
         </div>
       </div>
     </section>

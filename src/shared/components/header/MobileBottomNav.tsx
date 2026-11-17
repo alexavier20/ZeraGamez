@@ -29,10 +29,10 @@ export function MobileBottomNav({ onProfileClick }: Readonly<MobileBottomNavProp
         return (
           <NavLink
             className={({ isActive }) =>
-              `flex min-w-0 flex-col items-center justify-center gap-2 rounded-xl text-[11px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand ${
+              `flex min-w-0 flex-col items-center justify-center gap-2 rounded-xl text-[11px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-bright ${
                 isActive
-                  ? 'font-semibold text-brand underline decoration-1 underline-offset-2'
-                  : 'text-text-muted hover:text-text-primary'
+                  ? 'font-semibold text-text-primary underline decoration-logo decoration-1 underline-offset-2'
+                  : 'text-text-primary'
               }`
             }
             end={item.to === headerRoutes.home}
