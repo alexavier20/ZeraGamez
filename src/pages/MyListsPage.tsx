@@ -304,7 +304,7 @@ export function MyListsPage() {
           <div>
             {displayedLists.length === 0 ? (
               <p className="mb-5 text-sm text-text-muted">Você ainda não criou nenhuma lista.</p>
-            )}
+            ) : null}
             <div className="grid gap-x-3 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
               {visibleLists.map((list) => (
                 <ListSummary
